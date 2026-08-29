@@ -103,7 +103,7 @@ func main() {
 	}
 
 	registryHandler := registry.NewHandler(
-		controllerManager.GetClient(),
+		controllerManager.GetAPIReader(),
 		func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, registryUIFlag)
 		},

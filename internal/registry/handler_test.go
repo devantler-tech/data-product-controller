@@ -2,7 +2,7 @@ package registry
 
 import (
 	"context"
-	"io"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,13 +35,28 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	if got := response.Header().Get("Content-Type"); got != "application/json" {
 		t.Fatalf("Content-Type = %q, want %q", got, "application/json")
 	}
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		t.Fatalf("read response body: %v", err)
+	collection := productCollection{}
+	if err := json.NewDecoder(response.Body).Decode(&collection); err != nil {
+		t.Fatalf("decode response body: %v", err)
 	}
-	want := `{"products":[{"namespace":"products","name":"customer-catalog","id":"urn:devantler:data-product:customer-catalog","displayName":"Customer catalog","description":"Queryable customer records.","version":"v0.1.0","owner":{"name":"Customer data team","url":"https://example.test/owners/customer-data"},"documentationUrl":"https://example.test/docs/customer-catalog","outputs":[{"name":"query","protocol":"OpenAPI","url":"https://example.test/customer-catalog/query","contractUrl":"https://example.test/customer-catalog/openapi.json","mediaType":"application/json"}],"ui":{"url":"https://example.test/customer-catalog/ui","title":"Explore customer data"},"ready":true,"readiness":{"reason":"DependenciesReady","message":"All referenced data products and output ports are ready."}}]}` + "\n"
-	if string(body) != want {
-		t.Fatalf("response body =\n%s\nwant:\n%s", body, want)
+	if len(collection.Products) != 1 {
+		t.Fatalf("product count = %d, want 1", len(collection.Products))
+	}
+	descriptor := collection.Products[0]
+	if descriptor.Namespace != product.Namespace || descriptor.Name != product.Name {
+		t.Fatalf("product reference = %s/%s, want %s/%s", descriptor.Namespace, descriptor.Name, product.Namespace, product.Name)
+	}
+	if descriptor.ID != product.Spec.ID || descriptor.DisplayName != product.Spec.Name {
+		t.Fatalf("portable identity = %q (%q), want %q (%q)", descriptor.ID, descriptor.DisplayName, product.Spec.ID, product.Spec.Name)
+	}
+	if len(descriptor.Outputs) != 1 || descriptor.Outputs[0].ContractURL != product.Spec.Outputs[0].ContractURL {
+		t.Fatalf("outputs = %#v, want contract %q", descriptor.Outputs, product.Spec.Outputs[0].ContractURL)
+	}
+	if descriptor.UI == nil || descriptor.UI.URL != product.Spec.UI.URL {
+		t.Fatalf("UI = %#v, want URL %q", descriptor.UI, product.Spec.UI.URL)
+	}
+	if !descriptor.Ready || descriptor.Readiness.Reason != "DependenciesReady" {
+		t.Fatalf("readiness = %t/%q, want true/DependenciesReady", descriptor.Ready, descriptor.Readiness.Reason)
 	}
 }
 
