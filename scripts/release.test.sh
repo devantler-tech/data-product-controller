@@ -13,6 +13,8 @@ fail() {
   exit 1
 }
 
+command -v yq >/dev/null 2>&1 || fail 'yq is required to validate release manifests'
+
 grep -Eq 'uses: devantler-tech/actions/\.github/workflows/publish-app\.yaml@[0-9a-f]{40}' "$workflow" ||
   fail 'CD must call the immutable shared publish-app workflow'
 grep -F 'app-name: data-product-controller' "$workflow" >/dev/null ||
