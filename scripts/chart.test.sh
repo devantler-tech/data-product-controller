@@ -29,7 +29,7 @@ default_render=$(helm template data-product-controller "$chart")
 cmp "$generated_crd" "$chart_crd" || fail "generated CRD copies differ"
 assert_contains "$default_render" 'value: "false"'
 assert_not_contains "$default_render" 'kind: HTTPRoute'
-assert_contains "$default_render" 'kind: DataProduct'
+assert_not_contains "$default_render" 'name: harbour-observations'
 assert_contains "$default_render" 'kind: CustomResourceDefinition'
 assert_contains "$default_render" 'resources: [leases]'
 assert_contains "$default_render" 'verbs: [get, list, watch, create, update, patch, delete]'
@@ -40,6 +40,7 @@ hosted_render=$(helm template data-product-controller "$chart" \
   --set route.host=data-products.example.test)
 assert_contains "$hosted_render" 'value: "true"'
 assert_contains "$hosted_render" 'kind: HTTPRoute'
+assert_contains "$hosted_render" 'name: harbour-observations'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/ui'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/openapi.json'
 

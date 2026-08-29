@@ -1,4 +1,4 @@
-{{- if .Values.demoProduct.enabled }}
+{{- if and .Values.demoProduct.enabled .Values.route.enabled }}
 apiVersion: data.devantler.tech/v1alpha1
 kind: DataProduct
 metadata:
