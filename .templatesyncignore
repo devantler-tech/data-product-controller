@@ -44,6 +44,8 @@ Dockerfile
 Dockerfile.goreleaser
 .dockerignore
 .github/workflows/publish-chart.yaml
+# Copilot is disabled for this repository; never restore its agent setup workflow.
+.github/workflows/copilot-setup-steps.yml
 
 # --- The instance's own Go module and code ---
 # The module path, entrypoint, and packages are repointed by
