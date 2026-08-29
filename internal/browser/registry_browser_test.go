@@ -66,11 +66,13 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 	browser := rod.New().ControlURL(controlURL).MustConnect()
 	t.Cleanup(func() { _ = browser.Close() })
 
-	page := browser.MustPage(registryServer.URL).MustWaitStable()
-	page.MustElement(".product-card").MustClick()
-	productFrame := page.MustElement("#product-surface").MustFrame().MustWaitStable()
+	page := browser.MustPage(registryServer.URL).MustWaitLoad()
+	page.MustElement(".product-card").MustWaitVisible().MustClick()
+	productFrame := page.MustElement("#product-surface").MustFrame().MustWaitLoad()
 
-	status := productFrame.MustElement("#status").MustText()
+	statusElement := productFrame.MustElement("#status")
+	statusElement.MustWait(`() => this.textContent === '2 observations'`)
+	status := statusElement.MustText()
 	if status != "2 observations" {
 		t.Fatalf("embedded product status = %q, want %q", status, "2 observations")
 	}
