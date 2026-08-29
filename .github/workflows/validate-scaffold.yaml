@@ -1,0 +1,49 @@
+name: 🧱 Validate Scaffold
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+# Template-repo-only scaffold-integrity gate for three non-Go surfaces:
+#   * scripts/rename-placeholders.sh — the first thing a newcomer runs after
+#     `Use this template`; a silent regression ships broken to every generated
+#     project.
+#   * .github/scripts/run-mockery.sh — the pre-commit `mockery` hook's entry
+#     point; a regression makes every fresh clone's first commit fail.
+#   * CLAUDE.md / GEMINI.md — exact one-line includes of canonical AGENTS.md;
+#     copied guidance would create a second source that silently drifts.
+# This job runs ONLY in the template repo; it no-ops in projects created from it
+# (the guard below is false there), mirroring how cd.yaml/release.yaml run only
+# downstream. Generated projects delete the onboarding script and gate their own
+# code through whatever Go workflow their organisation injects (see AGENTS.md
+# *Validation*) — this repo has no such injection.
+jobs:
+  validate-scaffold:
+    name: Validate Scaffold
+    if: github.repository == 'devantler-tech/go-template'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # checkout
+    steps:
+      - name: 🔒 Harden runner
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+      - name: 📥 Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false # read-only job; never pushes
+      - name: 🤖 Validate agent instruction shims
+        run: sh scripts/validate-agent-shims.test.sh
+      - name: Check Go language-version floor
+        run: sh scripts/go-floor.test.sh
+      - name: 🐹 Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: 🧱 Validate onboarding (rename-placeholders.sh)
+        run: sh scripts/rename-placeholders.test.sh
+      - name: 🧪 Validate pre-commit mockery hook (run-mockery.sh)
+        run: sh .github/scripts/run-mockery.test.sh

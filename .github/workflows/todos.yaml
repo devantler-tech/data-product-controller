@@ -1,0 +1,15 @@
+---
+name: "TODOs"
+permissions:
+  contents: read
+  issues: write
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  todos:
+    uses: devantler-tech/actions/.github/workflows/scan-for-todo-comments.yaml@56665ea3f455622d6ff0cc0fb2b90fc3be6e41e7 # v13.2.2
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
