@@ -44,19 +44,40 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	}
 	descriptor := collection.Products[0]
 	if descriptor.Namespace != product.Namespace || descriptor.Name != product.Name {
-		t.Fatalf("product reference = %s/%s, want %s/%s", descriptor.Namespace, descriptor.Name, product.Namespace, product.Name)
+		t.Fatalf(
+			"product reference = %s/%s, want %s/%s",
+			descriptor.Namespace,
+			descriptor.Name,
+			product.Namespace,
+			product.Name,
+		)
 	}
 	if descriptor.ID != product.Spec.ID || descriptor.DisplayName != product.Spec.Name {
-		t.Fatalf("portable identity = %q (%q), want %q (%q)", descriptor.ID, descriptor.DisplayName, product.Spec.ID, product.Spec.Name)
+		t.Fatalf(
+			"portable identity = %q (%q), want %q (%q)",
+			descriptor.ID,
+			descriptor.DisplayName,
+			product.Spec.ID,
+			product.Spec.Name,
+		)
 	}
-	if len(descriptor.Outputs) != 1 || descriptor.Outputs[0].ContractURL != product.Spec.Outputs[0].ContractURL {
-		t.Fatalf("outputs = %#v, want contract %q", descriptor.Outputs, product.Spec.Outputs[0].ContractURL)
+	if len(descriptor.Outputs) != 1 ||
+		descriptor.Outputs[0].ContractURL != product.Spec.Outputs[0].ContractURL {
+		t.Fatalf(
+			"outputs = %#v, want contract %q",
+			descriptor.Outputs,
+			product.Spec.Outputs[0].ContractURL,
+		)
 	}
 	if descriptor.UI == nil || descriptor.UI.URL != product.Spec.UI.URL {
 		t.Fatalf("UI = %#v, want URL %q", descriptor.UI, product.Spec.UI.URL)
 	}
 	if !descriptor.Ready || descriptor.Readiness.Reason != "DependenciesReady" {
-		t.Fatalf("readiness = %t/%q, want true/DependenciesReady", descriptor.Ready, descriptor.Readiness.Reason)
+		t.Fatalf(
+			"readiness = %t/%q, want true/DependenciesReady",
+			descriptor.Ready,
+			descriptor.Readiness.Reason,
+		)
 	}
 }
 

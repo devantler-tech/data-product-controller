@@ -173,7 +173,3 @@ type DataProductList struct {
 
 	Items []DataProduct `json:"items"`
 }
-
-func init() {
-	SchemeBuilder.Register(&DataProduct{}, &DataProductList{})
-}
