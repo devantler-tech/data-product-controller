@@ -117,7 +117,10 @@ func main() {
 		go func() {
 			<-ctx.Done()
 
-			shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			shutdownContext, cancel := context.WithTimeout(
+				context.WithoutCancel(ctx),
+				10*time.Second,
+			)
 			defer cancel()
 
 			if err := registryServer.Shutdown(shutdownContext); err != nil {

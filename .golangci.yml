@@ -1,6 +1,7 @@
 version: "2"
 run:
   allow-parallel-runners: true
+  modules-download-mode: readonly
 formatters:
   enable:
     - gci
@@ -10,22 +11,44 @@ formatters:
     - golines
     - swaggo
 linters:
-  default: all
+  # Keep this list explicit: these checks target defects that can crash the
+  # controller, corrupt API responses, or weaken its network boundary. The
+  # Kubernetes API conventions deliberately use package globals and init
+  # registration, so enabling every stylistic linter is not meaningful here.
+  default: none
   enable:
-    - wsl_v5
-  disable:
-    - exhaustruct
-    - wsl
+    - asasalint
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - depguard
+    - durationcheck
+    - errcheck
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - makezero
+    - nilerr
+    - noctx
+    - protogetter
+    - reassign
+    - recvcheck
+    - staticcheck
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
   exclusions:
-    paths:
-      # Exclude auto-generated mock files from all linting rules
-      - ".*mocks.*\\.go$"
-      - ".*_mocks_.*\\.go$"
+    warn-unused: true
   settings:
-    wsl_v5:
-      allow-first-in-block: true
-      allow-whole-block: false
-      branch-max-lines: 2
     depguard:
       rules:
         main:
@@ -35,6 +58,7 @@ linters:
           list-mode: strict
           allow:
             - $gostd
+            - github.com/devantler-tech/data-product-controller
             # Portable runtime flag API — the feature-flag-first delivery
             # convention (see AGENTS.md ## Maintenance). Swap the provider for
             # flagd / a managed backend in a real service; call sites are stdlib.
@@ -44,3 +68,6 @@ linters:
             - k8s.io/apimachinery
             - k8s.io/client-go
             - sigs.k8s.io/controller-runtime
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

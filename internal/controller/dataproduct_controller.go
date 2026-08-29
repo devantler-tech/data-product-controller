@@ -62,7 +62,7 @@ func (r *DataProductReconciler) requestsForDependency(
 	}
 
 	sort.Slice(requests, func(left, right int) bool {
-		return requests[left].NamespacedName.String() < requests[right].NamespacedName.String()
+		return requests[left].String() < requests[right].String()
 	})
 
 	return requests

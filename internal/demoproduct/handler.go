@@ -4,6 +4,7 @@ package demoproduct
 import (
 	"embed"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -80,9 +81,11 @@ func observationsHandler(response http.ResponseWriter, request *http.Request) {
 
 	response.Header().Set("Content-Type", "application/json")
 	response.Header().Set("Cache-Control", "public, max-age=60")
-	_ = json.NewEncoder(response).Encode(struct {
+	if err := json.NewEncoder(response).Encode(struct {
 		Items []observation `json:"items"`
-	}{Items: items})
+	}{Items: items}); err != nil {
+		slog.ErrorContext(request.Context(), "encode observations", "error", err)
+	}
 }
 
 func openAPIHandler(response http.ResponseWriter, request *http.Request) {

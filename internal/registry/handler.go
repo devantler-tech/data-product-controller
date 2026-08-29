@@ -73,6 +73,9 @@ func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request
 
 	setUISecurityHeaders(writer)
 	writer.Header().Set("Content-Type", contentType)
+	// contents are read from the compile-time embedded UI bundle, never from
+	// the request path or another untrusted source.
+	//nolint:gosec
 	_, _ = writer.Write(contents)
 }
 

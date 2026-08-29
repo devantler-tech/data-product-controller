@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,6 +16,13 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("run demo data product", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	address := flag.String("listen-address", ":8080", "Address for the example data product.")
 	flag.Parse()
 
@@ -29,8 +37,12 @@ func main() {
 	go func() {
 		<-stopContext.Done()
 
-		shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		shutdownContext, cancel := context.WithTimeout(
+			context.WithoutCancel(stopContext),
+			10*time.Second,
+		)
 		defer cancel()
+
 		if err := server.Shutdown(shutdownContext); err != nil {
 			slog.Error("shut down demo product", "error", err)
 		}
@@ -38,7 +50,8 @@ func main() {
 
 	slog.Info("starting demo data product", "address", *address)
 	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		slog.Error("run demo data product", "error", err)
-		os.Exit(1)
+		return fmt.Errorf("listen and serve: %w", err)
 	}
+
+	return nil
 }
