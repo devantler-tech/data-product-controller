@@ -7,6 +7,7 @@ deployment="$repo_root/deploy/deployment.yaml"
 deploy_kustomization="$repo_root/deploy/kustomization.yaml"
 deploy_namespace="$repo_root/deploy/namespace.yaml"
 deploy_rbac="$repo_root/deploy/rbac.yaml"
+generated_rbac="$repo_root/config/rbac/role.yaml"
 chart="$repo_root/charts/data-product-controller/Chart.yaml"
 values="$repo_root/charts/data-product-controller/values.yaml"
 generated_crd="$repo_root/config/crd/bases/data.devantler.tech_dataproducts.yaml"
@@ -63,5 +64,15 @@ namespace_lease_rules=$(
   yq ea '[select(.kind == "Role") | .rules[] | select(.resources[] == "leases")] | length' "$deploy_rbac"
 )
 [ "$namespace_lease_rules" = '1' ] || fail 'deploy Role must grant Lease access in data-product-system'
+generated_cluster_lease_rules=$(
+  yq ea '[select(.kind == "ClusterRole") | .rules[] | select(.resources[] == "leases")] | length' "$generated_rbac"
+)
+[ "$generated_cluster_lease_rules" = '0' ] ||
+  fail 'controller-gen output must not grant cross-namespace Lease access'
+generated_namespace_lease_rules=$(
+  yq ea '[select(.kind == "Role" and .metadata.namespace == "data-product-system") | .rules[] | select(.resources[] == "leases")] | length' "$generated_rbac"
+)
+[ "$generated_namespace_lease_rules" = '1' ] ||
+  fail 'controller-gen output must grant Lease access only in data-product-system'
 
 printf '%s\n' 'release contract tests passed'
