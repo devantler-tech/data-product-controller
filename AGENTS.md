@@ -38,6 +38,7 @@ Run before every PR:
 golangci-lint fmt
 go build ./...
 go test ./...
+go test -tags=browser ./internal/browser
 sh scripts/chart.test.sh
 sh scripts/release.test.sh
 helm lint charts/data-product-controller

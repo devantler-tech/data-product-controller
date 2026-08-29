@@ -79,6 +79,25 @@ func TestHandlerQueriesProductData(t *testing.T) {
 	}
 }
 
+func TestHandlerAllowsSandboxedProductUIToReadPublicData(t *testing.T) {
+	t.Parallel()
+
+	request := httptest.NewRequest(http.MethodGet, "/api/observations", nil)
+	request.Header.Set("Origin", "null")
+	response := httptest.NewRecorder()
+	demoproduct.NewHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+	if got := response.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, "*")
+	}
+	if got := response.Header().Get("Access-Control-Allow-Credentials"); got != "" {
+		t.Fatalf("Access-Control-Allow-Credentials = %q, want no credential sharing", got)
+	}
+}
+
 func TestHandlerRejectsUnsupportedMethods(t *testing.T) {
 	t.Parallel()
 

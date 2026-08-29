@@ -12,6 +12,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  browser:
+    name: Validate sandboxed product interaction
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Exercise registry to sandboxed product query
+        run: go test -tags=browser ./internal/browser
+
   release-contract:
     name: Validate release contract
     runs-on: ubuntu-latest
@@ -28,11 +48,13 @@ jobs:
 
   required-checks:
     name: CI - Required Checks
-    needs: [release-contract]
+    needs: [browser, release-contract]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: ✅ Require checks in PR
         uses: devantler-tech/actions/aggregate-job-checks@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
         with:
-          job-results: ${{ needs.release-contract.result }}
+          job-results: >-
+            ${{ needs.browser.result }}
+            ${{ needs.release-contract.result }}

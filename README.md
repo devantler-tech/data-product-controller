@@ -89,6 +89,7 @@ The UI remains off when `registryUI.enabled` is omitted. For repository developm
 
 ```bash
 go test ./...
+go test -tags=browser ./internal/browser
 go build ./...
 sh scripts/chart.test.sh
 sh scripts/release.test.sh

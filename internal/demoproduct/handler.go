@@ -64,6 +64,12 @@ func observationsHandler(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// The registry deliberately gives embedded product UIs an opaque origin by
+	// omitting allow-same-origin from the iframe sandbox. This output is public
+	// and credential-free, so allow that UI (and other catalogues) to read it
+	// without granting cookies or authorization headers.
+	response.Header().Set("Access-Control-Allow-Origin", "*")
+
 	station := strings.ToLower(strings.TrimSpace(request.URL.Query().Get("station")))
 	items := make([]observation, 0, len(observations))
 	for _, item := range observations {
