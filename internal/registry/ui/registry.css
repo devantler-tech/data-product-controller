@@ -9,6 +9,7 @@
   --quiet: #5e7377;
   --line: #bfd2cc;
   --shadow: 0 24px 60px rgb(16 42 53 / 10%);
+
   font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -80,7 +81,7 @@ footer {
   align-items: center;
   margin: 0;
   color: var(--quiet);
-  font: 600 0.72rem/1.2 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font: 600 0.72rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -105,7 +106,7 @@ footer {
 .eyebrow {
   margin: 0 0 0.8rem;
   color: var(--lagoon);
-  font: 700 0.72rem/1.2 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font: 700 0.72rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: 0.13em;
   text-transform: uppercase;
 }
@@ -216,7 +217,7 @@ h2 {
 .count,
 .status {
   color: var(--quiet);
-  font: 600 0.72rem/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font: 600 0.72rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -289,7 +290,7 @@ h2 {
 
 .product-version {
   color: var(--lagoon);
-  font: 600 0.72rem/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font: 600 0.72rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
 .interaction-panel {
@@ -340,7 +341,7 @@ h2 {
 footer {
   padding: 0 0 3rem;
   color: var(--quiet);
-  font: 600 0.72rem/1.4 ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font: 600 0.72rem/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }

@@ -32,7 +32,7 @@ main {
 h1 {
   max-width: 12ch;
   margin: .4rem 0 1rem;
-  font-family: Iowan Old Style, Palatino Linotype, serif;
+  font-family: "Iowan Old Style", "Palatino Linotype", serif;
   font-size: clamp(2.8rem, 8vw, 6.6rem);
   font-weight: 400;
   line-height: .9;
