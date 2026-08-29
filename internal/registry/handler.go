@@ -150,9 +150,14 @@ func descriptorFor(product *datav1alpha1.DataProduct) productDescriptor {
 	}
 	ready := false
 	if condition != nil {
-		readiness.Reason = condition.Reason
-		readiness.Message = condition.Message
-		ready = condition.Status == "True"
+		if condition.ObservedGeneration != product.Generation {
+			readiness.Reason = "StatusStale"
+			readiness.Message = "The controller has not reconciled the current product generation."
+		} else {
+			readiness.Reason = condition.Reason
+			readiness.Message = condition.Message
+			ready = condition.Status == "True"
+		}
 	}
 
 	return productDescriptor{

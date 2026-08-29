@@ -113,6 +113,23 @@ func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
 	}
 }
 
+func TestDescriptorTreatsStaleReadinessAsUnready(t *testing.T) {
+	t.Parallel()
+
+	product := registryProduct()
+	product.Generation = 2
+	product.Status.Conditions[0].ObservedGeneration = 1
+
+	descriptor := descriptorFor(product)
+
+	if descriptor.Ready {
+		t.Fatal("stale Ready condition exposed the changed product as ready")
+	}
+	if descriptor.Readiness.Reason != "StatusStale" {
+		t.Fatalf("readiness reason = %q, want StatusStale", descriptor.Readiness.Reason)
+	}
+}
+
 func registryProduct() *datav1alpha1.DataProduct {
 	return &datav1alpha1.DataProduct{
 		ObjectMeta: metav1.ObjectMeta{Name: "customer-catalog", Namespace: "products"},
