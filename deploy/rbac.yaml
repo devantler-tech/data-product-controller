@@ -9,9 +9,6 @@ rules:
   - apiGroups: [data.devantler.tech]
     resources: [dataproducts/status]
     verbs: [get, patch, update]
-  - apiGroups: [coordination.k8s.io]
-    resources: [leases]
-    verbs: [get, list, watch, create, update, patch, delete]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -21,6 +18,30 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: data-product-controller
+subjects:
+  - kind: ServiceAccount
+    name: data-product-controller
+    namespace: data-product-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: data-product-controller-leader-election
+  namespace: data-product-system
+rules:
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, list, watch, create, update, patch, delete]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: data-product-controller-leader-election
+  namespace: data-product-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: data-product-controller-leader-election
 subjects:
   - kind: ServiceAccount
     name: data-product-controller

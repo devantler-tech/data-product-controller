@@ -11,6 +11,8 @@ fail() {
   exit 1
 }
 
+command -v yq >/dev/null 2>&1 || fail 'yq is required to validate rendered RBAC'
+
 assert_contains() {
   haystack=$1
   needle=$2
@@ -33,6 +35,17 @@ assert_not_contains "$default_render" 'name: harbour-observations'
 assert_contains "$default_render" 'kind: CustomResourceDefinition'
 assert_contains "$default_render" 'resources: [leases]'
 assert_contains "$default_render" 'verbs: [get, list, watch, create, update, patch, delete]'
+cluster_lease_rules=$(
+  printf '%s' "$default_render" |
+    yq ea '[select(.kind == "ClusterRole") | .rules[] | select(.resources[] == "leases")] | length' -
+)
+[ "$cluster_lease_rules" = '0' ] || fail 'ClusterRole must not grant cross-namespace Lease access'
+namespace_lease_rules=$(
+  printf '%s' "$default_render" |
+    yq ea '[select(.kind == "Role") | .rules[] | select(.resources[] == "leases")] | length' -
+)
+[ "$namespace_lease_rules" = '1' ] || fail 'Role must grant Lease access in the release namespace'
+assert_contains "$default_render" 'kind: RoleBinding'
 
 hosted_render=$(helm template data-product-controller "$chart" \
   --set registryUI.enabled=true \
