@@ -1,0 +1,37 @@
+name: Publish Helm chart
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions: {}
+
+concurrency:
+  group: publish-chart-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish chart to GHCR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # Checkout the tagged chart source.
+      packages: write # Publish the packaged Helm chart to this repository's GHCR namespace.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Package and publish
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GHCR_USER" --password-stdin
+          helm package charts/data-product-controller --version "$version" --app-version "$version"
+          helm push "data-product-controller-${version}.tgz" oci://ghcr.io/devantler-tech/charts

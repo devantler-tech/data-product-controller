@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-product-controller
+  labels:
+    app.kubernetes.io/name: data-product-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: data-product-controller
+    spec:
+      serviceAccountName: data-product-controller
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: data-product-controller
+          image: ghcr.io/devantler-tech/data-product-controller:latest
+          imagePullPolicy: IfNotPresent
+          command: [/manager]
+          args: [--leader-elect]
+          env:
+            - name: REGISTRY_UI_ENABLED
+              value: "false"
+          ports:
+            - name: registry
+              containerPort: 8082
+            - name: health
+              containerPort: 8081
+            - name: metrics
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 128Mi

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "data-product-controller.fullname" . }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: data-product-controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: controller
+  ports:
+    - name: http
+      port: 80
+      targetPort: registry

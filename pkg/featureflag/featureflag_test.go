@@ -7,28 +7,30 @@ import (
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 )
 
-func TestExampleFeature(t *testing.T) {
+func TestEnabled(t *testing.T) {
 	t.Parallel()
+
+	const flag = "registry-ui"
 
 	testCases := []struct {
 		name  string
 		flags map[string]bool
-		want  string
+		want  bool
 	}{
 		{
-			name:  "flag on serves the new path",
-			flags: map[string]bool{featureflag.ExampleFlag: true},
-			want:  "new feature output",
+			name:  "enabled",
+			flags: map[string]bool{flag: true},
+			want:  true,
 		},
 		{
-			name:  "flag off serves the default path",
-			flags: map[string]bool{featureflag.ExampleFlag: false},
-			want:  "default output",
+			name:  "disabled",
+			flags: map[string]bool{flag: false},
+			want:  false,
 		},
 		{
-			name:  "flag absent defaults off",
+			name:  "missing defaults off",
 			flags: map[string]bool{},
-			want:  "default output",
+			want:  false,
 		},
 	}
 
@@ -43,9 +45,9 @@ func TestExampleFeature(t *testing.T) {
 				t.Fatalf("NewClient(%q) returned error: %v", testCase.name, err)
 			}
 
-			got := featureflag.ExampleFeature(context.Background(), client)
+			got := featureflag.Enabled(context.Background(), client, flag)
 			if got != testCase.want {
-				t.Errorf("ExampleFeature() = %q, want %q", got, testCase.want)
+				t.Errorf("Enabled() = %t, want %t", got, testCase.want)
 			}
 		})
 	}

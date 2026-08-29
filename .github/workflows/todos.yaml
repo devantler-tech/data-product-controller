@@ -1,8 +1,6 @@
 ---
 name: "TODOs"
-permissions:
-  contents: read
-  issues: write
+permissions: {}
 on:
   workflow_dispatch:
   push:
@@ -10,6 +8,9 @@ on:
 
 jobs:
   todos:
+    permissions:
+      contents: read # Scan the repository source.
+      issues: write # Create and update TODO tracking issues.
     uses: devantler-tech/actions/.github/workflows/scan-for-todo-comments.yaml@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
