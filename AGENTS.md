@@ -15,6 +15,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `pkg/featureflag/` — OpenFeature boundary; the registry UI is default-off.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
+- `deploy/` — signed controller manifest artifact published with each release.
 - `docs/adr/` — architectural decisions.
 - `main.go` — controller manager and registry process.
 
@@ -38,6 +39,7 @@ golangci-lint fmt
 go build ./...
 go test ./...
 sh scripts/chart.test.sh
+sh scripts/release.test.sh
 helm lint charts/data-product-controller
 golangci-lint run
 ```

@@ -18,6 +18,8 @@ The current foundation provides:
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
 - a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing.
 
+Tagged releases publish the Helm chart plus a controller image and manifest artifact signed by the portfolio's trusted keyless release workflow. Platform deployments should pin the released chart and immutable image digest.
+
 Provisioners, source connectors, richer composition semantics, and data-space exchange are roadmap work rather than capabilities claimed by this first release. See the [roadmap epic](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Data product contract
@@ -89,6 +91,7 @@ The UI remains off when `registryUI.enabled` is omitted. For repository developm
 go test ./...
 go build ./...
 sh scripts/chart.test.sh
+sh scripts/release.test.sh
 helm lint charts/data-product-controller
 ```
 

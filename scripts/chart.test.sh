@@ -31,6 +31,8 @@ assert_contains "$default_render" 'value: "false"'
 assert_not_contains "$default_render" 'kind: HTTPRoute'
 assert_contains "$default_render" 'kind: DataProduct'
 assert_contains "$default_render" 'kind: CustomResourceDefinition'
+assert_contains "$default_render" 'resources: [leases]'
+assert_contains "$default_render" 'verbs: [get, list, watch, create, update, patch, delete]'
 
 hosted_render=$(helm template data-product-controller "$chart" \
   --set registryUI.enabled=true \

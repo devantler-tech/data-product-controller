@@ -23,6 +23,8 @@ import (
 
 const registryUIFlag = "registry-ui"
 
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
 func main() {
 	var metricsAddress string
 	var probeAddress string

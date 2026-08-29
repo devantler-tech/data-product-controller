@@ -1,55 +1,20 @@
 ---
-name: CD - Go
+name: Publish application
 on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
-permissions:
-  contents: write
-  packages: write
+permissions: {}
 
 jobs:
-  goreleaser:
-    name: Release with GoReleaser
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📑 Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: ⚙️ Setup Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          # Track the go.mod floor so the release toolchain never drifts below it
-          # (setup-go pins GOTOOLCHAIN=local for an explicit go-version, which then
-          # fails GoReleaser when go.mod requires a newer Go than was hardcoded).
-          go-version-file: go.mod
-          # Disable module cache restoration in release workflows to avoid
-          # cache-poisoning risk for runtime artifacts (see https://docs.zizmor.sh/audits/#cache-poisoning)
-          cache: false
-
-      - name: Install Mockery
-        run: go install github.com/vektra/mockery/v3@v3.5.4
-
-      - name: Add Go bin to PATH
-        run: echo "$HOME/go/bin" >> "$GITHUB_PATH"
-
-      - name: 🔐 Login to GHCR
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 🏗️ Run GoReleaser
-        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  publish:
+    name: Publish signed image and manifests
+    permissions:
+      contents: read # Checkout the tagged source.
+      packages: write # Publish the image and manifest artifact to GHCR.
+      id-token: write # Mint the keyless Sigstore signing identity.
+    uses: devantler-tech/actions/.github/workflows/publish-app.yaml@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
+    with:
+      app-name: data-product-controller
+      enable-caller-pin: true

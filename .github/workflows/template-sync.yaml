@@ -27,8 +27,8 @@ jobs:
     # without this the run fails at startup (reusable-workflow permission check)
     # — both here and in every instance where the job actually runs.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write # Push the template synchronization branch.
+      pull-requests: write # Open or update the synchronization pull request.
     uses: devantler-tech/actions/.github/workflows/template-sync.yaml@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
     with:
       source-repo-path: devantler-tech/go-template

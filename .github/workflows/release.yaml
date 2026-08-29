@@ -5,14 +5,15 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-  id-token: write
+permissions: {}
 
 jobs:
   release:
+    permissions:
+      contents: write # Create the release commit, tag, and GitHub release.
+      issues: write # Update release-driven issue state.
+      pull-requests: write # Update release-driven pull request state.
+      id-token: write # Mint the reusable workflow's GitHub App identity.
     uses: devantler-tech/actions/.github/workflows/create-release.yaml@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
