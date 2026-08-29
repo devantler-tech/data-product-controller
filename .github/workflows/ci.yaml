@@ -12,6 +12,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  core:
+    name: Validate controller, API, chart, and lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Run Go tests
+        run: go test -race -count=1 ./...
+
+      - name: Build all Go packages
+        run: go build ./...
+
+      - name: Validate chart behavior
+        run: sh scripts/chart.test.sh
+
+      - name: Lint Helm chart
+        run: helm lint charts/data-product-controller
+
+      - name: Lint Go code
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.10.1
+
   browser:
     name: Validate sandboxed product interaction
     runs-on: ubuntu-latest
@@ -48,7 +83,7 @@ jobs:
 
   required-checks:
     name: CI - Required Checks
-    needs: [browser, release-contract]
+    needs: [core, browser, release-contract]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -56,5 +91,6 @@ jobs:
         uses: devantler-tech/actions/aggregate-job-checks@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
         with:
           job-results: >-
+            ${{ needs.core.result }}
             ${{ needs.browser.result }}
             ${{ needs.release-contract.result }}
