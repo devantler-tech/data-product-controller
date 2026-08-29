@@ -1,0 +1,5 @@
+FROM gcr.io/distroless/static-debian13:nonroot
+COPY manager /manager
+COPY demo-product /demo-product
+USER 65532:65532
+ENTRYPOINT ["/manager"]

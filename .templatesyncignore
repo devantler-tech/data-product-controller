@@ -35,10 +35,15 @@ LICENSE
 # allowlist (stdlib + OpenFeature), so any real project must extend it — a
 # synced overwrite would clobber the project's dependency allowlist.
 .releaserc
+.goreleaser.yaml
 .gitignore
 .github/dependabot.yaml
 .golangci.yml
 cspell.json
+Dockerfile
+Dockerfile.goreleaser
+.dockerignore
+.github/workflows/publish-chart.yaml
 
 # --- The instance's own Go module and code ---
 # The module path, entrypoint, and packages are repointed by
@@ -52,6 +57,11 @@ main.go
 cmd/
 internal/
 pkg/
+api/
+charts/
+config/
+docs/
+scripts/chart.test.sh
 
 # --- Scaffolding machinery (template-only; dead code in a live instance) ---
 # These run when a NEW repo is created from this template ("use this template"

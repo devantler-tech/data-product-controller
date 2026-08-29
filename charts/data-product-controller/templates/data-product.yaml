@@ -1,0 +1,26 @@
+{{- if .Values.demoProduct.enabled }}
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: harbour-observations
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+spec:
+  id: https://{{ .Values.route.host }}/products/harbour
+  name: Harbour observations
+  description: Queryable temperature and salinity observations from Copenhagen harbour.
+  version: v1.0.0
+  owner:
+    name: devantler-tech
+    url: https://github.com/devantler-tech/data-product-controller
+  documentationUrl: https://github.com/devantler-tech/data-product-controller
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://{{ .Values.route.host }}/products/harbour/api/observations
+      contractUrl: https://{{ .Values.route.host }}/products/harbour/openapi.json
+      mediaType: application/json
+  ui:
+    title: Explore harbour observations
+    url: https://{{ .Values.route.host }}/products/harbour/ui
+{{- end }}

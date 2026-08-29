@@ -1,106 +1,109 @@
-# Go Template
+# data-product-controller
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Go Report Card](https://goreportcard.com/badge/github.com/devantler-tech/data-product-controller)](https://goreportcard.com/report/github.com/devantler-tech/data-product-controller)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Go Reference](https://pkg.go.dev/badge/github.com/devantler-tech/data-product-controller.svg)](https://pkg.go.dev/github.com/devantler-tech/data-product-controller)
 
-A minimal, batteries-included Go template for new projects. Skip the boilerplate — start from a clean, idiomatic scaffold with linting, CI/CD, releases, and agent tooling already wired up.
+A cloud-native control plane for self-describing, composable data products.
 
-## ✨ What's included
+`data.devantler.tech/v1alpha1` describes a data capability through ownership, inputs, outputs, standard machine-readable contracts, and an optional independently deployed user interface. The controller resolves product-to-product dependencies and reports readiness. A read-only registry and reference UI discover products from Kubernetes without compiling product-specific code into the catalogue.
 
-- **Idiomatic scaffold** — a no-op `main.go` plus the conventional `cmd/`, `internal/`, and `pkg/` layout, ready for your first package. A minimal [`pkg/example`](pkg/example) package with a table-driven test shows the house testing pattern — replace it with your own.
-- **Feature-flag-first** — [`pkg/featureflag`](pkg/featureflag) wires the portable [OpenFeature](https://openfeature.dev/) Go SDK so a **service** can land every new feature behind a flag, default-off, and flip it on only after validation (swap the in-memory provider for [flagd](https://flagd.dev/) or a managed backend). A **CLI** can stay dependency-free instead — gate experimental commands behind cobra `Hidden` + an `--experimental` opt-in, reaching for the SDK only when you need richer evaluation. Delete it when you add your own.
-- **Linting & formatting** — ready-to-use [`golangci-lint`](https://golangci-lint.run/) v2 (formatters + `default: all` linters) and [MegaLinter](https://megalinter.io/) configs. A [pre-commit](https://pre-commit.com/) hook runs `golangci-lint` formatting (and `mockery` mock generation) locally on commit; in CI they run wherever your organisation injects a Go workflow (see [*Validation*](AGENTS.md#validation)).
-- **CI/CD** — a required-checks workflow on pull requests and the merge queue, plus a [GoReleaser](https://goreleaser.com/) release pipeline (`cd.yaml`) triggered on `v*` tags.
-- **Coverage** — a `go test` coverage config ready to report via [GitHub Code Quality](https://docs.github.com/code-security/code-quality) once your CI runs it.
-- **Dependency management** — [Dependabot](https://docs.github.com/code-security/dependabot) keeps Go modules and pinned GitHub Actions current (daily).
-- **Agent-ready** — [`AGENTS.md`](AGENTS.md) conventions and a `.claude/skills/maintain` card so the autonomous Daily AI Assistant (and any agentic tool) can maintain the repo.
+## Foundation
 
-The minimum Go version is declared in [`go.mod`](go.mod) — the single source of truth.
+The current foundation provides:
 
-## 🚀 Use this template
+- a namespaced `DataProduct` CRD with guarded HTTPS interfaces and stable URI identity;
+- composition through named output references, with dependency-aware readiness conditions;
+- a portable JSON descriptor registry at `/api/v1/products`;
+- a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
+- an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
+- a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing.
 
-Create a new repository from the template with the GitHub CLI:
+Provisioners, source connectors, richer composition semantics, and data-space exchange are roadmap work rather than capabilities claimed by this first release. See the [roadmap epic](https://github.com/devantler-tech/data-product-controller/issues/1).
 
-```bash
-gh repo create my-project --template devantler-tech/go-template --public --clone
-cd my-project
+## Data product contract
+
+```yaml
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: harbour-observations
+spec:
+  id: https://data-products.example.com/products/harbour
+  name: Harbour observations
+  description: Queryable temperature and salinity observations.
+  version: v1.0.0
+  owner:
+    name: data-platform-team
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://data-products.example.com/products/harbour/api/observations
+      contractUrl: https://data-products.example.com/products/harbour/openapi.json
+      mediaType: application/json
+  ui:
+    title: Explore harbour observations
+    url: https://data-products.example.com/products/harbour/ui
 ```
 
-Or click **Use this template** on the [repository page](https://github.com/devantler-tech/go-template).
+Another product composes this output without copying its data:
 
-Then personalise the scaffold — repoint the module path (in `go.mod`, the Go
-imports, and the README badges) in one shot:
-
-```bash
-scripts/rename-placeholders.sh github.com/<you>/my-project
+```yaml
+spec:
+  inputs:
+    - name: harbour
+      productRef:
+        name: harbour-observations
+        output: observations
 ```
 
-Run with no argument to derive the path from your `origin` GitHub remote. The
-script leaves the upstream **Use this template** links above untouched, runs
-`go mod tidy`, and you can review the result with `git diff`. (Prefer to do it
-by hand? `go mod edit -module github.com/<you>/my-project && go mod tidy`.)
+The custom resource is control-plane metadata. Product data and credentials do not belong in the Kubernetes API. Credentials remain in Secrets consumed directly by provisioner or connector workloads.
 
-## 🔄 Staying current
+## Decentralized UI contract
 
-A weekly **template-sync** workflow opens a PR in your repository whenever this
-template's shared plumbing changes, so instances never drift from the
-portfolio's CI/lint/agent-file conventions. It never touches your code: every
-file falls into one of three ownership classes:
+The `spec.ui.url` page belongs to the data product, not the registry. A compatible catalogue may render it in a sandboxed iframe or link to it directly. The reference registry:
 
-- **Template-owned plumbing** — synced downstream by the weekly PR: the
-  `.github/workflows/` CI/CD/release workflows, the shared lint configs
-  (`.mega-linter.yml`, `.pre-commit-config.yaml`, `.editorconfig`,
-  `.gitattributes`), and the `CLAUDE.md`/`GEMINI.md` shims.
-  Change these upstream in the template, never by hand in an instance.
-- **Instance-owned** — listed in [`.templatesyncignore`](.templatesyncignore),
-  never touched by a sync: your Go module and code (`go.mod`, `go.sum`,
-  `main.go`, `cmd/`, `internal/`, all of `pkg/`), identity and docs
-  (`README.md`, `AGENTS.md`, `LICENSE`, `CODEOWNERS`), and the configs you
-  tailor (`.releaserc`, `.gitignore`, `dependabot.yaml`, `.golangci.yml` —
-  its depguard allowlist grows with your dependencies — and `cspell.json`).
-- **Scaffold-time-only** — the rename script and the template's own
-  `validate-scaffold.yaml` gate arrive when the repo is created and are ignored
-  by sync afterwards, so you can delete them and they stay gone.
+- loads only absolute HTTPS URLs supplied by the product descriptor;
+- uses `sandbox="allow-forms allow-scripts"` without `allow-same-origin`;
+- passes no bearer token, Secret, or Kubernetes identity;
+- never imports product JavaScript into the catalogue document.
 
-The sync workflow no-ops in this template repository itself. In devantler-tech
-instances it works out of the box (the org provides the App credentials); an
-instance elsewhere is off by default — opt in by supplying your own GitHub App
-(one allowed to open PRs in your repository): add its private key as the
-`APP_PRIVATE_KEY` secret, its client ID as the `APP_CLIENT_ID` repository
-variable (the reusable workflow mints its token from that variable/secret
-pair), and set the repository variable `TEMPLATE_SYNC_ENABLED=true`. Note that
-outside devantler-tech the synced `ci.yaml` is only an empty required-check
-aggregator (the real build/test workflows are injected by devantler-tech org
-rulesets): replace it with your own CI and add `.github/workflows/ci.yaml` to
-your `.templatesyncignore` so later syncs preserve your version.
+This keeps each product portable across the reference registry and third-party catalogue implementations. Cross-window capabilities and authentication are deliberately deferred until they have a versioned, least-privilege protocol.
 
-## 📝 Usage
+## Install
 
-### Add a dependency
+Install the chart with the registry UI explicitly enabled and an existing Gateway API listener:
 
 ```bash
-go get example.com/awesome-lib@latest
+helm upgrade --install data-product-controller \
+  oci://ghcr.io/devantler-tech/charts/data-product-controller \
+  --namespace data-product-system \
+  --create-namespace \
+  --set registryUI.enabled=true \
+  --set route.enabled=true \
+  --set route.host=data-products.example.com
 ```
 
-### Build your project
-
-```bash
-go build ./...
-```
-
-### Run your project
-
-```bash
-go run .
-```
-
-### Test your project
+The UI remains off when `registryUI.enabled` is omitted. For repository development:
 
 ```bash
 go test ./...
+go build ./...
+sh scripts/chart.test.sh
+helm lint charts/data-product-controller
 ```
 
-## 🤖 Maintenance
+Regenerate CRDs and RBAC after editing API markers:
 
-This template is maintained by an autonomous AI assistant. The conventions, validation commands, and contribution workflow live in [`AGENTS.md`](AGENTS.md).
+```bash
+go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
+  rbac:roleName=manager-role crd paths=./... \
+  output:crd:artifacts:config=config/crd/bases \
+  output:rbac:artifacts:config=config/rbac
+go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
+  crd paths=./api/... \
+  output:crd:artifacts:config=charts/data-product-controller/templates
+```
+
+## Design
+
+[ADR 0001](docs/adr/0001-portable-data-product-control-plane.md) records why the Kubernetes resource stays a small control-plane profile and how products remain portable. The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base). This release does not claim full conformance with those standards.

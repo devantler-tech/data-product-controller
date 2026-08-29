@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>Data product constellation</title>
+    <link rel="stylesheet" href="/assets/registry.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#products">Skip to products</a>
+    <header class="masthead">
+      <div class="wordmark" aria-label="Data product controller">
+        <span class="mark" aria-hidden="true">⬡</span>
+        <span>data products</span>
+      </div>
+      <p class="environment"><span aria-hidden="true"></span> live registry</p>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">Composable by contract</p>
+        <h1 id="page-title">A constellation of data you can actually use.</h1>
+        <p class="lede">
+          Each product owns its source, interfaces, and interaction surface. This registry only
+          discovers the contract and gives you a safe place to open it.
+        </p>
+        <div class="lineage-signal" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+
+      <section class="workspace" id="products" aria-labelledby="products-title">
+        <div class="catalog-panel">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Available now</p>
+              <h2 id="products-title">Data products</h2>
+            </div>
+            <p id="product-count" class="count" aria-live="polite">Loading…</p>
+          </div>
+          <div id="registry-status" class="status" role="status">Reading product contracts…</div>
+          <div id="data-product-grid" class="product-grid" aria-live="polite"></div>
+        </div>
+
+        <aside class="interaction-panel" aria-labelledby="interaction-title">
+          <div class="interaction-copy">
+            <p class="eyebrow">Independent surface</p>
+            <h2 id="interaction-title">Choose a product to work with its data.</h2>
+            <p id="interaction-description">
+              Product interfaces open here from their own published URL. The registry does not ship
+              or import their code.
+            </p>
+          </div>
+          <iframe
+            id="product-surface"
+            title="Selected data product"
+            sandbox="allow-forms allow-scripts"
+            referrerpolicy="no-referrer"
+            hidden
+          ></iframe>
+          <div id="surface-empty" class="surface-empty">
+            <span aria-hidden="true">↗</span>
+            <p>The next surface comes from the product, not this registry.</p>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      <p>One contract. Many producers. No central release train.</p>
+    </footer>
+    <script src="/assets/registry.js" defer></script>
+  </body>
+</html>
