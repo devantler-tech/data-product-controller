@@ -32,6 +32,8 @@ kind: Role
 metadata:
   name: {{ include "data-product-controller.fullname" . }}-leader-election
   namespace: {{ .Release.Namespace }}
+  annotations:
+    checkov.io/skip1: CKV_K8S_21=Helm installs this resource into the tested release namespace.
   labels:
     {{- include "data-product-controller.labels" . | nindent 4 }}
 rules:
@@ -44,6 +46,8 @@ kind: RoleBinding
 metadata:
   name: {{ include "data-product-controller.fullname" . }}-leader-election
   namespace: {{ .Release.Namespace }}
+  annotations:
+    checkov.io/skip1: CKV_K8S_21=Helm installs this resource into the tested release namespace.
   labels:
     {{- include "data-product-controller.labels" . | nindent 4 }}
 roleRef:

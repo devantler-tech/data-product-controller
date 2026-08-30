@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "data-product-controller.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: controller
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: registry
+        - port: health
+        - port: metrics
+{{- if .Values.demoProduct.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "data-product-controller.fullname" . }}-harbour
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: harbour-product
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: http
+{{- end }}

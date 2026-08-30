@@ -2,6 +2,11 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: data-product-controller
+  namespace: data-product-system
+  annotations:
+    checkov.io/skip1: CKV_K8S_14=publish-app replaces the :latest placeholder with the released image before publication.
+    checkov.io/skip2: CKV_K8S_38=The controller requires its scoped service-account token to watch and reconcile DataProducts.
+    checkov.io/skip3: CKV_K8S_43=publish-app replaces the source placeholder with the released immutable digest.
   labels:
     app.kubernetes.io/name: data-product-controller
 spec:
@@ -17,12 +22,14 @@ spec:
       serviceAccountName: data-product-controller
       securityContext:
         runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: data-product-controller
           image: ghcr.io/devantler-tech/data-product-controller:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           command: [/manager]
           args: [--leader-elect]
           env:
@@ -53,4 +60,5 @@ spec:
               cpu: 25m
               memory: 64Mi
             limits:
+              cpu: 100m
               memory: 128Mi

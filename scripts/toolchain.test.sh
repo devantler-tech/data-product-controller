@@ -16,8 +16,8 @@ gomod="$repo_root/go.mod"
 dockerfile="$repo_root/Dockerfile"
 
 fail() {
-  printf '%s\n' "toolchain test failed: $1" >&2
-  exit 1
+	printf '%s\n' "toolchain test failed: $1" >&2
+	exit 1
 }
 
 [ -f "$gomod" ] || fail "go.mod not found at $gomod"
@@ -37,7 +37,7 @@ builder_version=${builder_version%%-*}
 [ -n "$builder_version" ] || fail "could not parse a version from Dockerfile image '$builder'"
 
 if [ "$builder_version" != "$go_directive" ]; then
-  fail "Dockerfile builder '$builder' does not match go.mod 'go $go_directive'.
+	fail "Dockerfile builder '$builder' does not match go.mod 'go $go_directive'.
   The official golang image defaults to GOTOOLCHAIN=local, so a builder behind the
   go directive fails the build, and one ahead of it ships a stdlib the directive
   does not describe. Pin the build stage to golang:${go_directive}-alpine."

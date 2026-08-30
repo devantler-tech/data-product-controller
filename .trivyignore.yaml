@@ -1,0 +1,15 @@
+misconfigurations:
+  - id: KSV-0013
+    paths:
+      - deploy/deployment.yaml
+    statement: The published manifest uses latest only as the tested immutable digest substitution contract.
+  - id: KSV-0125
+    paths:
+      - charts/data-product-controller/templates/controller-deployment.yaml
+      - charts/data-product-controller/templates/demo-deployment.yaml
+      - deploy/deployment.yaml
+    statement: The chart and release contracts constrain workload images to the organization-owned GHCR repository.
+  - id: DS-0026
+    paths:
+      - Dockerfile
+    statement: Kubernetes readiness and liveness probes cover both binaries in this multi-entrypoint image.
