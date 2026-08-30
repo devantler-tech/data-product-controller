@@ -56,9 +56,9 @@ go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   output:rbac:artifacts:config=config/rbac
 go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   crd paths=./api/... \
-  output:crd:artifacts:config=charts/data-product-controller/templates
+  output:crd:artifacts:config=charts/data-product-controller/crds
 cmp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/data-product-controller/templates/data.devantler.tech_dataproducts.yaml
+  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
 ```
 
 ## Development rules

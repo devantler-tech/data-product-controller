@@ -12,7 +12,7 @@ chart="$repo_root/charts/data-product-controller/Chart.yaml"
 values="$repo_root/charts/data-product-controller/values.yaml"
 generated_crd="$repo_root/config/crd/bases/data.devantler.tech_dataproducts.yaml"
 deploy_crd="$repo_root/deploy/data.devantler.tech_dataproducts.yaml"
-chart_crd="$repo_root/charts/data-product-controller/templates/data.devantler.tech_dataproducts.yaml"
+chart_crd="$repo_root/charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml"
 
 fail() {
   printf '%s\n' "release contract test failed: $1" >&2

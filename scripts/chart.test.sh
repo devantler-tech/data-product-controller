@@ -4,7 +4,7 @@ set -eu
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 chart="$repo_root/charts/data-product-controller"
 generated_crd="$repo_root/config/crd/bases/data.devantler.tech_dataproducts.yaml"
-chart_crd="$chart/templates/data.devantler.tech_dataproducts.yaml"
+chart_crd="$chart/crds/data.devantler.tech_dataproducts.yaml"
 
 fail() {
   printf '%s\n' "chart test failed: $1" >&2
@@ -28,11 +28,14 @@ assert_not_contains() {
 }
 
 default_render=$(helm template data-product-controller "$chart")
+chart_crds=$(helm show crds "$chart")
+assert_contains "$chart_crds" 'kind: CustomResourceDefinition'
+assert_contains "$chart_crds" 'name: dataproducts.data.devantler.tech'
 cmp "$generated_crd" "$chart_crd" || fail "generated CRD copies differ"
 assert_contains "$default_render" 'value: "false"'
 assert_not_contains "$default_render" 'kind: HTTPRoute'
 assert_not_contains "$default_render" 'name: harbour-observations'
-assert_contains "$default_render" 'kind: CustomResourceDefinition'
+assert_not_contains "$default_render" 'kind: CustomResourceDefinition'
 assert_contains "$default_render" 'resources: [leases]'
 assert_contains "$default_render" 'verbs: [get, list, watch, create, update, patch, delete]'
 cluster_lease_rules=$(

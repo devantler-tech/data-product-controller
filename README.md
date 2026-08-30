@@ -105,7 +105,7 @@ go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   output:rbac:artifacts:config=config/rbac
 go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   crd paths=./api/... \
-  output:crd:artifacts:config=charts/data-product-controller/templates
+  output:crd:artifacts:config=charts/data-product-controller/crds
 ```
 
 ## Design
