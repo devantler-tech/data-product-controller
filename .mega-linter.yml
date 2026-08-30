@@ -23,6 +23,12 @@ DISABLE_LINTERS:
 
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: .github/prompts
 
+# Helm chart templates are Go templates, not YAML documents: yamllint parses `{{- if ... }}`
+# as a syntax error, which is a category error rather than a finding. devantler-tech/ksail
+# excludes them from the YAML linters for the same reason. Only yamllint needs it here —
+# v8r passes and prettier is advisory.
+YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: charts/.*/templates/.*
+
 # Allow zizmor to use GITHUB_TOKEN so its online audits (e.g. artipacked) can reach the
 # GitHub API. Without this, megalinter strips GITHUB_TOKEN and zizmor aborts with
 # "fatal: no audit was performed", failing the whole megalinter run.
