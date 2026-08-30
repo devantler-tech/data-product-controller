@@ -38,7 +38,7 @@ func TestHandlerPublishesPortableContractAndProductUI(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 
-			request := httptest.NewRequest(http.MethodGet, testCase.path, nil)
+			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, testCase.path, nil)
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, request)
 
@@ -58,7 +58,7 @@ func TestHandlerPublishesPortableContractAndProductUI(t *testing.T) {
 func TestHandlerQueriesProductData(t *testing.T) {
 	t.Parallel()
 
-	request := httptest.NewRequest(http.MethodGet, "/api/observations?station=nordhavn", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/observations?station=nordhavn", nil)
 	response := httptest.NewRecorder()
 	demoproduct.NewHandler().ServeHTTP(response, request)
 
@@ -82,7 +82,7 @@ func TestHandlerQueriesProductData(t *testing.T) {
 func TestHandlerAllowsSandboxedProductUIToReadPublicData(t *testing.T) {
 	t.Parallel()
 
-	request := httptest.NewRequest(http.MethodGet, "/api/observations", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/observations", nil)
 	request.Header.Set("Origin", "null")
 	response := httptest.NewRecorder()
 	demoproduct.NewHandler().ServeHTTP(response, request)
@@ -101,7 +101,7 @@ func TestHandlerAllowsSandboxedProductUIToReadPublicData(t *testing.T) {
 func TestHandlerRejectsUnsupportedMethods(t *testing.T) {
 	t.Parallel()
 
-	request := httptest.NewRequest(http.MethodPost, "/api/observations", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/observations", nil)
 	response := httptest.NewRecorder()
 	demoproduct.NewHandler().ServeHTTP(response, request)
 

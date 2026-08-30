@@ -24,7 +24,7 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	product := registryProduct()
 	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product).Build()
 	handler := NewHandler(reader, func(context.Context) bool { return false })
-	request := httptest.NewRequest(http.MethodGet, "/api/v1/products", nil)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/products", nil)
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, request)
@@ -103,7 +103,7 @@ func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
 			}
 			reader := fake.NewClientBuilder().WithScheme(scheme).Build()
 			handler := NewHandler(reader, func(context.Context) bool { return test.enabled })
-			request := httptest.NewRequest(http.MethodGet, "/", nil)
+			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			response := httptest.NewRecorder()
 
 			handler.ServeHTTP(response, request)

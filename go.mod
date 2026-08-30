@@ -1,6 +1,6 @@
 module github.com/devantler-tech/data-product-controller
 
-go 1.26.0
+go 1.26.6
 
 require (
 	github.com/go-rod/rod v0.116.2
