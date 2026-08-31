@@ -84,6 +84,17 @@ helm upgrade --install data-product-controller \
   --set route.host=data-products.example.com
 ```
 
+Updating the CRD is a manual step. Helm installs the chart's `crds/` directory on first install only
+and never updates or removes it on `helm upgrade`, so a release that changes the `DataProduct` schema
+does not reach clusters that already have the chart. Apply the new CRD before upgrading:
+
+```bash
+helm show crds oci://ghcr.io/devantler-tech/charts/data-product-controller --version <version> \
+  | kubectl apply -f -
+```
+
+`v1alpha1` is deliberately small and expected to change, so plan for this on schema-changing releases.
+
 The UI remains off when `registryUI.enabled` is omitted. For repository development:
 
 ```bash
