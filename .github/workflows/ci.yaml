@@ -36,8 +36,14 @@ jobs:
       - name: Build all Go packages
         run: go build ./...
 
+      - name: Validate Go toolchain pins
+        run: sh scripts/toolchain.test.sh
+
       - name: Validate chart behavior
         run: sh scripts/chart.test.sh
+
+      - name: Validate scanner suppression allowlists
+        run: sh scripts/scanner-suppressions.test.sh
 
       - name: Lint Helm chart
         run: helm lint charts/data-product-controller

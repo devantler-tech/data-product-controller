@@ -7,4 +7,5 @@ resources:
   - service-account.yaml
   - rbac.yaml
   - deployment.yaml
+  - network-policy.yaml
   - service.yaml

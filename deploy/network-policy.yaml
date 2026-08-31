@@ -1,0 +1,15 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: data-product-controller
+  namespace: data-product-system
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: registry
+        - port: health
+        - port: metrics

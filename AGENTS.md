@@ -41,6 +41,8 @@ go test ./...
 go test -tags=browser ./internal/browser
 sh scripts/chart.test.sh
 sh scripts/release.test.sh
+sh scripts/scanner-suppressions.test.sh
+sh scripts/toolchain.test.sh
 helm lint charts/data-product-controller
 golangci-lint run
 ```
