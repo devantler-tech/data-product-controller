@@ -1,0 +1,8 @@
+exclude = [
+  "(^|/)assets/(product|registry)\\.css$",
+  "(^|/)openapi\\.json$",
+]
+
+# The central registry's root-relative assets are runtime routes served by its Go handler, not files
+# beside the embedded HTML. Handler and browser tests cover those routes directly.
+exclude_path = ["internal/registry/ui/index\\.html"]

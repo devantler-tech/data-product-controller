@@ -1,7 +1,6 @@
 # data-product-controller
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Go Reference](https://pkg.go.dev/badge/github.com/devantler-tech/data-product-controller.svg)](https://pkg.go.dev/github.com/devantler-tech/data-product-controller)
 
 A cloud-native control plane for self-describing, composable data products.
 

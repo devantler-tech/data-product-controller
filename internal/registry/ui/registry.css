@@ -167,16 +167,34 @@ h1 {
   z-index: 1;
   width: 0.9rem;
   height: 0.9rem;
+  font-size: 0;
   border: 3px solid var(--paper);
   border-radius: 50%;
   background: var(--signal);
   box-shadow: 0 0 0 1px var(--signal);
 }
 
-.lineage-signal span:nth-child(1) { top: 8%; left: 52%; }
-.lineage-signal span:nth-child(2) { top: 44%; right: 14%; }
-.lineage-signal span:nth-child(3) { bottom: 14%; left: 28%; }
-.lineage-signal span:nth-child(4) { top: 37%; left: 40%; background: var(--lagoon); box-shadow: 0 0 0 1px var(--lagoon); }
+.lineage-signal span:nth-child(1) {
+  top: 8%;
+  left: 52%;
+}
+
+.lineage-signal span:nth-child(2) {
+  top: 44%;
+  right: 14%;
+}
+
+.lineage-signal span:nth-child(3) {
+  bottom: 14%;
+  left: 28%;
+}
+
+.lineage-signal span:nth-child(4) {
+  top: 37%;
+  left: 40%;
+  background: var(--lagoon);
+  box-shadow: 0 0 0 1px var(--lagoon);
+}
 
 .workspace {
   display: grid;
@@ -326,12 +344,12 @@ h2 {
   text-align: center;
 }
 
-.surface-empty span {
+#surface-empty span {
   color: var(--signal);
   font: 400 clamp(3rem, 7vw, 6rem)/1 "Iowan Old Style", serif;
 }
 
-.surface-empty p {
+#surface-empty p {
   max-width: 22rem;
   margin: 1rem 0 0;
   color: var(--quiet);
@@ -350,7 +368,7 @@ footer {
   display: none !important;
 }
 
-@media (max-width: 62rem) {
+@media (width <= 62rem) {
   .lineage-signal {
     opacity: 0.42;
   }
@@ -365,7 +383,7 @@ footer {
   }
 }
 
-@media (max-width: 40rem) {
+@media (width <= 40rem) {
   .masthead,
   main,
   footer {

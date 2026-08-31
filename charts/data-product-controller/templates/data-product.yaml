@@ -3,6 +3,7 @@ apiVersion: data.devantler.tech/v1alpha1
 kind: DataProduct
 metadata:
   name: harbour-observations
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:

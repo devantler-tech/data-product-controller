@@ -1,0 +1,22 @@
+# MegaLinter passes this file to yamllint with `-c` when it exists, which replaces its bundled
+# config rather than merging with it. So this file first reproduces the bundled behaviour, then
+# adds the two rules this repository actually needs.
+
+extends: default
+
+rules:
+  # Parity with MegaLinter's bundled config, which relaxes these. Without them, adopting this
+  # file would newly fail on formatting the repository has never enforced.
+  line-length: disable
+  braces: disable
+  indentation: disable
+  comments: disable
+
+  # GitHub Actions requires the `on:` key, and yamllint's default reads a bare `on` as the
+  # boolean it is in YAML 1.1. Matches devantler-tech/ksail's config.
+  truthy:
+    check-keys: false
+
+  # The suite does not use explicit `---` document starts; ksail and platform both omit them,
+  # so requiring them here would make this repository the odd one out.
+  document-start: disable

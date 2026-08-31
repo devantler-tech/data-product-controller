@@ -5,7 +5,9 @@
   background: #052d35;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 body {
   min-height: 100vh;
@@ -38,7 +40,11 @@ h1 {
   line-height: .9;
 }
 
-.lede { max-width: 42rem; color: #b5d8d3; font-size: 1.05rem; }
+.lede {
+  max-width: 42rem;
+  color: #b5d8d3;
+  font-size: 1.05rem;
+}
 
 form {
   display: flex;
@@ -48,7 +54,11 @@ form {
   margin: 2.5rem 0 1.5rem;
 }
 
-label { width: 100%; color: #b5d8d3; font-size: .8rem; }
+label {
+  width: 100%;
+  color: #b5d8d3;
+  font-size: .8rem;
+}
 
 select,
 button {
@@ -58,17 +68,64 @@ button {
   font: inherit;
 }
 
-select { flex: 1 1 14rem; padding: 0 .9rem; color: #e8f8f2; background: #0c4148; }
-button { padding: 0 1.25rem; color: #052d35; background: #6be4ce; font-weight: 700; cursor: pointer; }
-:focus-visible { outline: 3px solid #ffbd75; outline-offset: 3px; }
+select {
+  flex: 1 1 14rem;
+  padding: 0 .9rem;
+  color: #e8f8f2;
+  background: #0c4148;
+}
 
-.observations { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .75rem; }
-.observation { padding: 1rem; border: 1px solid #2e615e; background: rgb(8 53 60 / 74%); }
-.observation h2 { margin: 0 0 .8rem; font-size: 1rem; text-transform: capitalize; }
-.metric { display: flex; justify-content: space-between; gap: 1rem; color: #b5d8d3; }
-.metric strong { color: #e8f8f2; font-variant-numeric: tabular-nums; }
-.contract { display: inline-block; margin-top: 2rem; color: #6be4ce; }
+button {
+  padding: 0 1.25rem;
+  color: #052d35;
+  background: #6be4ce;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid #ffbd75;
+  outline-offset: 3px;
+}
+
+.observations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: .75rem;
+}
+
+.observation {
+  padding: 1rem;
+  border: 1px solid #2e615e;
+  background: rgb(8 53 60 / 74%);
+}
+
+.observation h2 {
+  margin: 0 0 .8rem;
+  font-size: 1rem;
+  text-transform: capitalize;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #b5d8d3;
+}
+
+.metric strong {
+  color: #e8f8f2;
+  font-variant-numeric: tabular-nums;
+}
+
+.contract {
+  display: inline-block;
+  margin-top: 2rem;
+  color: #6be4ce;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; }
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
 }
