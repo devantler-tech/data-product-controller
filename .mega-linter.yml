@@ -30,7 +30,7 @@ MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: .github/prompts
 YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: charts/.*/templates/.*
 # Helm templates are not plain YAML, while controller-gen output must remain byte-identical across
 # its generated and published copies. Format the authored YAML and leave generated artifacts intact.
-YAML_PRETTIER_FILTER_REGEX_EXCLUDE: (charts/.*/templates/.*|config/(crd/bases|rbac)/.*|deploy/data\.devantler\.tech_dataproducts\.yaml)
+YAML_PRETTIER_FILTER_REGEX_EXCLUDE: (charts/.*/(templates|crds)/.*|config/(crd/bases|rbac)/.*|deploy/data\.devantler\.tech_dataproducts\.yaml)
 
 # Allow zizmor to use GITHUB_TOKEN so its online audits (e.g. artipacked) can reach the
 # GitHub API. Without this, megalinter strips GITHUB_TOKEN and zizmor aborts with
