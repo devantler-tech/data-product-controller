@@ -14,6 +14,6 @@ jobs:
       issues: write # Update release-driven issue state.
       pull-requests: write # Update release-driven pull request state.
       id-token: write # Mint the reusable workflow's GitHub App identity.
-    uses: devantler-tech/actions/.github/workflows/create-release.yaml@3ee6cb9bbd616c2a38779be41a5e41f3e77282d0 # v13.2.3
+    uses: devantler-tech/actions/.github/workflows/create-release.yaml@4f4e07a3ebf3e1161756a292966e36c91a65ee04 # v13.3.0
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
