@@ -12,6 +12,7 @@ The current foundation provides:
 
 - a namespaced `DataProduct` CRD with guarded HTTPS interfaces and stable URI identity;
 - composition through named output references, with dependency-aware readiness conditions;
+- a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
@@ -34,7 +35,9 @@ cosign verify \
 Deployment policy must match this chart identity separately from the shared controller-image and
 manifest publisher. Platform configuration owns signature enforcement and rollout.
 
-Provisioners, source connectors, richer composition semantics, and data-space exchange are roadmap work rather than capabilities claimed by this first release. See the [roadmap epic](https://github.com/devantler-tech/data-product-controller/issues/1).
+Provisioned sources use delegated provisioning: an external controller owns infrastructure and credentials. The versioned `crossplane/v1` observer checks readiness and connection publication without creating resources or reading Secret values. See the [provisioned-source guide](docs/provisioned-sources.md) for its contract, scoped access, enablement, and limitations.
+
+Engine-specific provisioning, source connectors, richer composition semantics, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Data product contract
 
@@ -121,18 +124,21 @@ sh scripts/release.test.sh
 helm lint charts/data-product-controller
 ```
 
-Regenerate CRDs and RBAC after editing API markers:
+Regenerate deep-copy code, CRDs, and RBAC after editing API types or markers, then distribute the generated CRD to the chart and release artifact:
 
 ```bash
 go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
-  rbac:roleName=manager-role crd paths=./... \
+  object rbac:roleName=manager-role crd paths=./... \
   output:crd:artifacts:config=config/crd/bases \
   output:rbac:artifacts:config=config/rbac
-go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
-  crd paths=./api/... \
-  output:crd:artifacts:config=charts/data-product-controller/crds
+cp config/crd/bases/data.devantler.tech_dataproducts.yaml \
+  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
+cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 ```
 
 ## Design
 
-[ADR 0001](docs/adr/0001-portable-data-product-control-plane.md) records why the Kubernetes resource stays a small control-plane profile and how products remain portable. The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base). This release does not claim full conformance with those standards.
+[ADR 0001](docs/adr/0001-portable-data-product-control-plane.md) records why the Kubernetes resource stays a small control-plane profile and how products remain portable. [ADR 0002](docs/adr/0002-delegated-provisioned-sources.md) defines delegated source ownership and observation.
+
+The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base).
+This release does not claim full conformance with those standards.

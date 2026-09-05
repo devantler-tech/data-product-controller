@@ -23,6 +23,8 @@ import (
 
 const registryUIFlag = "registry-ui"
 
+const provisionedSourcesFlag = "provisioned-sources"
+
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
 func main() {
@@ -68,7 +70,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	flagProvider := featureflag.NewProvider(map[string]bool{registryUIFlag: uiEnabled})
+	sourcesEnabled, err := config.ProvisionedSourcesEnabled(
+		os.Getenv("PROVISIONED_SOURCES_ENABLED"),
+	)
+	if err != nil {
+		setupLog.Error(err, "invalid provisioned sources configuration")
+		os.Exit(1)
+	}
+	flagProvider := featureflag.NewProvider(
+		map[string]bool{registryUIFlag: uiEnabled, provisionedSourcesFlag: sourcesEnabled},
+	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
 	if err != nil {
 		setupLog.Error(err, "configure feature flags")
@@ -94,8 +105,12 @@ func main() {
 	}
 
 	reconciler := &productcontroller.DataProductReconciler{
-		Client: controllerManager.GetClient(),
-		Scheme: controllerManager.GetScheme(),
+		Client:       controllerManager.GetClient(),
+		Scheme:       controllerManager.GetScheme(),
+		SourceReader: controllerManager.GetAPIReader(),
+		SourcesEnabled: func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, provisionedSourcesFlag)
+		},
 	}
 	if err := reconciler.SetupWithManager(controllerManager); err != nil {
 		setupLog.Error(err, "register data-product controller")

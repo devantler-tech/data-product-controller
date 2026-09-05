@@ -39,6 +39,8 @@ spec:
           env:
             - name: REGISTRY_UI_ENABLED
               value: {{ .Values.registryUI.enabled | quote }}
+            - name: PROVISIONED_SOURCES_ENABLED
+              value: {{ .Values.provisionedSources.enabled | quote }}
           ports:
             - name: registry
               containerPort: 8082

@@ -98,6 +98,39 @@ type ProductUI struct {
 	Title string `json:"title"`
 }
 
+// ProvisionedResourceReference identifies a custom resource in the product's namespace.
+type ProvisionedResourceReference struct {
+	// APIVersion selects a custom-resource API group and version; core resources are not provisioners.
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?/[a-z][a-z0-9]*$`
+	APIVersion string `json:"apiVersion"`
+	// Kind is the provisioner's namespaced custom-resource kind.
+	// +kubebuilder:validation:Pattern=`^[A-Z][A-Za-z0-9]*$`
+	Kind string `json:"kind"`
+	// Name identifies the provisioner-owned resource.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`
+	Name string `json:"name"`
+}
+
+// ConnectionSecretReference identifies credentials consumed directly by the product workload.
+type ConnectionSecretReference struct {
+	// Name identifies the published connection Secret in the product's namespace.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`
+	Name string `json:"name"`
+}
+
+// ProvisionedSource observes a source whose creation, credentials, and deletion belong to a provisioner.
+type ProvisionedSource struct {
+	// Adapter selects a versioned readiness contract.
+	// +kubebuilder:validation:Enum=crossplane/v1
+	Adapter string `json:"adapter"`
+	// ResourceRef points to the provisioner-owned resource; the controller never writes it.
+	ResourceRef ProvisionedResourceReference `json:"resourceRef"`
+	// ConnectionSecretRef names the connection contract. Only Secret metadata is requested.
+	ConnectionSecretRef ConnectionSecretReference `json:"connectionSecretRef"`
+}
+
 // DataProductSpec defines a self-describing and composable data product.
 type DataProductSpec struct {
 	// ID is a stable URI for the product across clusters and deployments.
@@ -136,6 +169,9 @@ type DataProductSpec struct {
 
 	// UI is an optional independently deployed product interaction surface.
 	UI *ProductUI `json:"ui,omitempty"`
+
+	// Source optionally requires a provisioned resource and its published connection Secret to be ready.
+	Source *ProvisionedSource `json:"source,omitempty"`
 }
 
 // DataProductStatus reports observed composition and readiness.

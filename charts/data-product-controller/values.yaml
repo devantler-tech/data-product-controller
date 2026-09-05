@@ -7,6 +7,9 @@ image:
 registryUI:
   enabled: false
 
+provisionedSources:
+  enabled: false
+
 route:
   enabled: false
   host: data-products.local

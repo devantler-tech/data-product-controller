@@ -10,9 +10,10 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 
 - `api/v1alpha1/` — versioned Kubernetes API types and generated deep-copy code.
 - `internal/controller/` — dependency-aware `DataProduct` reconciliation.
+- `internal/provisioner/v1/` — versioned, read-only provisioner observation contract.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
-- `pkg/featureflag/` — OpenFeature boundary; the registry UI is default-off.
+- `pkg/featureflag/` — OpenFeature boundary; registry UI and provisioned sources are default-off.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
@@ -26,6 +27,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `DataProduct` is control-plane metadata. Do not put records, payloads, passwords, tokens, or connection strings in spec or status.
 - Products publish standard external contracts. Protocol-specific schemas stay in OpenAPI, AsyncAPI, GraphQL, DCAT, or adapter documents rather than expanding the CRD for each technology.
 - Composition references a producer's named output. The controller reports missing or unready dependencies and automatically requeues consumers when producers change.
+- Provisioned sources remain owned by external controllers. The `crossplane/v1` adapter observes same-namespace resource readiness and Secret metadata with explicit scoped RBAC; it never provisions, adopts, deletes, or reads connection values. See `docs/provisioned-sources.md` for the publication and ownership contract.
 - A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - `v1alpha1` is intentionally small and may change while real provisioned, integrated, and composed products validate the model. Never claim unimplemented roadmap capabilities.
@@ -49,18 +51,19 @@ golangci-lint run
 
 Workflow changes also require `actionlint` and `zizmor`.
 
-API marker changes require both checked-in CRD copies and RBAC to be regenerated with controller-tools v0.21.0. The two generated CRD files must remain identical:
+API type or marker changes require deep-copy code, CRDs, and RBAC to be regenerated with controller-tools v0.21.0. Distribute the generated CRD to the chart and release artifact; all three copies must remain identical:
 
 ```bash
 go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
-  rbac:roleName=manager-role crd paths=./... \
+  object rbac:roleName=manager-role crd paths=./... \
   output:crd:artifacts:config=config/crd/bases \
   output:rbac:artifacts:config=config/rbac
-go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
-  crd paths=./api/... \
-  output:crd:artifacts:config=charts/data-product-controller/crds
+cp config/crd/bases/data.devantler.tech_dataproducts.yaml \
+  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
+cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 cmp config/crd/bases/data.devantler.tech_dataproducts.yaml \
   charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
+cmp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 ```
 
 ## Development rules
