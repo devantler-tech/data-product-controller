@@ -22,6 +22,7 @@ type Observation struct {
 
 // Observer projects readiness without creating, modifying, or deleting a source or its credentials.
 type Observer interface {
+	// Observe evaluates the source in the product namespace and returns public-safe readiness details.
 	Observe(context.Context, string, datav1alpha1.ProvisionedSource) Observation
 }
 
@@ -164,10 +165,12 @@ func (c *Crossplane) Observe(
 	}
 }
 
+// unavailable constructs an unready observation from a stable reason and public-safe next step.
 func unavailable(reason, message string) Observation {
 	return Observation{Reason: reason, Message: message}
 }
 
+// readFailure distinguishes denied access from API failures without exposing the underlying error text.
 func readFailure(err error) Observation {
 	if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
 		return unavailable(
@@ -181,6 +184,8 @@ func readFailure(err error) Observation {
 	)
 }
 
+// crossplaneReady requires one Ready=True and one Synced=True condition with current explicit
+// generations; absent generations follow Crossplane's optional-generation condition contract.
 func crossplaneReady(resource *unstructured.Unstructured) bool {
 	if generation, found, err := unstructured.NestedInt64(
 		resource.Object,

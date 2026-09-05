@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// TestObserverUsesUncachedMetadataOnlyConnectionRequests verifies each observation makes fresh GETs
+// and negotiates Secret metadata without requesting credential values or mutating resources.
 func TestObserverUsesUncachedMetadataOnlyConnectionRequests(t *testing.T) {
 	t.Parallel()
 	var paths []string
@@ -77,6 +79,8 @@ func TestObserverUsesUncachedMetadataOnlyConnectionRequests(t *testing.T) {
 	}
 }
 
+// TestObserverRejectsInvalidOrClusterScopedReferencesBeforeReading ensures unsupported references
+// fail before any resource request, keeping discovery failures and namespace boundaries explicit.
 func TestObserverRejectsInvalidOrClusterScopedReferencesBeforeReading(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -130,6 +134,8 @@ func TestObserverRejectsInvalidOrClusterScopedReferencesBeforeReading(t *testing
 	}
 }
 
+// TestCrossplaneConditionContract checks optional generations and rejects failed, missing,
+// duplicate, malformed, or explicitly stale readiness conditions.
 func TestCrossplaneConditionContract(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -163,6 +169,8 @@ func TestCrossplaneConditionContract(t *testing.T) {
 	}
 }
 
+// TestObserverRejectsAccessAndMalformedReferencesWithoutLeakingErrors verifies API failure details
+// stay out of serialized observations while access denials retain an actionable reason.
 func TestObserverRejectsAccessAndMalformedReferencesWithoutLeakingErrors(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -207,6 +215,8 @@ func TestObserverRejectsAccessAndMalformedReferencesWithoutLeakingErrors(t *test
 	}
 }
 
+// sourceMapper supplies deterministic discovery for the test Database API and core Secrets,
+// with a selectable Database scope to exercise rejection of cluster-scoped sources.
 func sourceMapper(scope meta.RESTScope) meta.RESTMapper {
 	mapper := meta.NewDefaultRESTMapper(
 		[]schema.GroupVersion{
@@ -226,6 +236,7 @@ func sourceMapper(scope meta.RESTScope) meta.RESTMapper {
 	return mapper
 }
 
+// sourceReference binds the test Database and its connection Secret through the crossplane/v1 adapter.
 func sourceReference() datav1alpha1.ProvisionedSource {
 	return datav1alpha1.ProvisionedSource{
 		Adapter: "crossplane/v1",

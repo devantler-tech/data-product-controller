@@ -16,6 +16,7 @@ func ProvisionedSourcesEnabled(value string) (bool, error) {
 	return featureEnabled("PROVISIONED_SOURCES_ENABLED", value)
 }
 
+// featureEnabled defaults an unset flag to false and names invalid settings in parsing errors.
 func featureEnabled(name, value string) (bool, error) {
 	if value == "" {
 		return false, nil

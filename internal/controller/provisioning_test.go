@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// TestProvisionedSourceDefaultsOff ensures declaring a source cannot bypass the disabled release gate.
 func TestProvisionedSourceDefaultsOff(t *testing.T) {
 	t.Parallel()
 
@@ -52,6 +53,8 @@ func TestProvisionedSourceDefaultsOff(t *testing.T) {
 	}
 }
 
+// TestProvisionedSourceReadiness checks source lifecycle and publication ownership failures,
+// while requiring bounded retries and keeping private provider messages out of product status.
 func TestProvisionedSourceReadiness(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -174,6 +177,7 @@ func TestProvisionedSourceReadiness(t *testing.T) {
 	}
 }
 
+// TestProvisionedSourceOpenFeatureStates exercises both gate states through the OpenFeature client.
 func TestProvisionedSourceOpenFeatureStates(t *testing.T) {
 	t.Parallel()
 	for _, enabled := range []bool{false, true} {
@@ -210,6 +214,8 @@ func TestProvisionedSourceOpenFeatureStates(t *testing.T) {
 	}
 }
 
+// TestProvisionedSourceStillRequiresInputsAndKeepsPolling ensures a ready source cannot bypass
+// an unavailable product dependency and that observation continues after the dependency recovers.
 func TestProvisionedSourceStillRequiresInputsAndKeepsPolling(t *testing.T) {
 	t.Parallel()
 	product, resource, secret := provisionedFixture()
@@ -258,6 +264,8 @@ func TestProvisionedSourceStillRequiresInputsAndKeepsPolling(t *testing.T) {
 	}
 }
 
+// TestProvisionedSourceRecoveryRotationAndRetention verifies publication restores readiness,
+// credential rotation leaves status unchanged, and product deletion retains external resources.
 func TestProvisionedSourceRecoveryRotationAndRetention(t *testing.T) {
 	t.Parallel()
 	product, resource, secret := provisionedFixture()
@@ -322,6 +330,8 @@ func TestProvisionedSourceRecoveryRotationAndRetention(t *testing.T) {
 	}
 }
 
+// provisionedFixture returns a product, ready source, and UID-bound connection Secret
+// whose independent mutations exercise readiness and credential ownership boundaries.
 func provisionedFixture() (*datav1alpha1.DataProduct, *unstructured.Unstructured, *corev1.Secret) {
 	product := testProduct("provisioned")
 	product.Spec.Source = &datav1alpha1.ProvisionedSource{
@@ -368,6 +378,8 @@ func provisionedFixture() (*datav1alpha1.DataProduct, *unstructured.Unstructured
 	return product, resource, secret
 }
 
+// provisionedReconciler wires an enabled observer to a fake API with namespaced resource mapping
+// and a separate product status subresource, preserving the reconciliation boundaries under test.
 func provisionedReconciler(
 	t *testing.T,
 	objects ...client.Object,

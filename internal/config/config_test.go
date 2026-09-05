@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestProvisionedSourcesEnabled verifies default-off parsing and actionable errors for invalid settings.
 func TestProvisionedSourcesEnabled(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
