@@ -3,6 +3,7 @@ set -eu
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 workflow="$repo_root/.github/workflows/cd.yaml"
+release_workflow="$repo_root/.github/workflows/release.yaml"
 deployment="$repo_root/deploy/deployment.yaml"
 deploy_kustomization="$repo_root/deploy/kustomization.yaml"
 deploy_namespace="$repo_root/deploy/namespace.yaml"
@@ -21,6 +22,13 @@ fail() {
 }
 
 command -v yq >/dev/null 2>&1 || fail 'yq is required to validate release manifests'
+
+yq -e '.jobs.release.with.disable-issue-side-effects | ((tag == "!!bool") and (. == true))' "$release_workflow" >/dev/null ||
+	fail 'release must disable success/failure hooks that write to issues and pull requests'
+yq -e '.jobs.release.permissions | (((.issues // "none") == "none") and ((."pull-requests" // "none") == "none"))' "$release_workflow" >/dev/null ||
+	fail 'release must not grant issue or pull-request access after disabling their hooks'
+yq -e '.jobs.release.permissions | ((.contents == "write") and (."id-token" == "write"))' "$release_workflow" >/dev/null ||
+	fail 'release must retain contents and identity permissions for publication'
 
 grep -Eq 'uses: devantler-tech/actions/\.github/workflows/publish-app\.yaml@[0-9a-f]{40}' "$workflow" ||
 	fail 'CD must call the immutable shared publish-app workflow'
