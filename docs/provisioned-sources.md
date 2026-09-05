@@ -16,7 +16,10 @@ The `crossplane/v1` adapter accepts a namespaced provisioner resource that:
 - reports exactly one `Ready=True` and one `Synced=True` condition;
 - names its connection Secret through `spec.writeConnectionSecretToRef.name`;
 - uses the product namespace for that Secret, either explicitly or by omission;
-- owns the connection Secret through an owner reference matching its UID, API version, kind, and name.
+- owns the connection Secret through an owner reference matching its UID, API group, kind, and name.
+
+The owner reference may use another served API version of the same resource. Its UID must still
+match the current object, so an old Secret does not satisfy readiness after resource recreation.
 
 An explicit `observedGeneration` on the status or either condition must match the resource's
 generation. Crossplane resources that omit this optional field are evaluated from their reported

@@ -139,9 +139,13 @@ func (c *Crossplane) Observe(
 	}
 	owned := false
 	for _, owner := range secret.GetOwnerReferences() {
-		if resource.GetUID() != "" && owner.UID == resource.GetUID() &&
+		ownerVersion, ownerErr := schema.ParseGroupVersion(owner.APIVersion)
+		// UID identifies the object across served-version changes; group and kind
+		// keep the reference bound to the selected provisioner API.
+		if ownerErr == nil && ownerVersion.Version != "" &&
+			ownerVersion.Group == version.Group &&
+			resource.GetUID() != "" && owner.UID == resource.GetUID() &&
 			owner.Name == resource.GetName() &&
-			owner.APIVersion == resource.GetAPIVersion() &&
 			owner.Kind == resource.GetKind() {
 			owned = true
 			break

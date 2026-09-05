@@ -64,6 +64,27 @@ func TestProvisionedSourceReadiness(t *testing.T) {
 		{name: "missing resource", omitResource: true, want: "SourceNotFound"},
 		{name: "missing connection", omitSecret: true, want: "ConnectionNotPublished"},
 		{
+			name: "owner uses another API version",
+			mutate: func(_ *unstructured.Unstructured, s *corev1.Secret) {
+				s.OwnerReferences[0].APIVersion = "database.example.org/v1beta1"
+			},
+			want: "DependenciesReady",
+		},
+		{
+			name: "owner uses another API group",
+			mutate: func(_ *unstructured.Unstructured, s *corev1.Secret) {
+				s.OwnerReferences[0].APIVersion = "unrelated.example.org/v1alpha1"
+			},
+			want: "ConnectionOwnerMismatch",
+		},
+		{
+			name: "owner has malformed API version",
+			mutate: func(_ *unstructured.Unstructured, s *corev1.Secret) {
+				s.OwnerReferences[0].APIVersion = "database.example.org/v1/invalid"
+			},
+			want: "ConnectionOwnerMismatch",
+		},
+		{
 			name:   "unrelated connection",
 			mutate: func(_ *unstructured.Unstructured, s *corev1.Secret) { s.OwnerReferences = nil },
 			want:   "ConnectionOwnerMismatch",
