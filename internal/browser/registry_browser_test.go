@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
@@ -58,17 +59,32 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 	)
 	t.Cleanup(registryServer.Close)
 
-	controlURL := launcher.New().
+	controlURL, err := launcher.New().
 		Headless(true).
 		NoSandbox(true).
 		Set("ignore-certificate-errors").
-		MustLaunch()
-	browser := rod.New().ControlURL(controlURL).MustConnect()
+		Launch()
+	if err != nil {
+		t.Fatalf("launch browser: %v", err)
+	}
+	browser := rod.New().ControlURL(controlURL).
+		WithPanic(func(value interface{}) { t.Fatalf("browser interaction: %v", value) }).
+		MustConnect()
 	t.Cleanup(func() { _ = browser.Close() })
 
-	page := browser.MustPage(registryServer.URL).MustWaitLoad()
+	page := browser.MustPage(registryServer.URL).Timeout(30 * time.Second).MustWaitLoad()
+	frameElement := page.MustElement("#product-surface")
+	// Observe navigation from the stable parent document. Resolving the child
+	// document before load can race replacement of its initial about:blank node.
+	frameElement.MustEval(`() => {
+		this.dataset.testLoaded = "false";
+		this.addEventListener("load", () => {
+			this.dataset.testLoaded = "true";
+		}, { once: true });
+	}`)
 	page.MustElement(".product-card").MustWaitVisible().MustClick()
-	productFrame := page.MustElement("#product-surface").MustFrame().MustWaitLoad()
+	frameElement.MustWait(`() => this.dataset.testLoaded === "true"`)
+	productFrame := frameElement.MustFrame()
 
 	statusElement := productFrame.MustElement("#status")
 	statusElement.MustWait(`() => this.textContent === '2 observations'`)
