@@ -90,4 +90,6 @@ generated_namespace_lease_rules=$(
 [ "$generated_namespace_lease_rules" = '1' ] ||
 	fail 'controller-gen output must grant Lease access only in data-product-system'
 
+sh "$repo_root/scripts/chart-signing.test.sh"
+
 printf '%s\n' 'release contract tests passed'
