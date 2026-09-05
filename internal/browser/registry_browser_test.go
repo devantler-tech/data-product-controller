@@ -59,7 +59,10 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 	)
 	t.Cleanup(registryServer.Close)
 
+	launchContext, cancelLaunch := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancelLaunch()
 	controlURL, err := launcher.New().
+		Context(launchContext).
 		Headless(true).
 		NoSandbox(true).
 		Set("ignore-certificate-errors").
@@ -72,7 +75,8 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 		MustConnect()
 	t.Cleanup(func() { _ = browser.Close() })
 
-	page := browser.MustPage(registryServer.URL).Timeout(30 * time.Second).MustWaitLoad()
+	page := browser.MustPage().Timeout(30 * time.Second).
+		MustNavigate(registryServer.URL).MustWaitLoad()
 	frameElement := page.MustElement("#product-surface")
 	// Observe navigation from the stable parent document. Resolving the child
 	// document before load can race replacement of its initial about:blank node.
