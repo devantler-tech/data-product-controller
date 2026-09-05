@@ -19,6 +19,21 @@ The current foundation provides:
 
 Tagged releases publish the Helm chart plus a controller image and manifest artifact signed by the portfolio's trusted keyless release workflow. Platform deployments should pin the released chart and immutable image digest.
 
+The chart publication job signs the digest returned by Helm and verifies its signature before
+succeeding. Chart signatures use the issuer `https://token.actions.githubusercontent.com` and the
+identity `https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/<tag>`.
+Verify a released chart using its published digest and tag:
+
+```bash
+cosign verify \
+  --certificate-identity 'https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/<tag>' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  'ghcr.io/devantler-tech/charts/data-product-controller@sha256:<digest>'
+```
+
+Deployment policy must match this chart identity separately from the shared controller-image and
+manifest publisher. Platform configuration owns signature enforcement and rollout.
+
 Provisioners, source connectors, richer composition semantics, and data-space exchange are roadmap work rather than capabilities claimed by this first release. See the [roadmap epic](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Data product contract

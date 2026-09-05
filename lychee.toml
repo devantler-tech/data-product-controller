@@ -1,6 +1,9 @@
 exclude = [
   "(^|/)assets/(product|registry)\\.css$",
   "(^|/)openapi\\.json$",
+  # Signing identities are compared by Cosign, not fetched as documentation pages.
+  "^https://github\\.com/\\$GITHUB_WORKFLOW_REF$",
+  "^https://token\\.actions\\.githubusercontent\\.com/?$",
 ]
 
 # The central registry's root-relative assets are runtime routes served by its Go handler, not files
