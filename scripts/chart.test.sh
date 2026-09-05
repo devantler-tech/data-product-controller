@@ -33,6 +33,11 @@ assert_contains "$chart_crds" 'kind: CustomResourceDefinition'
 assert_contains "$chart_crds" 'name: dataproducts.data.devantler.tech'
 cmp "$generated_crd" "$chart_crd" || fail "generated CRD copies differ"
 assert_contains "$default_render" 'value: "false"'
+source_flag=$(printf '%s' "$default_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "PROVISIONED_SOURCES_ENABLED") | .value' -)
+[ "$source_flag" = 'false' ] || fail 'provisioned sources must default off'
+source_render=$(helm template data-product-controller "$chart" --namespace data-product-system --set provisionedSources.enabled=true)
+source_flag=$(printf '%s' "$source_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "PROVISIONED_SOURCES_ENABLED") | .value' -)
+[ "$source_flag" = 'true' ] || fail 'provisioned sources must be explicitly enableable'
 assert_not_contains "$default_render" 'kind: HTTPRoute'
 assert_not_contains "$default_render" 'name: harbour-observations'
 assert_not_contains "$default_render" 'kind: CustomResourceDefinition'
