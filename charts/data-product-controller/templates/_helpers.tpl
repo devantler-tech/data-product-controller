@@ -13,6 +13,6 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- if .Values.image.digest -}}
 {{ printf "%s@%s" .Values.image.repository .Values.image.digest }}
 {{- else -}}
-{{ printf "%s:%s" .Values.image.repository .Values.image.tag }}
+{{ printf "%s:%s" .Values.image.repository (.Values.image.tag | default (trimPrefix "v" .Chart.AppVersion)) }}
 {{- end -}}
 {{- end -}}

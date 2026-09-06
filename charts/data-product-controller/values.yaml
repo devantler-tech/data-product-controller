@@ -1,6 +1,7 @@
 image:
   repository: ghcr.io/devantler-tech/data-product-controller
-  tag: 0.1.0
+  # Empty selects the packaged chart appVersion; digest takes precedence.
+  tag: ""
   digest: ""
   pullPolicy: Always
 

@@ -98,17 +98,26 @@ This keeps each product portable across the reference registry and third-party c
 
 ## Install
 
-Install the chart with the registry UI explicitly enabled and an existing Gateway API listener:
+Install the chart with the registry UI explicitly enabled and an existing Gateway API listener.
+Replace `<version>` and `<verified-image-digest>` with the release's chart version and the controller
+image digest verified against the trusted publisher:
 
 ```bash
 helm upgrade --install data-product-controller \
   oci://ghcr.io/devantler-tech/charts/data-product-controller \
+  --version '<version>' \
   --namespace data-product-system \
   --create-namespace \
+  --set-string image.digest='sha256:<verified-image-digest>' \
   --set registryUI.enabled=true \
   --set route.enabled=true \
   --set route.host=data-products.example.com
 ```
+
+An empty `image.tag` selects the packaged chart's `appVersion` without its optional `v` prefix.
+An explicit tag overrides that default; `image.digest` takes precedence over either tag for all
+workloads. Pin a verified digest for production. The optional HTTP source workload requires a digest
+even outside production. When reusing saved Helm values, replace any old image override explicitly.
 
 Updating the CRD is a manual step. Helm installs the chart's `crds/` directory on first install only
 and never updates or removes it on `helm upgrade`, so a release that changes the `DataProduct` schema
