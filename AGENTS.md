@@ -55,6 +55,11 @@ golangci-lint run
 
 Workflow changes also require `actionlint` and `zizmor`.
 
+The required CI source-integration job runs `bash tests/source/run.sh` in an
+ephemeral KSail cluster with enforced NetworkPolicy. It requires Docker and several
+gigabytes of free disk space; hosted execution supplies the real-cluster evidence
+when the local environment cannot run it. See `docs/source-integration-tests.md`.
+
 API type or marker changes require deep-copy code, CRDs, and RBAC to be regenerated with controller-tools v0.21.0. Distribute the generated CRD to the chart and release artifact; all three copies must remain identical:
 
 ```bash

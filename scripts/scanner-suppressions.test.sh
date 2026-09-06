@@ -34,7 +34,7 @@ actual_checkov_allowlist=$(
       .metadata.annotations | to_entries[] |
       select(.key | test("^checkov\\.io/skip[0-9]*$")) |
       (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + " " + (.value | split("=")[0])' \
-			"$repo_root"/deploy/*.yaml
+			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml
 		sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/Dockerfile \1/p' "$repo_root/Dockerfile"
 	} | sort
 )
@@ -53,7 +53,8 @@ expected_checkov_allowlist=$(
 		'rendered:RoleBinding/data-product-controller-leader-election CKV_K8S_21' \
 		'rendered:Service/data-product-controller CKV_K8S_21' \
 		'rendered:Service/data-product-controller-harbour CKV_K8S_21' \
-		'rendered:ServiceAccount/data-product-controller CKV_K8S_21' |
+		'rendered:ServiceAccount/data-product-controller CKV_K8S_21' \
+		'tests/source/consumer.yaml CKV_K8S_43' |
 		sort
 )
 [ "$actual_checkov_allowlist" = "$expected_checkov_allowlist" ] ||
@@ -77,7 +78,8 @@ expected_trivy_allowlist=$(
 		'KSV-0013 deploy/deployment.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/controller-deployment.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/demo-deployment.yaml' \
-		'KSV-0125 deploy/deployment.yaml' |
+		'KSV-0125 deploy/deployment.yaml' \
+		'KSV-0125 tests/source/consumer.yaml' |
 		sort
 )
 [ "$actual_trivy_allowlist" = "$expected_trivy_allowlist" ] ||
