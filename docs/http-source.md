@@ -99,15 +99,15 @@ this policy. Only the separate management port exposes probes and metrics.
 
 ## Health, limits, and recovery
 
-| Endpoint or limit | Behavior |
-| --- | --- |
-| `/healthz` on management | Process liveness; source failure does not restart the pod. |
-| `/readyz` on management | Executes a bounded GET and validates the JSON; reports `SourceReady`, `SourceUnavailable`, or `FeatureDisabled` without returning source data. |
-| `/metrics` on management | Prometheus counters by fixed operation/result, latest observed readiness, and observation timestamp. |
-| Source timeout | Five seconds for connection, headers, and body together. |
-| Query capacity | Four concurrent source reads; excess requests receive 503 without being queued. |
-| Probe capacity | One separate source read, independent of query saturation. |
-| Response boundary | Complete validated JSON only; no upstream cookies, redirects, authentication challenges, or other headers. Responses use `Cache-Control: no-store`. |
+| Endpoint or limit        | Behavior                                                                                                                                            |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `/healthz` on management | Process liveness; source failure does not restart the pod.                                                                                          |
+| `/readyz` on management  | Executes a bounded GET and validates the JSON; reports `SourceReady`, `SourceUnavailable`, or `FeatureDisabled` without returning source data.      |
+| `/metrics` on management | Prometheus counters by fixed operation/result, latest observed readiness, and observation timestamp.                                                |
+| Source timeout           | Five seconds for connection, headers, and body together.                                                                                            |
+| Query capacity           | Four concurrent source reads; excess requests receive 503 without being queued.                                                                     |
+| Probe capacity           | One separate source read, independent of query saturation.                                                                                          |
+| Response boundary        | Complete validated JSON only; no upstream cookies, redirects, authentication challenges, or other headers. Responses use `Cache-Control: no-store`. |
 
 The chart probes readiness every 30 seconds with a seven-second timeout. Each probe reads the full
 export, so include that traffic in the source's request budget. The connector performs no application

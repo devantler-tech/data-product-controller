@@ -9,16 +9,31 @@
         "enabled": { "type": "boolean" },
         "secretName": { "type": "string" },
         "sourceCIDR": { "type": "string" },
-        "consumerPodLabels": { "type": "object", "additionalProperties": { "type": "string" } },
-        "monitorPodLabels": { "type": "object", "additionalProperties": { "type": "string" } },
+        "consumerPodLabels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "monitorPodLabels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
         "resources": { "type": "object" }
       },
-      "if": { "properties": { "enabled": { "const": true } }, "required": ["enabled"] },
+      "if": {
+        "properties": { "enabled": { "const": true } },
+        "required": ["enabled"]
+      },
       "then": {
         "required": ["secretName", "sourceCIDR", "consumerPodLabels"],
         "properties": {
-          "secretName": { "minLength": 1, "maxLength": 253, "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$" },
-          "sourceCIDR": { "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}/32$" },
+          "secretName": {
+            "minLength": 1,
+            "maxLength": 253,
+            "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$"
+          },
+          "sourceCIDR": {
+            "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}/32$"
+          },
           "consumerPodLabels": { "minProperties": 1 }
         }
       }
