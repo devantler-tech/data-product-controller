@@ -87,6 +87,15 @@ source_pod() {
 	kube get pods -l app.kubernetes.io/component=http-source -o json |
 		jq -er '.items | map(select(.metadata.deletionTimestamp == null)) | if length == 1 then .[0].metadata.uid else error("expected one connector Pod") end'
 }
+independent_resource_uids() {
+	kube get deployment/dpc-http-source secret/existing-export -o json |
+		jq -ceS --arg product_uid "$1" '
+    if (.items | length) == 2 and all(.items[];
+      .metadata.uid != null and .metadata.uid != "" and .metadata.deletionTimestamp == null and
+      all(.metadata.ownerReferences[]?; .uid != $product_uid))
+    then [.items[] | {key: (.kind + "/" + .metadata.name), value: .metadata.uid}] | from_entries
+    else error("connector and credentials must exist independently of the product without pending deletion") end'
+}
 disabled_export() {
 	local address
 	address=$(kube get pods -l app.kubernetes.io/component=http-source -o json | jq -er '
@@ -233,8 +242,15 @@ kube set env deployment/dpc-http-source HTTP_SOURCE_ENABLED=true
 kube --request-timeout=0 rollout status deployment/dpc-http-source --timeout=240s
 wait_for 're-enabled export recovers the complete rollout' 240 readiness True true
 
+product_uid=$(kube get dataproduct existing-export -o json | jq -er '.metadata.uid | select(. != null and . != "")')
+resource_uids=$(independent_resource_uids "$product_uid")
 kube delete dataproduct existing-export
 wait_for 'deleted product disappears from the registry' 120 probe --url http://dpc/api/v1/products --contains '"products":[]'
-kube get deployment/dpc-http-source secret/existing-export -o name
+retained_uids=$(independent_resource_uids "$product_uid")
+[[ "$retained_uids" == "$resource_uids" ]] || {
+	echo 'product deletion replaced an independently owned workload or credential Secret' >&2
+	exit 1
+}
+probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 docker exec "$source_container" /fixture probe --url http://127.0.0.1:9000/healthz --timeout 3s
 echo 'PASS: product deletion retained independently owned workloads and credentials'

@@ -71,7 +71,10 @@ replica must refuse data and readiness, and the incomplete rollout must make the
 product unavailable. Re-enabling the flag restores full rollout readiness.
 
 Deleting the product must remove its registry entry while retaining the source
-container, connector Deployment, and credential Secret.
+container, connector Deployment, and credential Secret. The suite checks that the
+Deployment and Secret have no product ownership reference before deletion, retain
+their UIDs afterward, and have no pending deletion. A final export request checks
+that the retained connector still works.
 
 ## Bounds and evidence
 
