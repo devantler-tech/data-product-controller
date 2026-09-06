@@ -23,11 +23,27 @@ spec:
       command: [/fixture, idle]
       readinessProbe:
         exec:
-          command: [/fixture, probe, --url, "http://127.0.0.1:9000/healthz", --timeout, 3s]
+          command:
+            [
+              /fixture,
+              probe,
+              --url,
+              "http://127.0.0.1:9000/healthz",
+              --timeout,
+              3s,
+            ]
         timeoutSeconds: 5
       livenessProbe:
         exec:
-          command: [/fixture, probe, --url, "http://127.0.0.1:9000/healthz", --timeout, 3s]
+          command:
+            [
+              /fixture,
+              probe,
+              --url,
+              "http://127.0.0.1:9000/healthz",
+              --timeout,
+              3s,
+            ]
         timeoutSeconds: 5
       resources:
         requests:
