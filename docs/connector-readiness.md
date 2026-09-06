@@ -22,17 +22,17 @@ The [HTTP source guide](http-source.md) defines the export workload's own Secret
 
 The controller reads the current Deployment every 30 seconds with a five-second read deadline. `ConnectorReady=True` requires a non-deleting workload, a positive desired replica count, and a positive generation matched exactly by `status.observedGeneration`. An omitted desired count means one. Updated, total, ready, and available replicas must each equal the desired count, and unavailable replicas must be zero. This requires full capacity and completion of the current rollout; minimum availability alone is insufficient.
 
-| Reason | Operator action |
-| --- | --- |
-| `ConnectorFeatureDisabled` | Enable the observation release flag. |
-| `ConnectorInvalid` | Use the supported adapter, API, kind, and same-namespace name. |
-| `ConnectorNotFound` | Create or correct the referenced Deployment. |
-| `ConnectorDeleting` | Restore the workload or select its replacement. |
-| `ConnectorScaledToZero` | Scale the connector to at least one replica. |
-| `ConnectorStatusStale` | Wait for the Deployment controller to observe the current generation. |
-| `ConnectorNotReady` | Inspect the rollout, replica availability, and probes. |
-| `ConnectorAccessDenied` | Grant exact-name Deployment get access in the product namespace. |
-| `ConnectorUnavailable` | Check Kubernetes API availability and controller configuration. |
+| Reason                     | Operator action                                                       |
+|----------------------------|-----------------------------------------------------------------------|
+| `ConnectorFeatureDisabled` | Enable the observation release flag.                                  |
+| `ConnectorInvalid`         | Use the supported adapter, API, kind, and same-namespace name.        |
+| `ConnectorNotFound`        | Create or correct the referenced Deployment.                          |
+| `ConnectorDeleting`        | Restore the workload or select its replacement.                       |
+| `ConnectorScaledToZero`    | Scale the connector to at least one replica.                          |
+| `ConnectorStatusStale`     | Wait for the Deployment controller to observe the current generation. |
+| `ConnectorNotReady`        | Inspect the rollout, replica availability, and probes.                |
+| `ConnectorAccessDenied`    | Grant exact-name Deployment get access in the product namespace.      |
+| `ConnectorUnavailable`     | Check Kubernetes API availability and controller configuration.       |
 
 Aggregate `Ready` also requires every declared provisioned source and product input. Source and input failures keep their aggregate reason precedence; `ConnectorReady` still refreshes independently. The registry's existing `ready` and `readiness` fields reflect aggregate readiness, including a connector failure when no earlier prerequisite blocks the product. Workload probes determine how source failures affect Deployment availability. Public contract reachability and source data correctness require separate evidence.
 
