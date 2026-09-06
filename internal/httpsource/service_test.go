@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,7 +94,7 @@ func TestFixedReadOnlyBoundary(t *testing.T) {
 	}))
 	defer source.Close()
 	service, _ := fixture(t, source)
-	r := httptest.NewRequest(http.MethodGet, "/api/data", nil)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/data", nil)
 	for _, header := range []string{"Authorization", "Cookie", "X-Forwarded-For", "X-Caller", "Range"} {
 		r.Header.Set(header, "caller-private")
 	}
@@ -232,9 +233,15 @@ func TestSecretRotationAndRecovery(t *testing.T) {
 // TestInvalidSecretFailsClosed catches unsafe endpoint or bearer configuration before any request.
 func TestInvalidSecretFailsClosed(t *testing.T) {
 	t.Parallel()
+	withUser := url.URL{
+		Scheme: "https",
+		Host:   "example.com",
+		Path:   "/export",
+		User:   url.UserPassword("example", "test-password"),
+	}
 	for _, config := range []string{
 		`{}`, `null`, `[]`, `{"endpointURL":"http://example.com/export","bearerToken":"private"}`,
-		`{"endpointURL":"https://user:private@example.com/export","bearerToken":"private"}`,
+		fmt.Sprintf(`{"endpointURL":%q,"bearerToken":"private"}`, withUser.String()),
 		`{"endpointURL":"https://example.com/export?token=private","bearerToken":"private"}`,
 		`{"endpointURL":"https://example.com/export#private","bearerToken":"private"}`,
 		`{"endpointURL":"https://example.com/export","bearerToken":""}`,
@@ -440,7 +447,7 @@ func writeSecret(t *testing.T, path, endpoint, token string) {
 // request exercises an HTTP handler while retaining exact response headers and body for assertions.
 func request(handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(method, path, strings.NewReader(body))
+	r := httptest.NewRequestWithContext(context.Background(), method, path, strings.NewReader(body))
 	handler.ServeHTTP(w, r)
 	return w
 }
