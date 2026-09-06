@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1.7
 FROM golang:1.26.6-alpine AS build
 WORKDIR /src
-COPY tests/source/fixture/*.go ./
-RUN CGO_ENABLED=0 GO111MODULE=off GOFLAGS=-p=1 go build -trimpath -ldflags="-s -w" -o /fixture .
+COPY go.mod go.sum ./
+COPY tests/source/fixture/*.go ./tests/source/fixture/
+RUN CGO_ENABLED=0 GOFLAGS=-p=1 go build -trimpath -ldflags="-s -w" -o /fixture ./tests/source/fixture
 
 FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /fixture /fixture

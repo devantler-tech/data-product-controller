@@ -102,8 +102,13 @@ ksail project init --name "$cluster_name" --distribution Vanilla --provider Dock
 	--metrics-server Disabled --local-registry localhost:5055 --kubeconfig "$KUBECONFIG" \
 	--output "$test_dir/cluster" --no-devcontainer
 cluster_started=true
-ksail cluster create --config "$cluster_config"
+ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml"
 kubectl --request-timeout=0 -n kube-system rollout status daemonset/cilium --timeout=180s
+[[ -z "$(kubectl --request-timeout=15s -n kube-system get daemonset kindnet --ignore-not-found -o name)" ]] || {
+	echo 'unexpected default Kind CNI alongside Cilium' >&2
+	exit 1
+}
+echo 'PASS: cluster uses the generated Cilium configuration'
 kubectl --request-timeout=15s create namespace products
 
 # No GHCR write or release credentials: both images exist only in this cluster's registry.

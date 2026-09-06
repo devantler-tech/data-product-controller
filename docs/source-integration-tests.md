@@ -44,6 +44,10 @@ apply. Two artifact-scoped scanner exceptions describe that dynamic digest and
 private test registry; the suppression contract pins both exact rule/path pairs.
 Production scanner exceptions are unchanged.
 
+The fixture build retains the repository's Go module version so its HTTP routing
+semantics match unit tests. The harness passes the generated Kind configuration
+explicitly and rejects a cluster that also installed Kind's default CNI.
+
 ## Observed behavior
 
 The suite checks the workload-absent HTTP default and both connector-observation
