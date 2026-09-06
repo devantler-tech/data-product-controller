@@ -27,7 +27,8 @@ cleanup() {
 	if [[ "$cluster_started" == true ]]; then
 		if [[ "$result" != 0 ]]; then
 			# Selected diagnostics contain only synthetic workloads and public status.
-			kubectl --request-timeout=10s -n products get pods,deployments,dataproducts -o wide || true
+			kubectl --request-timeout=10s -n products get pods,deployments -o wide || true
+			kubectl --request-timeout=10s -n products get dataproducts -o wide || true
 			kubectl --request-timeout=10s -n products get events --sort-by=.metadata.creationTimestamp || true
 			kubectl --request-timeout=10s -n products logs deployment/dpc --tail=80 || true
 			kubectl --request-timeout=10s -n kube-system get pods -o wide || true
@@ -120,6 +121,21 @@ kubectl --request-timeout=0 -n kube-system rollout status daemonset/cilium --tim
 echo 'PASS: cluster uses the generated Cilium configuration'
 kubectl --request-timeout=15s create namespace products
 
+# A node's localhost is not the host's registry endpoint. Configure only this
+# cluster's nodes using Kind's documented containerd alias for a local registry.
+# https://kind.sigs.k8s.io/docs/user/local-registry/
+cluster_nodes=$(docker ps --filter "label=io.x-k8s.kind.cluster=$cluster_name" --format '{{.Names}}')
+[[ -n "$cluster_nodes" ]] || {
+	echo 'missing owned Kind nodes' >&2
+	exit 1
+}
+registry_dir=/etc/containerd/certs.d/localhost:5055
+while IFS= read -r node; do
+	docker exec "$node" mkdir -p "$registry_dir"
+	printf '[host."http://%s-local-registry:5000"]\n' "$cluster_name" |
+		docker exec -i "$node" cp /dev/stdin "$registry_dir/hosts.toml"
+done <<<"$cluster_nodes"
+
 # No GHCR write or release credentials: both images exist only in this cluster's registry.
 docker build --tag localhost:5055/data-product-controller:e2e "$repo_root"
 docker push localhost:5055/data-product-controller:e2e
@@ -138,6 +154,10 @@ DPC_FIXTURE_IMAGE=$(docker image inspect localhost:5055/source-fixture:e2e --for
 	echo 'missing pushed fixture digest' >&2
 	exit 1
 }
+while IFS= read -r node; do
+	docker exec "$node" crictl pull "$DPC_FIXTURE_IMAGE"
+done <<<"$cluster_nodes"
+echo 'PASS: node runtime pulls the immutable fixture through the local registry alias'
 
 mkdir "$test_dir/tls"
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 1 \

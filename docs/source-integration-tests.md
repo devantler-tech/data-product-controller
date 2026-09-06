@@ -38,6 +38,11 @@ the resources. It does not create a Helm release. Certificate and hostname
 verification stay enabled. Production chart defaults and deployment configuration
 are unchanged.
 
+The harness installs Kind's documented [local registry alias](https://kind.sigs.k8s.io/docs/user/local-registry/)
+inside only its own nodes. This maps the host's `localhost:5055` image references
+to the registry container on the private Docker network. A node-runtime pull of
+the fixture digest verifies that mapping before workloads start.
+
 The consumer has loopback health probes and denies incoming network traffic.
 Its checked-in local image tag is replaced with the actual pushed digest before
 apply. Two artifact-scoped scanner exceptions describe that dynamic digest and
