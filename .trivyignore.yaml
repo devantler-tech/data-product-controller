@@ -13,3 +13,7 @@ misconfigurations:
     paths:
       - Dockerfile
     statement: Kubernetes readiness and liveness probes cover both binaries in this multi-entrypoint image.
+  - id: KSV-0125
+    paths:
+      - tests/source/consumer.yaml
+    statement: The ephemeral test consumes only its checked-out fixture build from the cluster-local registry, replaced with its pushed immutable digest before apply.

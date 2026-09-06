@@ -39,13 +39,52 @@ func run(ctx context.Context, args []string) error {
 		if len(args) != 1 {
 			return errors.New("idle accepts no arguments")
 		}
-		<-ctx.Done()
-		return nil
+		return idle(ctx)
 	case "probe":
 		return probe(ctx, args[1:])
 	default:
 		return errors.New("unknown fixture command")
 	}
+}
+
+func newServer(ctx context.Context, address string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              address,
+		Handler:           handler,
+		ReadHeaderTimeout: 3 * time.Second,
+		ReadTimeout:       5 * time.Second,
+		WriteTimeout:      5 * time.Second,
+		IdleTimeout:       15 * time.Second,
+		MaxHeaderBytes:    8 << 10,
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
+		BaseContext:       func(net.Listener) context.Context { return ctx },
+	}
+}
+
+func idle(ctx context.Context) error {
+	health := http.NewServeMux()
+	health.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	server := newServer(ctx, "127.0.0.1:9000", health)
+	finished := make(chan error, 1)
+	go func() { finished <- server.ListenAndServe() }()
+	var result error
+	select {
+	case <-ctx.Done():
+	case err := <-finished:
+		if !errors.Is(err, http.ErrServerClosed) {
+			result = errors.New("fixture health listener failed")
+		}
+	}
+	shutdown, stop := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer stop()
+	shutdownErr := server.Shutdown(shutdown)
+	_ = server.Close()
+	if shutdownErr != nil {
+		return errors.New("fixture health shutdown failed")
+	}
+	return result
 }
 
 func serve(ctx context.Context) error {
@@ -59,21 +98,8 @@ func serve(ctx context.Context) error {
 	admin.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	newServer := func(address string, handler http.Handler) *http.Server {
-		return &http.Server{
-			Addr:              address,
-			Handler:           handler,
-			ReadHeaderTimeout: 3 * time.Second,
-			ReadTimeout:       5 * time.Second,
-			WriteTimeout:      5 * time.Second,
-			IdleTimeout:       15 * time.Second,
-			MaxHeaderBytes:    8 << 10,
-			TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
-			BaseContext:       func(net.Listener) context.Context { return ctx },
-		}
-	}
-	api := newServer(":443", public)
-	management := newServer("127.0.0.1:9000", admin)
+	api := newServer(ctx, ":443", public)
+	management := newServer(ctx, "127.0.0.1:9000", admin)
 	results := make(chan error, 2)
 	go func() { results <- api.ListenAndServeTLS("/tls/tls.crt", "/tls/tls.key") }()
 	go func() { results <- management.ListenAndServe() }()

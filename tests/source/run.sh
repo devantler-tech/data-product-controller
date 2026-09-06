@@ -102,7 +102,7 @@ ksail project init --name "$cluster_name" --distribution Vanilla --provider Dock
 	--metrics-server Disabled --local-registry localhost:5055 --kubeconfig "$KUBECONFIG" \
 	--output "$test_dir/cluster" --no-devcontainer
 cluster_started=true
-ksail cluster create --config "$cluster_config" --ttl 30m
+ksail cluster create --config "$cluster_config"
 kubectl --request-timeout=0 -n kube-system rollout status daemonset/cilium --timeout=180s
 kubectl --request-timeout=15s create namespace products
 
@@ -151,9 +151,10 @@ DPC_SOURCE_IP=$(docker inspect --format '{{(index .NetworkSettings.Networks "kin
 }
 yq 'with(select(.kind == "EndpointSlice"); .endpoints[0].addresses = [strenv(DPC_SOURCE_IP)])' \
 	"$repo_root/tests/source/source.yaml" | kube apply -f -
-yq '.spec.containers[0].image = strenv(DPC_FIXTURE_IMAGE)' \
+yq 'with(select(.kind == "Pod"); .spec.containers[0].image = strenv(DPC_FIXTURE_IMAGE))' \
 	"$repo_root/tests/source/consumer.yaml" | kube apply -f -
-yq '.spec.containers[0].image = strenv(DPC_FIXTURE_IMAGE) | .metadata.name = "outsider" | .metadata.labels.app = "outsider"' \
+yq 'select(.kind == "Pod") | .spec.containers[0].image = strenv(DPC_FIXTURE_IMAGE) |
+  .metadata.name = "outsider" | .metadata.labels.app = "outsider"' \
 	"$repo_root/tests/source/consumer.yaml" | kube apply -f -
 kube --request-timeout=0 wait pod/consumer pod/outsider --for=condition=Ready --timeout=180s
 source_secret fixture-token-a

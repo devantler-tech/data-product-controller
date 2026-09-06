@@ -7,7 +7,57 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestIdleServesOnlyHealthAndStopsOnCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	finished := make(chan error, 1)
+	go func() {
+		finished <- run(ctx, []string{"idle"})
+		close(finished)
+	}()
+	t.Cleanup(func() {
+		cancel()
+		select {
+		case err := <-finished:
+			if err != nil {
+				t.Errorf("idle failed: %v", err)
+			}
+		case <-time.After(2 * time.Second):
+			t.Error("idle did not stop after cancellation")
+		}
+	})
+	health := []string{"--url", "http://127.0.0.1:9000/healthz", "--timeout", "100ms"}
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		err := probe(t.Context(), health)
+		if err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("idle health endpoint did not become available: %v", err)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if err := probe(t.Context(), []string{
+		"--url", "http://127.0.0.1:9000/control/healthy", "--want-status", "404",
+	}); err != nil {
+		t.Fatalf("consumer exposed source control: %v", err)
+	}
+	cancel()
+	select {
+	case err := <-finished:
+		if err != nil {
+			t.Fatalf("idle failed: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("idle did not stop after cancellation")
+	}
+	if err := probe(t.Context(), append(health, "--want-error")); err != nil {
+		t.Fatalf("idle health listener remained open after shutdown: %v", err)
+	}
+}
 
 func TestSourceOutageAndCredentialRotation(t *testing.T) {
 	source := &source{}

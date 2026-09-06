@@ -19,11 +19,17 @@ bash tests/source/run.sh
 
 The command creates a uniquely named local cluster, temporary kubeconfig, and local
 registry. It never selects the operator's current Kubernetes context. Cleanup
-deletes the source container, that cluster, and its storage on exit, with a 30-minute cluster lifetime as
-a backstop. Allow several gigabytes of free disk space for Kubernetes and image
+deletes the source container, that cluster, and its storage on normal exit or
+handled termination. Allow several gigabytes of free disk space for Kubernetes and image
 builds. CI runs the same command on a disposable hosted runner, verifies the KSail
 download checksum, grants only repository read access, and limits the job to
 30 minutes.
+
+The harness does not use KSail's `--ttl`: that mode keeps the create command in the
+foreground until automatic destruction, which would prevent the assertions from
+running. Hosted-runner disposal is the backstop for uncatchable termination in CI;
+after an uncatchable local termination, remove the named cluster and source
+container manually.
 
 Both images are built from the checked-out source and pushed to the local
 registry. The chart uses the resulting immutable image digest. The harness renders
@@ -31,6 +37,12 @@ the chart, mounts the generated CA through a test-only manifest filter, and appl
 the resources. It does not create a Helm release. Certificate and hostname
 verification stay enabled. Production chart defaults and deployment configuration
 are unchanged.
+
+The consumer has loopback health probes and denies incoming network traffic.
+Its checked-in local image tag is replaced with the actual pushed digest before
+apply. Two artifact-scoped scanner exceptions describe that dynamic digest and
+private test registry; the suppression contract pins both exact rule/path pairs.
+Production scanner exceptions are unchanged.
 
 ## Observed behavior
 

@@ -3,8 +3,11 @@ kind: Pod
 metadata:
   name: consumer
   namespace: products
+  annotations:
+    checkov.io/skip1: CKV_K8S_43=The harness replaces this local build tag with its verified pushed digest before applying either consumer.
   labels:
     app: source-consumer
+    app.kubernetes.io/component: source-test-consumer
 spec:
   automountServiceAccountToken: false
   securityContext:
@@ -15,8 +18,17 @@ spec:
       type: RuntimeDefault
   containers:
     - name: consumer
-      image: fixture-image-replaced-by-harness
+      image: localhost:5055/source-fixture:e2e
+      imagePullPolicy: Always
       command: [/fixture, idle]
+      readinessProbe:
+        exec:
+          command: [/fixture, probe, --url, "http://127.0.0.1:9000/healthz", --timeout, 3s]
+        timeoutSeconds: 5
+      livenessProbe:
+        exec:
+          command: [/fixture, probe, --url, "http://127.0.0.1:9000/healthz", --timeout, 3s]
+        timeoutSeconds: 5
       resources:
         requests:
           cpu: 10m
@@ -29,3 +41,15 @@ spec:
         readOnlyRootFilesystem: true
         capabilities:
           drop: [ALL]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: source-test-consumers
+  namespace: products
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: source-test-consumer
+  policyTypes: [Ingress]
+  ingress: []
