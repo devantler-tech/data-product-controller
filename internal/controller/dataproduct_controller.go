@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -23,6 +25,10 @@ import (
 type DataProductReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	// SourceReader bypasses the cache for external resources and Secret metadata.
+	SourceReader client.Reader
+	// SourcesEnabled evaluates the default-off provisioned-sources release flag.
+	SourcesEnabled func(context.Context) bool
 }
 
 func (r *DataProductReconciler) requestsForDependency(
@@ -94,6 +100,22 @@ func (r *DataProductReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 	previousStatus := product.DeepCopy().Status
+	result := ctrl.Result{}
+	if product.Spec.Source != nil {
+		result.RequeueAfter = 30 * time.Second
+		observation := provisionerv1.Observation{
+			Reason:  "SourceFeatureDisabled",
+			Message: "Enable the provisioned-sources feature to observe this product's source.",
+		}
+		if r.SourcesEnabled != nil && r.SourcesEnabled(ctx) {
+			observer := &provisionerv1.Crossplane{Reader: r.SourceReader, Mapper: r.RESTMapper()}
+			observation = observer.Observe(ctx, product.Namespace, *product.Spec.Source)
+		}
+		if !observation.Ready {
+			setReadiness(product, metav1.ConditionFalse, observation.Reason, observation.Message)
+			return result, r.updateStatusIfChanged(ctx, product, previousStatus)
+		}
+	}
 
 	for _, input := range product.Spec.Inputs {
 		namespace := input.ProductRef.Namespace
@@ -117,7 +139,7 @@ func (r *DataProductReconciler) Reconcile(
 					),
 				)
 
-				return ctrl.Result{}, r.updateStatusIfChanged(ctx, product, previousStatus)
+				return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 			}
 
 			return ctrl.Result{}, err
@@ -142,7 +164,7 @@ func (r *DataProductReconciler) Reconcile(
 				),
 			)
 
-			return ctrl.Result{}, r.updateStatusIfChanged(ctx, product, previousStatus)
+			return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 		}
 
 		if !hasOutput(dependency, input.ProductRef.Output) {
@@ -159,7 +181,7 @@ func (r *DataProductReconciler) Reconcile(
 				),
 			)
 
-			return ctrl.Result{}, r.updateStatusIfChanged(ctx, product, previousStatus)
+			return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 		}
 	}
 
@@ -174,7 +196,7 @@ func (r *DataProductReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
+	return result, nil
 }
 
 func (r *DataProductReconciler) updateStatusIfChanged(

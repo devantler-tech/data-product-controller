@@ -174,6 +174,57 @@ spec:
                 required:
                 - name
                 type: object
+              source:
+                description: Source optionally requires a provisioned resource and
+                  its published connection Secret to be ready.
+                properties:
+                  adapter:
+                    description: Adapter selects a versioned readiness contract.
+                    enum:
+                    - crossplane/v1
+                    type: string
+                  connectionSecretRef:
+                    description: ConnectionSecretRef names the connection contract.
+                      Only Secret metadata is requested.
+                    properties:
+                      name:
+                        description: Name identifies the published connection Secret
+                          in the product's namespace.
+                        maxLength: 253
+                        pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  resourceRef:
+                    description: ResourceRef points to the provisioner-owned resource;
+                      the controller never writes it.
+                    properties:
+                      apiVersion:
+                        description: APIVersion selects a custom-resource API group
+                          and version; core resources are not provisioners.
+                        pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?/[a-z][a-z0-9]*$
+                        type: string
+                      kind:
+                        description: Kind is the provisioner's namespaced custom-resource
+                          kind.
+                        pattern: ^[A-Z][A-Za-z0-9]*$
+                        type: string
+                      name:
+                        description: Name identifies the provisioner-owned resource.
+                        maxLength: 253
+                        pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    type: object
+                required:
+                - adapter
+                - connectionSecretRef
+                - resourceRef
+                type: object
               ui:
                 description: UI is an optional independently deployed product interaction
                   surface.
