@@ -1,0 +1,183 @@
+{{- if .Values.httpSource.enabled }}
+{{- if eq .Release.Namespace "default" }}
+{{- fail "httpSource requires an explicit non-default product namespace" }}
+{{- end }}
+{{- if not (regexMatch "^sha256:[a-f0-9]{64}$" .Values.image.digest) }}
+{{- fail "httpSource requires image.digest pinned to a released sha256 digest" }}
+{{- end }}
+{{- $name := printf "%s-http-source" (include "data-product-controller.fullname" . | trunc 51 | trimSuffix "-") }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: http-source
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: data-product-controller
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: http-source
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: http-source
+          image: {{ include "data-product-controller.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [/http-source]
+          env:
+            - name: HTTP_SOURCE_ENABLED
+              value: "true"
+          ports:
+            - name: data
+              containerPort: 8080
+            - name: management
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: management
+            timeoutSeconds: 7
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: management
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          resources:
+            {{- toYaml .Values.httpSource.resources | nindent 12 }}
+          volumeMounts:
+            - name: source-config
+              mountPath: /etc/http-source
+              readOnly: true
+      volumes:
+        - name: source-config
+          secret:
+            secretName: {{ .Values.httpSource.secretName }}
+            defaultMode: 0440
+            items:
+              - key: config.json
+                path: config.json
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: data-product-controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: http-source
+  ports:
+    - name: data
+      port: 80
+      targetPort: data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-http-source-metrics" (include "data-product-controller.fullname" . | trunc 43 | trimSuffix "-") }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
+spec:
+  type: ClusterIP
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: data-product-controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: http-source
+  ports:
+    - name: management
+      port: 8081
+      targetPort: management
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: http-source
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- toYaml .Values.httpSource.consumerPodLabels | nindent 14 }}
+      ports:
+        - port: data
+          protocol: TCP
+    {{- with .Values.httpSource.monitorPodLabels }}
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
+      ports:
+        - port: management
+          protocol: TCP
+    {{- end }}
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.httpSource.sourceCIDR | quote }}
+      ports:
+        - port: 443
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+{{- end }}

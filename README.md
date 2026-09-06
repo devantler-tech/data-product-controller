@@ -16,6 +16,7 @@ The current foundation provides:
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
+- an opt-in, Secret-backed HTTPS JSON export connector with a read-only API, OpenAPI contract, probes, and metrics;
 - a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing.
 
 Tagged releases publish the Helm chart plus a controller image and manifest artifact signed by the portfolio's trusted keyless release workflow. Platform deployments should pin the released chart and immutable image digest.
@@ -37,7 +38,11 @@ manifest publisher. Platform configuration owns signature enforcement and rollou
 
 Provisioned sources use delegated provisioning: an external controller owns infrastructure and credentials. The versioned `crossplane/v1` observer checks readiness and connection publication without creating resources or reading Secret values. See the [provisioned-source guide](docs/provisioned-sources.md) for its contract, scoped access, enablement, and limitations.
 
-Engine-specific provisioning, source connectors, richer composition semantics, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
+The [HTTP source guide](docs/http-source.md) describes the independently deployed reference connector,
+its credential and network boundaries, and its default-off release gate. It does not register a
+DataProduct or imply controller-observed connector health.
+
+Engine-specific provisioning, additional source adapters, connector health integration, richer composition semantics, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Data product contract
 
@@ -139,6 +144,7 @@ cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.
 ## Design
 
 [ADR 0001](docs/adr/0001-portable-data-product-control-plane.md) records why the Kubernetes resource stays a small control-plane profile and how products remain portable. [ADR 0002](docs/adr/0002-delegated-provisioned-sources.md) defines delegated source ownership and observation.
+[ADR 0003](docs/adr/0003-read-only-http-source-connector.md) defines the reference connector's data-plane and credential boundaries.
 
 The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base).
 This release does not claim full conformance with those standards.
