@@ -10,8 +10,6 @@ deploy_namespace="$repo_root/deploy/namespace.yaml"
 deploy_rbac="$repo_root/deploy/rbac.yaml"
 deploy_network_policy="$repo_root/deploy/network-policy.yaml"
 generated_rbac="$repo_root/config/rbac/role.yaml"
-chart="$repo_root/charts/data-product-controller/Chart.yaml"
-values="$repo_root/charts/data-product-controller/values.yaml"
 generated_crd="$repo_root/config/crd/bases/data.devantler.tech_dataproducts.yaml"
 deploy_crd="$repo_root/deploy/data.devantler.tech_dataproducts.yaml"
 chart_crd="$repo_root/charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml"
@@ -46,16 +44,7 @@ container_count=$(yq '[.spec.template.spec.containers[] | select(.name == "data-
 [ "$(yq '.spec.template.spec.containers[] | select(.name == "data-product-controller") | .image' "$deployment")" = 'ghcr.io/devantler-tech/data-product-controller:latest' ] ||
 	fail 'publish-app must receive the expected mutable image placeholder'
 
-chart_app_version=$(yq '.appVersion' "$chart")
-[ -n "$chart_app_version" ] && [ "$chart_app_version" != 'null' ] ||
-	fail 'chart appVersion is required to derive the expected image tag'
-expected_tag=${chart_app_version#v}
-image_tag=$(yq '.image.tag' "$values")
-case "$image_tag" in
-v*) fail 'the chart image tag must not include a v prefix' ;;
-esac
-[ "$image_tag" = "$expected_tag" ] ||
-	fail 'the chart tag must match docker metadata semver output (without the v prefix)'
+sh "$repo_root/scripts/chart-image.test.sh"
 
 [ "$(yq '.namespace' "$deploy_kustomization")" = 'data-product-system' ] ||
 	fail 'deploy kustomization must target data-product-system'
