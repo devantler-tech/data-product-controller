@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// TestQuerySaturationLeavesReadinessCapacity ensures a full query pool cannot evict a healthy pod.
+// TestQuerySaturationLeavesReadinessCapacity keeps a busy, healthy source eligible for data routing.
 func TestQuerySaturationLeavesReadinessCapacity(t *testing.T) {
 	t.Parallel()
 	var calls atomic.Int32

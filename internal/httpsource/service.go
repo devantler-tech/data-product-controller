@@ -117,8 +117,10 @@ func (s *Service) ManagementHandler() http.Handler {
 // Close releases the connector's idle source connections.
 func (s *Service) Close() { s.client.CloseIdleConnections() }
 
+// isEnabled treats an absent release-flag evaluator as disabled.
 func (s *Service) isEnabled(ctx context.Context) bool { return s.enabled != nil && s.enabled(ctx) }
 
+// query publishes a complete validated export or a fixed error without upstream details.
 func (s *Service) query(w http.ResponseWriter, r *http.Request) {
 	if !s.isEnabled(r.Context()) {
 		s.record("query", "disabled")
@@ -143,13 +145,14 @@ func (s *Service) query(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// readiness observes source access independently of consumer query capacity and discards source data.
 func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 	if !readRequest(w, r) {
 		return
 	}
 	result := "disabled"
 	if s.isEnabled(r.Context()) {
-		// Readiness has its own single slot so query saturation cannot evict healthy pods.
+		// A dedicated slot keeps query saturation from removing healthy pods from data routing.
 		_, result = s.fetch(r.Context(), s.probes)
 	}
 	s.record("probe", result)
@@ -166,6 +169,7 @@ func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `{"ready":false,"reason":"SourceUnavailable"}`)
 }
 
+// fetch uses fresh Secret configuration for one bounded source read, without queueing excess work.
 func (s *Service) fetch(ctx context.Context, slots chan struct{}) ([]byte, string) {
 	select {
 	case slots <- struct{}{}:
@@ -211,6 +215,7 @@ func (s *Service) fetch(ctx context.Context, slots chan struct{}) ([]byte, strin
 	return body, "success"
 }
 
+// record updates fixed-label counters and readiness while preserving the last observation when busy.
 func (s *Service) record(operation, result string) {
 	s.requests.WithLabelValues(operation, result).Inc()
 	if result == "busy" {
@@ -224,6 +229,7 @@ func (s *Service) record(operation, result string) {
 	}
 }
 
+// readRequest rejects writes and caller-supplied query or body inputs before contacting a source.
 func readRequest(w http.ResponseWriter, r *http.Request) bool {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -238,6 +244,7 @@ func readRequest(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
+// responseBoundary prevents caching and MIME sniffing for successful and rejected requests alike.
 func responseBoundary(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")

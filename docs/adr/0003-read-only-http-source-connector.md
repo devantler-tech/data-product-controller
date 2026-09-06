@@ -32,8 +32,8 @@ public route nor a DataProduct registration.
 Management endpoints use a separate listener and a management-only Service that remains reachable
 when the pod is unready. Data routing remains readiness-gated. Liveness checks only the process; readiness executes
 a bounded source read and discards the data. Probe capacity is separate from query capacity to avoid
-evicting healthy pods under query saturation. Prometheus metrics expose fixed operation and result
-labels, last observed readiness, and observation time. Errors, probes, contracts, and metrics omit
+removing healthy pods from data Service routing under query saturation. Prometheus metrics expose
+fixed operation and result labels, last observed readiness, and observation time. Errors, probes, contracts, and metrics omit
 connection details, credentials, and source response bodies.
 
 The OpenFeature `http-source` release flag defaults off. The optional chart workload explicitly

@@ -18,6 +18,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 )
 
+// main reports startup or shutdown failure through the process exit status.
 func main() {
 	if err := run(); err != nil {
 		slog.Error("run HTTP source connector", "error", err)
@@ -25,6 +26,7 @@ func main() {
 	}
 }
 
+// run configures the release gate and both listeners, then serves until interrupted or failed.
 func run() error {
 	address := flag.String("listen-address", ":8080", "Address for the read-only export API.")
 	managementAddress := flag.String(
