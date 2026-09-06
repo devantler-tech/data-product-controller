@@ -3,11 +3,13 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	connectorv1 "github.com/devantler-tech/data-product-controller/internal/connector/v1"
 	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,6 +31,10 @@ type DataProductReconciler struct {
 	SourceReader client.Reader
 	// SourcesEnabled evaluates the default-off provisioned-sources release flag.
 	SourcesEnabled func(context.Context) bool
+	// ConnectorReader performs uncached, scoped workload reads.
+	ConnectorReader client.Reader
+	// ConnectorsEnabled evaluates the default-off connector-readiness release flag.
+	ConnectorsEnabled func(context.Context) bool
 }
 
 func (r *DataProductReconciler) requestsForDependency(
@@ -101,6 +107,10 @@ func (r *DataProductReconciler) Reconcile(
 	}
 	previousStatus := product.DeepCopy().Status
 	result := ctrl.Result{}
+	r.observeConnector(ctx, product)
+	if product.Spec.Connector != nil {
+		result.RequeueAfter = 30 * time.Second
+	}
 	if product.Spec.Source != nil {
 		result.RequeueAfter = 30 * time.Second
 		observation := provisionerv1.Observation{
@@ -142,6 +152,22 @@ func (r *DataProductReconciler) Reconcile(
 				return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 			}
 
+			if product.Spec.Connector != nil ||
+				meta.FindStatusCondition(
+					previousStatus.Conditions,
+					datav1alpha1.ConditionConnectorReady,
+				) != nil {
+				setReadiness(
+					product,
+					metav1.ConditionFalse,
+					"DependencyUnavailable",
+					"A referenced data product could not be observed; check Kubernetes API availability and controller access.",
+				)
+				return result, errors.Join(
+					err,
+					r.updateStatusIfChanged(ctx, product, previousStatus),
+				)
+			}
 			return ctrl.Result{}, err
 		}
 
@@ -185,6 +211,15 @@ func (r *DataProductReconciler) Reconcile(
 		}
 	}
 
+	if connector := meta.FindStatusCondition(
+		product.Status.Conditions,
+		datav1alpha1.ConditionConnectorReady,
+	); connector != nil &&
+		connector.Status != metav1.ConditionTrue {
+		setReadiness(product, metav1.ConditionFalse, connector.Reason, connector.Message)
+		return result, r.updateStatusIfChanged(ctx, product, previousStatus)
+	}
+
 	setReadiness(
 		product,
 		metav1.ConditionTrue,
@@ -197,6 +232,36 @@ func (r *DataProductReconciler) Reconcile(
 	}
 
 	return result, nil
+}
+
+// observeConnector refreshes its independent condition even when other capabilities block aggregate readiness.
+func (r *DataProductReconciler) observeConnector(
+	ctx context.Context,
+	product *datav1alpha1.DataProduct,
+) {
+	if product.Spec.Connector == nil {
+		meta.RemoveStatusCondition(&product.Status.Conditions, datav1alpha1.ConditionConnectorReady)
+		return
+	}
+	observation := connectorv1.Observation{
+		Reason:  "ConnectorFeatureDisabled",
+		Message: "Enable connector-readiness to observe this product's connector Deployment.",
+	}
+	if r.ConnectorsEnabled != nil && r.ConnectorsEnabled(ctx) {
+		observer := &connectorv1.Deployment{Reader: r.ConnectorReader}
+		observation = observer.Observe(ctx, product.Namespace, *product.Spec.Connector)
+	}
+	status := metav1.ConditionFalse
+	if observation.Ready {
+		status = metav1.ConditionTrue
+	}
+	meta.SetStatusCondition(&product.Status.Conditions, metav1.Condition{
+		Type:               datav1alpha1.ConditionConnectorReady,
+		Status:             status,
+		ObservedGeneration: product.Generation,
+		Reason:             observation.Reason,
+		Message:            observation.Message,
+	})
 }
 
 func (r *DataProductReconciler) updateStatusIfChanged(

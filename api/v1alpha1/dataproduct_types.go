@@ -5,6 +5,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 const (
 	// ConditionReady reports whether a product and all referenced inputs are ready.
 	ConditionReady = "Ready"
+	// ConditionConnectorReady reports the last observed connector workload readiness.
+	ConditionConnectorReady = "ConnectorReady"
 )
 
 // ProductOwner identifies the team accountable for a data product.
@@ -131,6 +133,32 @@ type ProvisionedSource struct {
 	ConnectionSecretRef ConnectionSecretReference `json:"connectionSecretRef"`
 }
 
+// ConnectorResourceReference selects a Deployment in the product's namespace.
+type ConnectorResourceReference struct {
+	// APIVersion selects the supported workload API.
+	// +kubebuilder:validation:Enum=apps/v1
+	APIVersion string `json:"apiVersion"`
+	// Kind selects the supported workload kind.
+	// +kubebuilder:validation:Enum=Deployment
+	Kind string `json:"kind"`
+	// Name identifies the independently owned connector Deployment.
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$`
+	Name string `json:"name"`
+	// Namespace must be omitted or empty; scope is always the product's namespace.
+	// +kubebuilder:validation:MaxLength=0
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// Connector observes an independently operated data-plane workload.
+type Connector struct {
+	// Adapter selects a versioned workload-readiness contract.
+	// +kubebuilder:validation:Enum=deployment/v1
+	Adapter string `json:"adapter"`
+	// ResourceRef identifies the workload without granting lifecycle ownership.
+	ResourceRef ConnectorResourceReference `json:"resourceRef"`
+}
+
 // DataProductSpec defines a self-describing and composable data product.
 type DataProductSpec struct {
 	// ID is a stable URI for the product across clusters and deployments.
@@ -172,6 +200,9 @@ type DataProductSpec struct {
 
 	// Source optionally requires a provisioned resource and its published connection Secret to be ready.
 	Source *ProvisionedSource `json:"source,omitempty"`
+
+	// Connector optionally requires full current-generation workload availability.
+	Connector *Connector `json:"connector,omitempty"`
 }
 
 // DataProductStatus reports observed composition and readiness.

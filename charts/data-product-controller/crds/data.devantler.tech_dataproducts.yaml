@@ -51,6 +51,49 @@ spec:
             description: DataProductSpec defines a self-describing and composable
               data product.
             properties:
+              connector:
+                description: Connector optionally requires full current-generation
+                  workload availability.
+                properties:
+                  adapter:
+                    description: Adapter selects a versioned workload-readiness contract.
+                    enum:
+                    - deployment/v1
+                    type: string
+                  resourceRef:
+                    description: ResourceRef identifies the workload without granting
+                      lifecycle ownership.
+                    properties:
+                      apiVersion:
+                        description: APIVersion selects the supported workload API.
+                        enum:
+                        - apps/v1
+                        type: string
+                      kind:
+                        description: Kind selects the supported workload kind.
+                        enum:
+                        - Deployment
+                        type: string
+                      name:
+                        description: Name identifies the independently owned connector
+                          Deployment.
+                        maxLength: 253
+                        pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$
+                        type: string
+                      namespace:
+                        description: Namespace must be omitted or empty; scope is
+                          always the product's namespace.
+                        maxLength: 0
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    type: object
+                required:
+                - adapter
+                - resourceRef
+                type: object
               description:
                 description: Description states what data capability the product provides.
                 minLength: 1

@@ -41,6 +41,8 @@ spec:
               value: {{ .Values.registryUI.enabled | quote }}
             - name: PROVISIONED_SOURCES_ENABLED
               value: {{ .Values.provisionedSources.enabled | quote }}
+            - name: CONNECTOR_READINESS_ENABLED
+              value: {{ .Values.connectorReadiness.enabled | quote }}
           ports:
             - name: registry
               containerPort: 8082

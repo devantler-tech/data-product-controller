@@ -149,10 +149,11 @@ and readiness during query saturation.
 
 ## Controller integration and rollout
 
-The connector does not write Kubernetes status or register a DataProduct. The controller's existing
-readiness condition tracks declared product dependencies and provisioned sources; it does not prove
-this connector's health or public contract reachability. A versioned observation and registration
-contract remains work under [#4](https://github.com/devantler-tech/data-product-controller/issues/4).
+The connector does not write Kubernetes status or register a DataProduct. The controller's optional
+[Deployment observer](connector-readiness.md) reports `ConnectorReady` and includes it in aggregate
+readiness when an authored product declares `spec.connector`. Workload readiness reflects its probes;
+public contract reachability remains separate work under
+[#4](https://github.com/devantler-tech/data-product-controller/issues/4).
 
 Platform owns production deployment, routing, and verification of signed released artifacts.
 Local tests do not establish production access or adoption. The release gate remains until

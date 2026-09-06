@@ -68,6 +68,8 @@ linters:
             # Kubernetes API machinery and the controller-runtime are the
             # control plane's deliberately narrow runtime dependencies.
             - k8s.io/apimachinery
+            # The deployment/v1 connector contract observes the typed workload status.
+            - k8s.io/api/apps/v1$
             - k8s.io/client-go
             - sigs.k8s.io/controller-runtime
 issues:

@@ -25,6 +25,8 @@ const registryUIFlag = "registry-ui"
 
 const provisionedSourcesFlag = "provisioned-sources"
 
+const connectorReadinessFlag = "connector-readiness"
+
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
 // main validates release flags, registers the controller and registry, and runs the manager until shutdown.
@@ -78,8 +80,19 @@ func main() {
 		setupLog.Error(err, "invalid provisioned sources configuration")
 		os.Exit(1)
 	}
+	connectorsEnabled, err := config.ConnectorReadinessEnabled(
+		os.Getenv("CONNECTOR_READINESS_ENABLED"),
+	)
+	if err != nil {
+		setupLog.Error(err, "invalid connector readiness configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
-		map[string]bool{registryUIFlag: uiEnabled, provisionedSourcesFlag: sourcesEnabled},
+		map[string]bool{
+			registryUIFlag:         uiEnabled,
+			provisionedSourcesFlag: sourcesEnabled,
+			connectorReadinessFlag: connectorsEnabled,
+		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
 	if err != nil {
@@ -106,9 +119,13 @@ func main() {
 	}
 
 	reconciler := &productcontroller.DataProductReconciler{
-		Client:       controllerManager.GetClient(),
-		Scheme:       controllerManager.GetScheme(),
-		SourceReader: controllerManager.GetAPIReader(),
+		Client:          controllerManager.GetClient(),
+		Scheme:          controllerManager.GetScheme(),
+		SourceReader:    controllerManager.GetAPIReader(),
+		ConnectorReader: controllerManager.GetAPIReader(),
+		ConnectorsEnabled: func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, connectorReadinessFlag)
+		},
 		SourcesEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, provisionedSourcesFlag)
 		},
