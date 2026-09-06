@@ -87,9 +87,42 @@ jobs:
       - name: Validate trusted publication path
         run: sh scripts/release.test.sh
 
+  source-integration:
+    name: Validate source and registry in Kubernetes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Install verified KSail
+        run: |
+          curl --fail --location --retry 3 --max-time 180 \
+            --output "$RUNNER_TEMP/ksail.tar.gz" \
+            https://github.com/devantler-tech/ksail/releases/download/v7.182.6/ksail_7.182.6_linux_amd64.tar.gz
+          printf '%s  %s\n' \
+            4c1b561c0f4c5cedb3cad5e91a518ccee25d0ced083ce65b290b1c675013d510 \
+            "$RUNNER_TEMP/ksail.tar.gz" | sha256sum --check -
+          mkdir "$RUNNER_TEMP/ksail-bin"
+          tar -xzf "$RUNNER_TEMP/ksail.tar.gz" -C "$RUNNER_TEMP/ksail-bin" ksail
+          echo "$RUNNER_TEMP/ksail-bin" >> "$GITHUB_PATH"
+
+      - name: Exercise the source-to-registry lifecycle
+        run: bash tests/source/run.sh
+
   required-checks:
     name: CI - Required Checks
-    needs: [core, browser, release-contract]
+    needs: [core, browser, release-contract, source-integration]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -100,3 +133,4 @@ jobs:
             ${{ needs.core.result }}
             ${{ needs.browser.result }}
             ${{ needs.release-contract.result }}
+            ${{ needs.source-integration.result }}
