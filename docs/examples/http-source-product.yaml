@@ -1,0 +1,24 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: existing-export
+  namespace: products
+spec:
+  id: urn:example:existing-export
+  name: Existing export
+  description: Governed read-only JSON export from an existing source.
+  version: v1.0.0
+  owner:
+    name: export-team
+  connector:
+    adapter: deployment/v1
+    resourceRef:
+      apiVersion: apps/v1
+      kind: Deployment
+      name: export-http-source
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://export.example.com/api/data
+      contractUrl: https://export.example.com/openapi.json
+      mediaType: application/json

@@ -13,6 +13,7 @@ The current foundation provides:
 - a namespaced `DataProduct` CRD with guarded HTTPS interfaces and stable URI identity;
 - composition through named output references, with dependency-aware readiness conditions;
 - a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
+- default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
@@ -37,6 +38,8 @@ Deployment policy must match this chart identity separately from the shared cont
 manifest publisher. Platform configuration owns signature enforcement and rollout.
 
 Provisioned sources use delegated provisioning: an external controller owns infrastructure and credentials. The versioned `crossplane/v1` observer checks readiness and connection publication without creating resources or reading Secret values. See the [provisioned-source guide](docs/provisioned-sources.md) for its contract, scoped access, enablement, and limitations.
+
+Connector workloads remain independently owned. The `deployment/v1` observer reads one named Deployment in the product's namespace and publishes `ConnectorReady` alongside aggregate readiness. See the [connector-readiness guide](docs/connector-readiness.md) for flag enablement, narrowly scoped RBAC, an authored product example, and rollout semantics.
 
 The [HTTP source guide](docs/http-source.md) describes the independently deployed reference connector,
 its credential and network boundaries, and its default-off release gate. It does not register a

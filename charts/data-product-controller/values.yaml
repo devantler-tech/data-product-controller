@@ -10,6 +10,9 @@ registryUI:
 provisionedSources:
   enabled: false
 
+connectorReadiness:
+  enabled: false
+
 httpSource:
   enabled: false
   secretName: ""

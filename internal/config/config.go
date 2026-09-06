@@ -16,6 +16,11 @@ func ProvisionedSourcesEnabled(value string) (bool, error) {
 	return featureEnabled("PROVISIONED_SOURCES_ENABLED", value)
 }
 
+// ConnectorReadinessEnabled parses the default-off workload observation release flag.
+func ConnectorReadinessEnabled(value string) (bool, error) {
+	return featureEnabled("CONNECTOR_READINESS_ENABLED", value)
+}
+
 // featureEnabled defaults an unset flag to false and names invalid settings in parsing errors.
 func featureEnabled(name, value string) (bool, error) {
 	if value == "" {

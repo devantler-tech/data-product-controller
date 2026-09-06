@@ -11,10 +11,11 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `api/v1alpha1/` — versioned Kubernetes API types and generated deep-copy code.
 - `internal/controller/` — dependency-aware `DataProduct` reconciliation.
 - `internal/provisioner/v1/` — versioned, read-only provisioner observation contract.
+- `internal/connector/v1/` — versioned Deployment observation with bounded, uncached, exact-name reads.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
-- `pkg/featureflag/` — OpenFeature boundary; registry UI and provisioned sources are default-off.
+- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, and connector readiness are default-off.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
@@ -30,6 +31,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - Composition references a producer's named output. The controller reports missing or unready dependencies and automatically requeues consumers when producers change.
 - Provisioned sources remain owned by external controllers. The `crossplane/v1` adapter observes same-namespace resource readiness and Secret metadata with explicit scoped RBAC; it never provisions, adopts, deletes, or reads connection values. See `docs/provisioned-sources.md` for the publication and ownership contract.
 - The HTTP source connector is a separate data-plane workload. It reads its own projected Secret, exposes only a fixed GET export, and never gives the controller source credentials or data. Preserve TLS verification, redirect/proxy rejection, bounded reads, and the explicit consumer/egress policy. It does not register products or report Kubernetes conditions; see `docs/http-source.md`.
+- Connector observation supports only named same-namespace `apps/v1` Deployments through `deployment/v1`. Preserve exact-name read-only RBAC, full current-generation replica readiness, independent `ConnectorReady` refresh, and bounded polling. Never add workload ownership, Secret reads, or data-plane URL probes; see `docs/connector-readiness.md`.
 - A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - `v1alpha1` is intentionally small and may change while real provisioned, integrated, and composed products validate the model. Never claim unimplemented roadmap capabilities.
