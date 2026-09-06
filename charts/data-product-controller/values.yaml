@@ -10,6 +10,20 @@ registryUI:
 provisionedSources:
   enabled: false
 
+httpSource:
+  enabled: false
+  secretName: ""
+  sourceCIDR: ""
+  consumerPodLabels: {}
+  monitorPodLabels: {}
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 route:
   enabled: false
   host: data-products.local

@@ -102,4 +102,6 @@ assert_contains "$hosted_render" 'name: harbour-observations'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/ui'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/openapi.json'
 
+sh "$repo_root/scripts/http-source-chart.test.sh"
+
 printf '%s\n' 'chart behavior tests passed'

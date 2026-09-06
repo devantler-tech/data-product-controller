@@ -63,6 +63,8 @@ linters:
             # convention (see AGENTS.md ## Maintenance). Swap the provider for
             # flagd / a managed backend in a real service; call sites are stdlib.
             - github.com/open-feature/go-sdk
+            # Standard metrics for the isolated source connector.
+            - github.com/prometheus/client_golang
             # Kubernetes API machinery and the controller-runtime are the
             # control plane's deliberately narrow runtime dependencies.
             - k8s.io/apimachinery
