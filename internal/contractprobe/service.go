@@ -140,6 +140,8 @@ func (s *Service) fetch(ctx context.Context) string {
 		target.Opaque != "" {
 		return "ContractConfigurationInvalid"
 	}
+	// #nosec G704 -- The validated URL is fixed operator configuration, never caller input.
+	// The independently deployed probe has explicitly restricted network egress.
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, s.target, nil)
 	if err != nil {
 		return "ContractConfigurationInvalid"

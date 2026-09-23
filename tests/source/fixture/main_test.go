@@ -104,16 +104,22 @@ func TestContractOutageDoesNotAffectExport(t *testing.T) {
 		want int
 	}{{"contract-up", 200}, {"contract-down", 503}, {"contract-up", 200}} {
 		control := httptest.NewRecorder()
-		fixture.control(control, httptest.NewRequest("POST", "/control/"+step.mode, nil))
+		fixture.control(
+			control,
+			httptest.NewRequestWithContext(t.Context(), "POST", "/control/"+step.mode, nil),
+		)
 		if control.Code != 204 {
 			t.Fatalf("unsupported contract mode: %d", control.Code)
 		}
 		contract := httptest.NewRecorder()
-		fixture.contract(contract, httptest.NewRequest("GET", "/contract", nil))
+		fixture.contract(
+			contract,
+			httptest.NewRequestWithContext(t.Context(), "GET", "/contract", nil),
+		)
 		if contract.Code != step.want {
 			t.Fatalf("contract status %d, want %d", contract.Code, step.want)
 		}
-		request := httptest.NewRequest("GET", "/export", nil)
+		request := httptest.NewRequestWithContext(t.Context(), "GET", "/export", nil)
 		request.Header.Set("Authorization", "Bearer fixture-token-a")
 		export := httptest.NewRecorder()
 		fixture.export(export, request)

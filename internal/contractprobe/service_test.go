@@ -59,12 +59,12 @@ func TestReachabilityFailuresAndRecovery(t *testing.T) {
 		{0, 200, "ContractReachable"},
 	} {
 		mode.Store(tc.mode)
-		response := request(service, http.MethodGet, "/readyz")
+		response := request(t, service, http.MethodGet, "/readyz")
 		if response.Code != tc.status || !strings.Contains(response.Body.String(), tc.reason) ||
 			strings.Contains(response.Body.String(), "sentinel") {
 			t.Fatalf("mode %d: %d %s", tc.mode, response.Code, response.Body)
 		}
-		metrics := request(service, http.MethodGet, "/metrics").Body.String()
+		metrics := request(t, service, http.MethodGet, "/metrics").Body.String()
 		wantGauge := "contract_probe_ready 0"
 		if tc.status == 200 {
 			wantGauge = "contract_probe_ready 1"
@@ -109,7 +109,7 @@ func TestProbeOpenFeatureAndRequestBoundary(t *testing.T) {
 			{"GET", "/readyz?", 400},
 			{"GET", "/unknown", 404},
 		} {
-			response := request(service, tc.method, tc.path)
+			response := request(t, service, tc.method, tc.path)
 			if response.Code != tc.status {
 				t.Fatalf("%s %s: %d", tc.method, tc.path, response.Code)
 			}
@@ -117,7 +117,7 @@ func TestProbeOpenFeatureAndRequestBoundary(t *testing.T) {
 		if requests.Load() != before {
 			t.Fatal("management or rejected request fetched contract")
 		}
-		response := request(service, "GET", "/readyz")
+		response := request(t, service, "GET", "/readyz")
 		if enabled && (response.Code != 200 || requests.Load() != before+1) {
 			t.Fatal("enabled probe did not fetch contract")
 		}
@@ -138,9 +138,9 @@ func TestProbeRejectsUnsafeConfigurationAndTLS(t *testing.T) {
 		),
 	)
 	defer upstream.Close()
-	for _, target := range []string{"", "http://example.com/schema", upstream.URL + "?token=sentinel", upstream.URL + "#fragment", "https://user:sentinel@example.com/schema", "https://", upstream.URL + "?", upstream.URL + "/$(OTHER)"} {
+	for _, target := range []string{"", "http://example.com/schema", upstream.URL + "?token=sentinel", upstream.URL + "#fragment", "https://user@example.com/schema", "https://", upstream.URL + "?", upstream.URL + "/$(OTHER)"} {
 		service := NewService(target, func(context.Context) bool { return true })
-		response := request(service, "GET", "/readyz")
+		response := request(t, service, "GET", "/readyz")
 		service.Close()
 		if response.Code != 503 ||
 			!strings.Contains(response.Body.String(), "ContractConfigurationInvalid") {
@@ -149,7 +149,7 @@ func TestProbeRejectsUnsafeConfigurationAndTLS(t *testing.T) {
 	}
 	service := NewService(upstream.URL, func(context.Context) bool { return true })
 	defer service.Close()
-	if response := request(service, "GET", "/readyz"); response.Code != 503 {
+	if response := request(t, service, "GET", "/readyz"); response.Code != 503 {
 		t.Fatal("accepted untrusted certificate")
 	}
 	if requests.Load() != 0 {
@@ -176,7 +176,7 @@ func TestProbeNeverFollowsRedirects(t *testing.T) {
 	defer upstream.Close()
 	service := trustedService(t, upstream)
 	if response := request(
-		service,
+		t, service,
 		"GET",
 		"/readyz",
 	); response.Code != 503 ||
@@ -209,7 +209,7 @@ func TestProbeBoundsConcurrencyAndCancellation(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("probe never reached upstream")
 	}
-	response := request(service, "GET", "/readyz")
+	response := request(t, service, "GET", "/readyz")
 	if response.Code != 503 || !strings.Contains(response.Body.String(), "ContractProbeBusy") {
 		t.Fatal("excess probe was queued")
 	}
@@ -238,9 +238,10 @@ func trustedService(t *testing.T, upstream *httptest.Server) *Service {
 	return service
 }
 
-func request(service *Service, method, path string) *httptest.ResponseRecorder {
+func request(t *testing.T, service *Service, method, path string) *httptest.ResponseRecorder {
+	t.Helper()
 	response := httptest.NewRecorder()
-	service.ServeHTTP(response, httptest.NewRequest(method, path, nil))
+	service.ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), method, path, nil))
 	return response
 }
 
@@ -273,7 +274,7 @@ func TestProbeIgnoresAmbientProxy(t *testing.T) {
 		return (&net.Dialer{}).DialContext(ctx, network, upstream.Listener.Addr().String())
 	}
 	if response := request(
-		service,
+		t, service,
 		"GET",
 		"/readyz",
 	); response.Code != 200 ||
@@ -310,7 +311,10 @@ func TestProbeRejectsRequestBodies(t *testing.T) {
 	service := NewService("https://unreachable.invalid", func(context.Context) bool { return true })
 	defer service.Close()
 	response := httptest.NewRecorder()
-	service.ServeHTTP(response, httptest.NewRequest("GET", "/readyz", strings.NewReader("input")))
+	service.ServeHTTP(
+		response,
+		httptest.NewRequestWithContext(t.Context(), "GET", "/readyz", strings.NewReader("input")),
+	)
 	if response.Code != 400 {
 		t.Fatalf("request body accepted: %d", response.Code)
 	}
