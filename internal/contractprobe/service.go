@@ -133,7 +133,8 @@ func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 // fetch discards a complete bounded response; the target is immutable operator configuration.
 func (s *Service) fetch(ctx context.Context) string {
 	target, err := url.Parse(s.target)
-	if err != nil || target.Scheme != "https" || target.Hostname() == "" || target.User != nil || strings.Contains(s.target, "$(") ||
+	if err != nil || target.Scheme != "https" || target.Hostname() == "" ||
+		target.User != nil || strings.Contains(s.target, "$(") ||
 		target.RawQuery != "" || target.ForceQuery ||
 		target.Fragment != "" ||
 		target.Opaque != "" {
