@@ -22,12 +22,26 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 		t.Fatalf("register data-product API: %v", err)
 	}
 	product := registryProduct()
+	product.Spec.ContractChecks = []datav1alpha1.ContractCheck{
+		{
+			Output: "query",
+			ResourceRef: datav1alpha1.ConnectorResourceReference{
+				APIVersion: "apps/v1",
+				Kind:       "Deployment",
+				Name:       "private-probe-sentinel",
+			},
+		},
+	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product).Build()
 	handler := NewHandler(reader, func(context.Context) bool { return false })
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/products", nil)
 	response := httptest.NewRecorder()
 
 	handler.ServeHTTP(response, request)
+	if strings.Contains(response.Body.String(), "private-probe-sentinel") ||
+		strings.Contains(response.Body.String(), "contractChecks") {
+		t.Fatal("registry exposed private probe references")
+	}
 
 	if response.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)

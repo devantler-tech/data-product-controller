@@ -1,0 +1,143 @@
+{{- if .Values.contractProbe.enabled }}
+{{- if eq .Release.Namespace "default" }}
+{{- fail "contractProbe requires an explicit non-default product namespace" }}
+{{- end }}
+{{- if not (regexMatch "^sha256:[a-f0-9]{64}$" .Values.image.digest) }}
+{{- fail "contractProbe requires image.digest pinned to a released sha256 digest" }}
+{{- end }}
+{{- $name := printf "%s-contract-probe" (include "data-product-controller.fullname" . | trunc 48 | trimSuffix "-") }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contract-probe
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contract-probe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: contract-probe
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: data-product-controller
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: contract-probe
+    spec:
+      serviceAccountName: {{ $name }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: contract-probe
+          image: {{ include "data-product-controller.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: [/contract-probe]
+          env:
+            - name: CONTRACT_PROBE_URL
+              value: {{ .Values.contractProbe.url | quote }}
+            - name: CONTRACT_READINESS_ENABLED
+              value: "true"
+          ports:
+            - name: management
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: management
+            timeoutSeconds: 7
+            periodSeconds: 30
+            failureThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: management
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            readOnlyRootFilesystem: true
+          resources:
+            {{- toYaml .Values.contractProbe.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contract-probe
+spec:
+  type: ClusterIP
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: data-product-controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: contract-probe
+  ports:
+    - name: management
+      port: 8081
+      targetPort: management
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: contract-probe
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: data-product-controller
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: contract-probe
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- toYaml .Values.contractProbe.monitorPodLabels | nindent 14 }}
+      ports:
+        - port: management
+          protocol: TCP
+  egress:
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.contractProbe.targetCIDR | quote }}
+      ports:
+        - port: 443
+          protocol: TCP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+{{- end }}

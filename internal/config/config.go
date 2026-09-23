@@ -21,6 +21,11 @@ func ConnectorReadinessEnabled(value string) (bool, error) {
 	return featureEnabled("CONNECTOR_READINESS_ENABLED", value)
 }
 
+// ContractReadinessEnabled parses the default-off contract observation and execution flag.
+func ContractReadinessEnabled(value string) (bool, error) {
+	return featureEnabled("CONTRACT_READINESS_ENABLED", value)
+}
+
 // featureEnabled defaults an unset flag to false and names invalid settings in parsing errors.
 func featureEnabled(name, value string) (bool, error) {
 	if value == "" {

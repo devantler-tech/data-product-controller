@@ -88,6 +88,16 @@ source_pod() {
 	kube get pods -l app.kubernetes.io/component=http-source -o json |
 		jq -er '.items | map(select(.metadata.deletionTimestamp == null)) | if length == 1 then .[0].metadata.uid else error("expected one connector Pod") end'
 }
+contract_readiness() {
+	local status=$1 reason=$2
+	kube get dataproduct existing-export -o json | jq -e --arg status "$status" --arg reason "$reason" '
+    . as $product |
+    any(.status.conditions[]?; .type == "ConnectorReady" and .status == "True" and .observedGeneration == $product.metadata.generation) and
+    ([.status.conditions[]? | select(.type == "Ready" or .type == "ContractsReady") |
+      select(.status == $status and .observedGeneration == $product.metadata.generation)] | length == 2) and
+    any(.status.conditions[]?; .type == "ContractsReady" and .reason == $reason)' >/dev/null &&
+		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
+}
 independent_resource_uids() {
 	kube get deployment/dpc-http-source secret/existing-export -o json |
 		jq -ceS --arg product_uid "$1" '
@@ -220,6 +230,53 @@ kube apply -f "$test_dir/observer-rbac.yaml"
 wait_for 'healthy source reaches product and registry readiness' 240 readiness True true
 wait_for 'authorized consumer reads the real export' 120 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
+
+# Independent publication lets contract outages leave the authenticated export healthy.
+jq --arg cidr "$DPC_SOURCE_IP/32" '.contractProbe={enabled:true,
+  url:"https://source.products.svc.cluster.local/contract",targetCIDR:$cidr,
+  monitorPodLabels:{app:"source-consumer"}}' "$test_dir/values.yaml" >"$test_dir/contract-values.yaml"
+mv "$test_dir/contract-values.yaml" "$test_dir/values.yaml"
+install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
+kube --request-timeout=0 rollout status deployment/dpc-contract-probe --timeout=240s
+kube patch dataproduct existing-export --type=merge -p '{"spec":{"outputs":[{"name":"query","protocol":"OpenAPI","url":"https://export.example.com/api/data","contractUrl":"https://source.products.svc.cluster.local/contract","mediaType":"application/json"}],"contractChecks":[{"output":"query","resourceRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"dpc-contract-probe"}}]}}'
+wait_for 'contract checks default off without changing connector health' 180 contract_readiness False ContractFeatureDisabled
+kube set env deployment/dpc CONTRACT_READINESS_ENABLED=true
+kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
+wait_for 'contract checks require their exact-resource grant' 180 contract_readiness False ContractProbeAccessDenied
+yq 'with(select(.kind == "Role"); .rules[0].resourceNames = ["dpc-contract-probe"]) |
+  with(select(.kind == "RoleBinding"); .subjects[0].name = "dpc" | .subjects[0].namespace = "products")' \
+	"$repo_root/docs/examples/contract-observer-rbac.yaml" >"$test_dir/contract-rbac.yaml"
+kube apply -f "$test_dir/contract-rbac.yaml"
+wait_for 'published contract reaches product and registry readiness' 180 contract_readiness True ContractsReady
+docker exec "$source_container" /fixture control contract-down
+wait_for 'contract outage reaches readiness while connector stays healthy' 240 contract_readiness False ContractProbeNotReady
+probe --url http://dpc-contract-probe:8081/metrics --contains 'contract_probe_ready 0'
+probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
+docker exec "$source_container" /fixture control contract-up
+wait_for 'contract publication recovery restores product readiness' 240 contract_readiness True ContractsReady
+probe --url http://dpc-contract-probe:8081/metrics --contains 'contract_probe_ready 1'
+kube patch dataproduct existing-export --type=json -p '[{"op":"replace","path":"/spec/outputs/0/contractUrl","value":"https://source.products.svc.cluster.local/other"}]'
+wait_for 'a changed contract URL rejects the previous healthy probe' 180 contract_readiness False ContractProbeConfigurationMismatch
+kube patch dataproduct existing-export --type=json -p '[{"op":"replace","path":"/spec/outputs/0/contractUrl","value":"https://source.products.svc.cluster.local/contract"}]'
+wait_for 'matching the probe URL restores contract readiness' 180 contract_readiness True ContractsReady
+kube delete role export-contract-observer
+wait_for 'revoked contract observation access becomes unready' 180 contract_readiness False ContractProbeAccessDenied
+kube apply -f "$test_dir/contract-rbac.yaml"
+wait_for 'restored contract observation access recovers' 180 contract_readiness True ContractsReady
+kube set env deployment/dpc-contract-probe CONTRACT_READINESS_ENABLED=false
+wait_for 'disabled probe execution fails closed' 180 contract_readiness False ContractProbeConfigurationMismatch
+wait_for 'disabled probe reports its release gate' 180 probe --url http://dpc-contract-probe:8081/readyz --want-status 503 --contains FeatureDisabled
+kube set env deployment/dpc-contract-probe CONTRACT_READINESS_ENABLED=true
+kube --request-timeout=0 rollout status deployment/dpc-contract-probe --timeout=240s
+wait_for 'reenabled probe execution restores readiness' 180 contract_readiness True ContractsReady
+wait_for 'unauthorized monitor cannot reach contract metrics' 90 kube exec outsider -- /fixture probe \
+	--url http://dpc-contract-probe:8081/metrics --want-error --timeout 5s
+kube patch dataproduct existing-export --type=merge -p '{"spec":{"contractChecks":null}}'
+wait_for 'removing contract checks preserves connector readiness' 180 readiness True true
+kube get dataproduct existing-export -o json | jq -e 'all(.status.conditions[]; .type != "ContractsReady")' >/dev/null
+kube get deployment dpc-contract-probe >/dev/null
+echo 'PASS: detached contract probe remains independently owned'
+
 connector_uid=$(source_pod)
 wait_for 'unauthorized consumer is denied by NetworkPolicy' 90 kube exec outsider -- /fixture probe \
 	--url http://dpc-http-source/api/data --want-error --timeout 5s

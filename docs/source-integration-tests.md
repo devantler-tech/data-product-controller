@@ -1,6 +1,6 @@
 # Source integration acceptance
 
-`tests/source/run.sh` exercises the real controller, HTTP export connector, and
+`tests/source/run.sh` exercises the real controller, HTTP export connector, contract probe, and
 registry together in an ephemeral KSail cluster. It uses Vanilla Kubernetes on
 Kind/Docker with Cilium enforcing NetworkPolicy. Its synthetic source serves TLS
 with a generated one-day certificate and test-only credentials.
@@ -90,7 +90,14 @@ Secret projection has an independent propagation delay. There is no universal
 and selected status/events/controller logs on failure, without dumping Secret
 values, generated keys, or kubeconfig contents.
 
+The independent TLS contract fixture supports publication outage/recovery while
+the authenticated export stays healthy. Contract checks cover disabled observation,
+exact-resource RBAC and revocation, changed output URLs, disabled probe execution,
+monitor network isolation, metrics during outages, and reference removal without
+workload deletion. `ContractsReady` and aggregate registry readiness follow the
+contract while `ConnectorReady` stays true.
+
 The hosted result is a controlled integration proxy. Platform rollout acceptance
-and release-flag retirement remain in issues #46 and #49. Public-route contract
-reachability is outside this test's claim: the contract is fetched over the actual
-in-cluster connector Service, and the controller never fetches its data-plane URL.
+and release-flag retirement remain in issues #46, #49 and #101. The contract probe
+uses a real TLS endpoint on the private test network; this does not prove production
+public-route reachability. The controller never fetches its data-plane URLs.

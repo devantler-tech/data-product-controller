@@ -43,6 +43,8 @@ spec:
               value: {{ .Values.provisionedSources.enabled | quote }}
             - name: CONNECTOR_READINESS_ENABLED
               value: {{ .Values.connectorReadiness.enabled | quote }}
+            - name: CONTRACT_READINESS_ENABLED
+              value: {{ .Values.contractReadiness.enabled | quote }}
           ports:
             - name: registry
               containerPort: 8082

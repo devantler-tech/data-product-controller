@@ -93,6 +93,7 @@ func serve(ctx context.Context) error {
 	fixture := &source{}
 	public := http.NewServeMux()
 	public.HandleFunc("/export", fixture.export)
+	public.HandleFunc("/contract", fixture.contract)
 	admin := http.NewServeMux()
 	admin.HandleFunc("/control/", fixture.control)
 	admin.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {

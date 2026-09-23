@@ -11,7 +11,24 @@ import (
 )
 
 type source struct {
-	mode atomic.Int32
+	mode         atomic.Int32
+	contractDown atomic.Bool
+}
+
+func (s *source) contract(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.contractDown.Load() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = io.WriteString(
+		w,
+		`{"openapi":"3.1.0","info":{"title":"Fixture","version":"1.0.0"},"paths":{}}`,
+	)
 }
 
 func (s *source) export(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +61,10 @@ func (s *source) control(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch r.URL.Path {
+	case "/control/contract-down":
+		s.contractDown.Store(true)
+	case "/control/contract-up":
+		s.contractDown.Store(false)
 	case "/control/healthy":
 		s.mode.Store(0)
 	case "/control/down":
@@ -68,6 +89,10 @@ func control(ctx context.Context, args []string) error {
 		return errors.New("could not create control request")
 	}
 	switch args[0] {
+	case "contract-down":
+		request.URL.Path = "/control/contract-down"
+	case "contract-up":
+		request.URL.Path = "/control/contract-up"
 	case "healthy":
 	case "down":
 		request.URL.Path = "/control/down"

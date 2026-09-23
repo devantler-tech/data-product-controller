@@ -3,6 +3,7 @@ package v1
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
@@ -32,11 +33,45 @@ type Deployment struct {
 
 var _ Observer = (*Deployment)(nil)
 
+// ObserveContract observes the independent probe for one selected output.
+func (d *Deployment) ObserveContract(
+	ctx context.Context,
+	namespace string,
+	ref datav1alpha1.ConnectorResourceReference,
+	target string,
+) Observation {
+	if target == "" || strings.Contains(target, "$(") {
+		return unavailable(
+			"ContractProbeConfigurationMismatch",
+			"Select an output with a contract URL.",
+		)
+	}
+	observation := d.observe(
+		ctx,
+		namespace,
+		datav1alpha1.Connector{Adapter: "deployment/v1", ResourceRef: ref},
+		target,
+	)
+	observation.Reason = strings.Replace(observation.Reason, "Connector", "ContractProbe", 1)
+	observation.Message = strings.ReplaceAll(observation.Message, "connector", "contract probe")
+	return observation
+}
+
 // Observe requires all desired replicas to be current, ready, and available within a bounded API read.
 func (d *Deployment) Observe(
 	ctx context.Context,
 	namespace string,
 	connector datav1alpha1.Connector,
+) Observation {
+	return d.observe(ctx, namespace, connector, "")
+}
+
+// observe uses the same snapshot for configuration binding and full rollout readiness.
+func (d *Deployment) observe(
+	ctx context.Context,
+	namespace string,
+	connector datav1alpha1.Connector,
+	target string,
 ) Observation {
 	ref := connector.ResourceRef
 	if connector.Adapter != "deployment/v1" || ref.APIVersion != "apps/v1" ||
@@ -87,6 +122,12 @@ func (d *Deployment) Observe(
 			"The connector Deployment is being deleted; restore or replace the reference.",
 		)
 	}
+	if target != "" && !matchesContractProbe(workload, target) {
+		return unavailable(
+			"ContractProbeConfigurationMismatch",
+			"Configure the contract-probe container with this output's literal URL, enable it, and use its /readyz HTTP probe on port 8081.",
+		)
+	}
 	desired := int32(1)
 	if workload.Spec.Replicas != nil {
 		desired = *workload.Spec.Replicas
@@ -118,6 +159,50 @@ func (d *Deployment) Observe(
 		Reason:  "ConnectorReady",
 		Message: "All desired connector replicas are current, ready, and available.",
 	}
+}
+
+// matchesContractProbe binds the observed generation to explicit, operator-owned probe configuration.
+func matchesContractProbe(workload *appsv1.Deployment, target string) bool {
+	for _, container := range workload.Spec.Template.Spec.Containers {
+		if container.Name != "contract-probe" {
+			continue
+		}
+		if len(container.Command) != 1 || container.Command[0] != "/contract-probe" ||
+			len(container.Args) != 0 ||
+			container.ReadinessProbe == nil {
+			return false
+		}
+		probe := container.ReadinessProbe.HTTPGet
+		if probe == nil || probe.Path != "/readyz" || probe.Host != "" ||
+			len(probe.HTTPHeaders) != 0 ||
+			(probe.Scheme != "" && probe.Scheme != "HTTP") {
+			return false
+		}
+		port := probe.Port.IntVal == 8081 && probe.Port.StrVal == ""
+		for _, candidate := range container.Ports {
+			if candidate.Name == probe.Port.StrVal && candidate.ContainerPort == 8081 &&
+				candidate.Name != "" {
+				port = true
+			}
+		}
+		urlCount, flagCount := 0, 0
+		for _, env := range container.Env {
+			switch env.Name {
+			case "CONTRACT_PROBE_URL":
+				if env.ValueFrom != nil || env.Value != target {
+					return false
+				}
+				urlCount++
+			case "CONTRACT_READINESS_ENABLED":
+				if env.ValueFrom != nil || env.Value != "true" {
+					return false
+				}
+				flagCount++
+			}
+		}
+		return port && urlCount == 1 && flagCount == 1
+	}
+	return false
 }
 
 // unavailable describes a failed observation without exposing workload or API error contents.

@@ -35,6 +35,8 @@ type DataProductReconciler struct {
 	ConnectorReader client.Reader
 	// ConnectorsEnabled evaluates the default-off connector-readiness release flag.
 	ConnectorsEnabled func(context.Context) bool
+	// ContractsEnabled evaluates the default-off contract-readiness release flag.
+	ContractsEnabled func(context.Context) bool
 }
 
 func (r *DataProductReconciler) requestsForDependency(
@@ -108,7 +110,8 @@ func (r *DataProductReconciler) Reconcile(
 	previousStatus := product.DeepCopy().Status
 	result := ctrl.Result{}
 	r.observeConnector(ctx, product)
-	if product.Spec.Connector != nil {
+	r.observeContracts(ctx, product)
+	if product.Spec.Connector != nil || len(product.Spec.ContractChecks) != 0 {
 		result.RequeueAfter = 30 * time.Second
 	}
 	if product.Spec.Source != nil {
@@ -152,7 +155,12 @@ func (r *DataProductReconciler) Reconcile(
 				return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 			}
 
-			if product.Spec.Connector != nil ||
+			if len(product.Spec.ContractChecks) != 0 ||
+				meta.FindStatusCondition(
+					previousStatus.Conditions,
+					datav1alpha1.ConditionContractsReady,
+				) != nil ||
+				product.Spec.Connector != nil ||
 				meta.FindStatusCondition(
 					previousStatus.Conditions,
 					datav1alpha1.ConditionConnectorReady,
@@ -217,6 +225,15 @@ func (r *DataProductReconciler) Reconcile(
 	); connector != nil &&
 		connector.Status != metav1.ConditionTrue {
 		setReadiness(product, metav1.ConditionFalse, connector.Reason, connector.Message)
+		return result, r.updateStatusIfChanged(ctx, product, previousStatus)
+	}
+
+	if contracts := meta.FindStatusCondition(
+		product.Status.Conditions,
+		datav1alpha1.ConditionContractsReady,
+	); contracts != nil &&
+		contracts.Status != metav1.ConditionTrue {
+		setReadiness(product, metav1.ConditionFalse, contracts.Reason, contracts.Message)
 		return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 	}
 

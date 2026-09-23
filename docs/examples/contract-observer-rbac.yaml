@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: export-contract-observer
+  namespace: products
+rules:
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [export-contract-probe]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: export-contract-observer
+  namespace: products
+subjects:
+  - kind: ServiceAccount
+    name: data-product-controller
+    namespace: data-product-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: export-contract-observer
