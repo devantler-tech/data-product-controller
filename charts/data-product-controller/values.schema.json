@@ -46,16 +46,10 @@
             "const": true
           }
         },
-        "required": [
-          "enabled"
-        ]
+        "required": ["enabled"]
       },
       "then": {
-        "required": [
-          "secretName",
-          "sourceCIDR",
-          "consumerPodLabels"
-        ],
+        "required": ["secretName", "sourceCIDR", "consumerPodLabels"],
         "properties": {
           "secretName": {
             "minLength": 1,
@@ -109,16 +103,10 @@
             "const": true
           }
         },
-        "required": [
-          "enabled"
-        ]
+        "required": ["enabled"]
       },
       "then": {
-        "required": [
-          "url",
-          "targetCIDR",
-          "monitorPodLabels"
-        ],
+        "required": ["url", "targetCIDR", "monitorPodLabels"],
         "properties": {
           "url": {
             "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(/[^\\s?#@]*)?$",
