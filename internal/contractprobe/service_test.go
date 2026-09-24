@@ -224,6 +224,7 @@ func TestProbeBoundsConcurrencyAndCancellation(t *testing.T) {
 	}
 }
 
+// trustedService trusts only the fixture certificate while preserving hostname validation.
 func trustedService(t *testing.T, upstream *httptest.Server) *Service {
 	t.Helper()
 	service := NewService(upstream.URL, func(context.Context) bool { return true })
@@ -238,6 +239,7 @@ func trustedService(t *testing.T, upstream *httptest.Server) *Service {
 	return service
 }
 
+// request exercises the management handler with cancellation tied to the test lifecycle.
 func request(t *testing.T, service *Service, method, path string) *httptest.ResponseRecorder {
 	t.Helper()
 	response := httptest.NewRecorder()

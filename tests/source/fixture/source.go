@@ -15,6 +15,7 @@ type source struct {
 	contractDown atomic.Bool
 }
 
+// contract can fail independently of the authenticated export to test contract-specific readiness.
 func (s *source) contract(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -31,6 +32,7 @@ func (s *source) contract(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// export models a read-only source whose availability and synthetic credential can change.
 func (s *source) export(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -55,6 +57,7 @@ func (s *source) export(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `{"fixture":"source"}`)
 }
 
+// control changes only predefined source and contract failure modes through the private listener.
 func (s *source) control(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -78,6 +81,7 @@ func (s *source) control(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// control sends one validated mode transition to the fixture's loopback management endpoint.
 func control(ctx context.Context, args []string) error {
 	if len(args) != 1 {
 		return errors.New("control expects healthy, down, or rotated")

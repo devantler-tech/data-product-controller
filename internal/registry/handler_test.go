@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// TestProductRegistryReturnsPortableDescriptors excludes private resource references from discovery.
 func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	t.Parallel()
 

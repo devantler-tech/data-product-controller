@@ -16,7 +16,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
-- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, and connector readiness are default-off.
+- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, connector readiness, and contract readiness are default-off.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
