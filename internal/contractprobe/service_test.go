@@ -283,11 +283,22 @@ func TestProbeIgnoresAmbientProxy(t *testing.T) {
 	}
 }
 
-// TestSlowContractTimesOut checks the production network deadline with an otherwise live request context.
+// TestSlowContractTimesOut checks that the total deadline also bounds a stalled response body.
 func TestSlowContractTimesOut(t *testing.T) {
 	t.Parallel()
 	upstream := httptest.NewTLSServer(
-		http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) { <-r.Context().Done() }),
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Length", "100")
+			if _, err := io.WriteString(w, "partial"); err != nil {
+				t.Error(err)
+				return
+			}
+			if err := http.NewResponseController(w).Flush(); err != nil {
+				t.Error(err)
+				return
+			}
+			<-r.Context().Done()
+		}),
 	)
 	defer upstream.Close()
 	service := trustedService(t, upstream)
