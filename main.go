@@ -27,6 +27,8 @@ const provisionedSourcesFlag = "provisioned-sources"
 
 const connectorReadinessFlag = "connector-readiness"
 
+const contractReadinessFlag = "contract-readiness"
+
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
 // main validates release flags, registers the controller and registry, and runs the manager until shutdown.
@@ -87,11 +89,19 @@ func main() {
 		setupLog.Error(err, "invalid connector readiness configuration")
 		os.Exit(1)
 	}
+	contractsEnabled, err := config.ContractReadinessEnabled(
+		os.Getenv("CONTRACT_READINESS_ENABLED"),
+	)
+	if err != nil {
+		setupLog.Error(err, "invalid contract readiness configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			registryUIFlag:         uiEnabled,
 			provisionedSourcesFlag: sourcesEnabled,
 			connectorReadinessFlag: connectorsEnabled,
+			contractReadinessFlag:  contractsEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -123,6 +133,9 @@ func main() {
 		Scheme:          controllerManager.GetScheme(),
 		SourceReader:    controllerManager.GetAPIReader(),
 		ConnectorReader: controllerManager.GetAPIReader(),
+		ContractsEnabled: func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, contractReadinessFlag)
+		},
 		ConnectorsEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, connectorReadinessFlag)
 		},

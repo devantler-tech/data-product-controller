@@ -14,6 +14,22 @@ provisionedSources:
 connectorReadiness:
   enabled: false
 
+contractReadiness:
+  enabled: false
+
+contractProbe:
+  enabled: false
+  url: ""
+  targetCIDR: ""
+  monitorPodLabels: {}
+  resources:
+    requests:
+      cpu: 10m
+      memory: 24Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
 httpSource:
   enabled: false
   secretName: ""

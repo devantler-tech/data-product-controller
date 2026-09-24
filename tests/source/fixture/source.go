@@ -11,9 +11,28 @@ import (
 )
 
 type source struct {
-	mode atomic.Int32
+	mode         atomic.Int32
+	contractDown atomic.Bool
 }
 
+// contract can fail independently of the authenticated export to test contract-specific readiness.
+func (s *source) contract(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if s.contractDown.Load() {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = io.WriteString(
+		w,
+		`{"openapi":"3.1.0","info":{"title":"Fixture","version":"1.0.0"},"paths":{}}`,
+	)
+}
+
+// export models a read-only source whose availability and synthetic credential can change.
 func (s *source) export(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -38,12 +57,17 @@ func (s *source) export(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `{"fixture":"source"}`)
 }
 
+// control changes only predefined source and contract failure modes through the private listener.
 func (s *source) control(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	switch r.URL.Path {
+	case "/control/contract-down":
+		s.contractDown.Store(true)
+	case "/control/contract-up":
+		s.contractDown.Store(false)
 	case "/control/healthy":
 		s.mode.Store(0)
 	case "/control/down":
@@ -57,6 +81,7 @@ func (s *source) control(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// control sends one validated mode transition to the fixture's loopback management endpoint.
 func control(ctx context.Context, args []string) error {
 	if len(args) != 1 {
 		return errors.New("control expects healthy, down, or rotated")
@@ -68,6 +93,10 @@ func control(ctx context.Context, args []string) error {
 		return errors.New("could not create control request")
 	}
 	switch args[0] {
+	case "contract-down":
+		request.URL.Path = "/control/contract-down"
+	case "contract-up":
+		request.URL.Path = "/control/contract-up"
 	case "healthy":
 	case "down":
 		request.URL.Path = "/control/down"

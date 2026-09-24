@@ -6,28 +6,46 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean" }
+        "enabled": {
+          "type": "boolean"
+        }
       }
     },
     "httpSource": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean" },
-        "secretName": { "type": "string" },
-        "sourceCIDR": { "type": "string" },
+        "enabled": {
+          "type": "boolean"
+        },
+        "secretName": {
+          "type": "string"
+        },
+        "sourceCIDR": {
+          "type": "string"
+        },
         "consumerPodLabels": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "monitorPodLabels": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
-        "resources": { "type": "object" }
+        "resources": {
+          "type": "object"
+        }
       },
       "if": {
-        "properties": { "enabled": { "const": true } },
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        },
         "required": ["enabled"]
       },
       "then": {
@@ -41,7 +59,67 @@
           "sourceCIDR": {
             "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}/32$"
           },
-          "consumerPodLabels": { "minProperties": 1 }
+          "consumerPodLabels": {
+            "minProperties": 1
+          }
+        }
+      }
+    },
+    "contractReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "contractProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "url": {
+          "type": "string"
+        },
+        "targetCIDR": {
+          "type": "string"
+        },
+        "monitorPodLabels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "resources": {
+          "type": "object"
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        },
+        "required": ["enabled"]
+      },
+      "then": {
+        "required": ["url", "targetCIDR", "monitorPodLabels"],
+        "properties": {
+          "url": {
+            "pattern": "^https://[A-Za-z0-9.-]+(?::443)?(/[^\\s?#@]*)?$",
+            "not": {
+              "pattern": "\\$\\("
+            }
+          },
+          "targetCIDR": {
+            "pattern": "^(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])){3}/32$"
+          },
+          "monitorPodLabels": {
+            "minProperties": 1
+          }
         }
       }
     }

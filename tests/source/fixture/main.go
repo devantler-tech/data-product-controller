@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// main ties every synthetic fixture mode to process shutdown signals.
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	err := run(ctx, os.Args[1:])
@@ -23,6 +24,7 @@ func main() {
 	}
 }
 
+// run dispatches the fixture's fixed modes and rejects unsupported commands.
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
 		return errors.New("expected serve, control, idle, or probe")
@@ -47,6 +49,7 @@ func run(ctx context.Context, args []string) error {
 	}
 }
 
+// newServer bounds fixture requests and cancels them with the owning test process.
 func newServer(ctx context.Context, address string, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              address,
@@ -61,6 +64,7 @@ func newServer(ctx context.Context, address string, handler http.Handler) *http.
 	}
 }
 
+// idle keeps a consumer Pod alive with loopback-only health until the test cancels it.
 func idle(ctx context.Context) error {
 	health := http.NewServeMux()
 	health.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
@@ -87,12 +91,14 @@ func idle(ctx context.Context) error {
 	return result
 }
 
+// serve separates the synthetic TLS export and contract from loopback-only failure controls.
 func serve(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	fixture := &source{}
 	public := http.NewServeMux()
 	public.HandleFunc("/export", fixture.export)
+	public.HandleFunc("/contract", fixture.contract)
 	admin := http.NewServeMux()
 	admin.HandleFunc("/control/", fixture.control)
 	admin.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {

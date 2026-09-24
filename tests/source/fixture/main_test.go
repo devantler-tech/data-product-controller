@@ -95,6 +95,40 @@ func TestSourceOutageAndCredentialRotation(t *testing.T) {
 	}
 }
 
+// TestContractOutageDoesNotAffectExport ensures contract failures exercise independent readiness.
+func TestContractOutageDoesNotAffectExport(t *testing.T) {
+	t.Parallel()
+	fixture := &source{}
+	for _, step := range []struct {
+		mode string
+		want int
+	}{{"contract-up", 200}, {"contract-down", 503}, {"contract-up", 200}} {
+		control := httptest.NewRecorder()
+		fixture.control(
+			control,
+			httptest.NewRequestWithContext(t.Context(), "POST", "/control/"+step.mode, nil),
+		)
+		if control.Code != 204 {
+			t.Fatalf("unsupported contract mode: %d", control.Code)
+		}
+		contract := httptest.NewRecorder()
+		fixture.contract(
+			contract,
+			httptest.NewRequestWithContext(t.Context(), "GET", "/contract", nil),
+		)
+		if contract.Code != step.want {
+			t.Fatalf("contract status %d, want %d", contract.Code, step.want)
+		}
+		request := httptest.NewRequestWithContext(t.Context(), "GET", "/export", nil)
+		request.Header.Set("Authorization", "Bearer fixture-token-a")
+		export := httptest.NewRecorder()
+		fixture.export(export, request)
+		if export.Code != 200 {
+			t.Fatal("contract outage also broke connector source")
+		}
+	}
+}
+
 func TestProbeRejectsHTTPFailuresAsNetworkDenial(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)

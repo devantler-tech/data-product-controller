@@ -94,6 +94,58 @@ spec:
                 - adapter
                 - resourceRef
                 type: object
+              contractChecks:
+                description: ContractChecks optionally require reachability of selected
+                  published contracts.
+                items:
+                  description: ContractCheck binds a published output to an independently
+                    operated contract-probe Deployment.
+                  properties:
+                    output:
+                      description: Output selects the product's named output and its
+                        current contractUrl.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    resourceRef:
+                      description: ResourceRef selects the same-namespace probe Deployment;
+                        no lifecycle ownership is granted.
+                      properties:
+                        apiVersion:
+                          description: APIVersion selects the supported workload API.
+                          enum:
+                          - apps/v1
+                          type: string
+                        kind:
+                          description: Kind selects the supported workload kind.
+                          enum:
+                          - Deployment
+                          type: string
+                        name:
+                          description: Name identifies the independently owned connector
+                            Deployment.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$
+                          type: string
+                        namespace:
+                          description: Namespace must be omitted or empty; scope is
+                            always the product's namespace.
+                          maxLength: 0
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                  required:
+                  - output
+                  - resourceRef
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - output
+                x-kubernetes-list-type: map
               description:
                 description: Description states what data capability the product provides.
                 minLength: 1

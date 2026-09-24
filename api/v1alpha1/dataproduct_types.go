@@ -7,6 +7,8 @@ const (
 	ConditionReady = "Ready"
 	// ConditionConnectorReady reports the last observed connector workload readiness.
 	ConditionConnectorReady = "ConnectorReady"
+	// ConditionContractsReady reports the selected contracts' independently observed reachability.
+	ConditionContractsReady = "ContractsReady"
 )
 
 // ProductOwner identifies the team accountable for a data product.
@@ -159,6 +161,16 @@ type Connector struct {
 	ResourceRef ConnectorResourceReference `json:"resourceRef"`
 }
 
+// ContractCheck binds a published output to an independently operated contract-probe Deployment.
+type ContractCheck struct {
+	// Output selects the product's named output and its current contractUrl.
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Output string `json:"output"`
+	// ResourceRef selects the same-namespace probe Deployment; no lifecycle ownership is granted.
+	ResourceRef ConnectorResourceReference `json:"resourceRef"`
+}
+
 // DataProductSpec defines a self-describing and composable data product.
 type DataProductSpec struct {
 	// ID is a stable URI for the product across clusters and deployments.
@@ -203,6 +215,12 @@ type DataProductSpec struct {
 
 	// Connector optionally requires full current-generation workload availability.
 	Connector *Connector `json:"connector,omitempty"`
+
+	// ContractChecks optionally require reachability of selected published contracts.
+	// +kubebuilder:validation:MaxItems=8
+	// +listType=map
+	// +listMapKey=output
+	ContractChecks []ContractCheck `json:"contractChecks,omitempty"`
 }
 
 // DataProductStatus reports observed composition and readiness.

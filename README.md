@@ -14,6 +14,7 @@ The current foundation provides:
 - composition through named output references, with dependency-aware readiness conditions;
 - a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
+- default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
@@ -45,7 +46,11 @@ The [HTTP source guide](docs/http-source.md) describes the independently deploye
 its credential and network boundaries, and its default-off release gate. It does not register a
 DataProduct or imply controller-observed connector health.
 
-Engine-specific provisioning, additional source adapters, connector health integration, richer composition semantics, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
+The [contract-readiness guide](docs/contract-readiness.md) describes independent contract probes,
+selected output checks, scoped observation, metrics, and failure recovery. Network fetching stays
+outside the controller; probe configuration must match each selected output's current contract URL.
+
+Engine-specific provisioning, additional source adapters, richer composition semantics, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Data product contract
 
@@ -117,7 +122,7 @@ helm upgrade --install data-product-controller \
 An empty `image.tag` selects the packaged chart's `appVersion` without its optional `v` prefix.
 An explicit tag overrides that default; `image.digest` takes precedence over either tag for all
 workloads. Pin a verified digest for production. The optional HTTP source workload requires a digest
-even outside production. When reusing saved Helm values, replace any old image override explicitly.
+even outside production, as does the optional contract probe. When reusing saved Helm values, replace any old image override explicitly.
 
 Updating the CRD is a manual step. Helm installs the chart's `crds/` directory on first install only
 and never updates or removes it on `helm upgrade`, so a release that changes the `DataProduct` schema
