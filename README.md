@@ -12,7 +12,7 @@ The current foundation provides:
 
 - a namespaced `DataProduct` CRD with guarded HTTPS interfaces and stable URI identity;
 - composition through named output references, with dependency-aware readiness conditions;
-- default-off contract version checks, bounded cycle detection, and observed input lineage in the API and UI;
+- default-off contract version checks, bounded cycle detection, and direct input lineage within a namespace in the API and UI;
 - a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;

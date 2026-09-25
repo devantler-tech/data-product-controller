@@ -18,6 +18,75 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
+// TestCompositionRejectsCrossNamespaceReads prevents the observer from disclosing another tenant's metadata.
+func TestCompositionRejectsCrossNamespaceReads(t *testing.T) {
+	t.Parallel()
+	for _, kind := range []string{"direct", "transitive", "unversioned", "missing"} {
+		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
+			producer, consumer := testProduct("producer"), testProduct("consumer")
+			producer.Namespace = "private"
+			producer.Spec.Version = "v1.0.0"
+			producer.Spec.Owner.Name = "must-not-be-disclosed"
+			markCompositionProducerReady(producer)
+			composeInput(t, consumer, producer.Name, "v1.0.0")
+			consumer.Spec.Inputs[0].ProductRef.Namespace = producer.Namespace
+			products := []*datav1alpha1.DataProduct{consumer, producer}
+			switch kind {
+			case "transitive":
+				bridge := consumer.DeepCopy()
+				bridge.Name = "bridge"
+				consumer.Spec.Inputs = nil
+				composeInput(t, consumer, bridge.Name, "v1.0.0")
+				markCompositionProducerReady(bridge)
+				products = append(products, bridge)
+			case "unversioned":
+				consumer.Spec.Inputs[0].Contract = nil
+			case "missing":
+				products = products[:1]
+			}
+			consumer.Status.Inputs = []datav1alpha1.InputStatus{{
+				Name: "old", Owner: &producer.Spec.Owner,
+			}}
+			r := compositionReconciler(t, products...)
+			foreignReads := 0
+			store, ok := r.Client.(client.WithWatch)
+			if !ok {
+				t.Fatal("test client must support watches")
+			}
+			r.Client = interceptor.NewClient(store, interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, options ...client.GetOption) error {
+					if key.Namespace == producer.Namespace {
+						foreignReads++
+					}
+					return c.Get(ctx, key, object, options...)
+				},
+			})
+			got := reconcileComposition(t, r, consumer)
+			if readyCondition(t, got).Reason != "CrossNamespaceDependencyDenied" ||
+				foreignReads != 0 {
+				t.Fatalf(
+					"cross-namespace observation: reason=%s foreign reads=%d",
+					readyCondition(t, got).Reason,
+					foreignReads,
+				)
+			}
+			status, err := json.Marshal(got.Status)
+			if err != nil || strings.Contains(string(status), producer.Spec.Owner.Name) {
+				t.Fatalf(
+					"foreign or previous lineage escaped into status: %s, error=%v",
+					status,
+					err,
+				)
+			}
+			if kind != "transitive" &&
+				(len(got.Status.Inputs) != 1 || got.Status.Inputs[0].Reason != "CrossNamespaceDependencyDenied") {
+				t.Fatalf("denied edge lacks an actionable diagnostic: %+v", got.Status.Inputs)
+			}
+		})
+	}
+}
+
 // TestCompositionBoundsLineageSize catches status expansion from repeated or oversized producer metadata.
 func TestCompositionBoundsLineageSize(t *testing.T) {
 	t.Parallel()
@@ -196,6 +265,24 @@ func TestCompositionDisabledFailsClosed(t *testing.T) {
 	if readyCondition(t, got).Status != metav1.ConditionTrue {
 		t.Fatal("legacy input lost existing behavior")
 	}
+	// The namespace restriction belongs to the opt-in feature, not legacy readiness.
+	foreign := p.DeepCopy()
+	foreign.Namespace = "upstream"
+	foreign.ResourceVersion = ""
+	if err := r.Create(t.Context(), foreign); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Status().Update(t.Context(), foreign); err != nil {
+		t.Fatal(err)
+	}
+	got.Spec.Inputs[0].ProductRef.Namespace = foreign.Namespace
+	if err := r.Update(t.Context(), got); err != nil {
+		t.Fatal(err)
+	}
+	got = reconcileComposition(t, r, consumer)
+	if readyCondition(t, got).Status != metav1.ConditionTrue || len(got.Status.Inputs) != 0 {
+		t.Fatal("disabled composition changed legacy cross-namespace readiness or copied metadata")
+	}
 }
 
 // TestCompositionBounds catches unlimited recursion, fan-out and repeated diamond traversal.
@@ -278,7 +365,7 @@ func TestCompositionReportsMalformedEdges(t *testing.T) {
 			case "cross namespace":
 				p.Namespace = "upstream"
 				consumer.Spec.Inputs[0].ProductRef.Namespace = "upstream"
-				want = "DependenciesReady"
+				want = "CrossNamespaceDependencyDenied"
 			}
 			got := reconcileComposition(t, compositionReconciler(t, p, consumer), consumer)
 			if readyCondition(t, got).Reason != want {
@@ -364,6 +451,7 @@ func TestCompositionContractCompatibility(t *testing.T) {
 	}
 }
 
+// composeInput decodes the public JSON contract so tests catch fields that disappear during decoding.
 func composeInput(t *testing.T, consumer *datav1alpha1.DataProduct, producer, minimum string) {
 	t.Helper()
 	input := map[string]any{
@@ -383,6 +471,7 @@ func composeInput(t *testing.T, consumer *datav1alpha1.DataProduct, producer, mi
 	consumer.Spec.Version = "v1.0.0"
 }
 
+// markCompositionProducerReady creates a fresh readiness observation for a fixture producer.
 func markCompositionProducerReady(product *datav1alpha1.DataProduct) {
 	product.Status.Conditions = []metav1.Condition{{
 		Type: datav1alpha1.ConditionReady, Status: metav1.ConditionTrue,
@@ -390,6 +479,7 @@ func markCompositionProducerReady(product *datav1alpha1.DataProduct) {
 	}}
 }
 
+// compositionReconciler supplies isolated Kubernetes storage with status-subresource behavior.
 func compositionReconciler(
 	t *testing.T,
 	products ...*datav1alpha1.DataProduct,
@@ -409,6 +499,7 @@ func compositionReconciler(
 	}
 }
 
+// reconcileComposition returns persisted status rather than trusting a mutated in-memory fixture.
 func reconcileComposition(
 	t *testing.T,
 	r *DataProductReconciler,

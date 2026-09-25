@@ -6,6 +6,7 @@ const empty = document.querySelector("#surface-empty");
 const interactionTitle = document.querySelector("#interaction-title");
 const interactionDescription = document.querySelector("#interaction-description");
 
+/** Render declared references and current observations as inert text, including untrusted owner metadata. */
 function showLineage(product) {
   const section = document.querySelector("#composition-detail");
   const list = document.querySelector("#product-lineage");
@@ -34,6 +35,7 @@ function showLineage(product) {
   }
 }
 
+/** Select a descriptor and open its independent surface only while the product is ready. */
 function selectProduct(product, button) {
   document.querySelectorAll(".product-card").forEach((card) => {
     card.setAttribute("aria-pressed", String(card === button));

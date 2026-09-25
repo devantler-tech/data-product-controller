@@ -147,6 +147,7 @@ func (s *server) listProducts(writer http.ResponseWriter, request *http.Request)
 	}
 }
 
+// descriptorFor projects published metadata while withholding readiness and lineage from stale generations.
 func descriptorFor(product *datav1alpha1.DataProduct) productDescriptor {
 	condition := meta.FindStatusCondition(product.Status.Conditions, datav1alpha1.ConditionReady)
 	readiness := readinessDescriptor{

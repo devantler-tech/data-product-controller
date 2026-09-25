@@ -35,12 +35,19 @@ Changes to a producer enqueue its transitive consumers as well as direct consume
 when observations change. Independent connector and contract-reachability conditions still refresh when
 composition is blocked.
 
+Composition rejects cross-namespace edges before any producer lookup, including transitive edges. Naming a
+producer is not authorization to copy its metadata into a consumer's namespace. Denied edges expose only the
+consumer's own declared reference and a stable denial reason; any old copied lineage is cleared. Producers
+must share the consumer's namespace until a producer-side authorization contract exists. Legacy dependency
+readiness remains unchanged while composition is disabled. Registry access policy is a separate deployment
+boundary; the existing cluster-wide catalog is not made tenant-filtered by this change.
+
 ## Consequences
 
 Authors can diagnose missing products, missing ports, incompatible contracts and cycles without inspecting
 controller logs. The API remains metadata-only and adds no Kubernetes permissions. Large graphs fail
 explicitly instead of creating unbounded traversal. Readiness and lineage describe an eventually consistent
-observation; producer generations are included so clients can identify the revision observed. The registry
+observation; producer generations are included so clients can identify the producer revision. The registry
 does not claim an atomic snapshot across products.
 
 Production adoption and flag retirement require separate rollout evidence.

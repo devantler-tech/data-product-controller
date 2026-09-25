@@ -100,7 +100,9 @@ contract while `ConnectorReady` stays true.
 The same cluster applies the documented three-product composition example. It
 checks both release-flag states, API lineage, breaking and compatible upgrades,
 cycle diagnosis without status-write loops, missing ports, producer deletion and
-recreation, and clearing lineage when disabled. The example describes interfaces;
+recreation, and clearing lineage when disabled. A namespace-scoped reader verifies
+that a denied cross-namespace reference cannot disclose producer metadata through
+consumer status. The example describes interfaces;
 it does not run their illustrative endpoints or transfer records.
 
 The hosted result is a controlled integration proxy. Platform rollout acceptance

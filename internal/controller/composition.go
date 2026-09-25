@@ -85,7 +85,9 @@ func (r *DataProductReconciler) observeComposition(
 				ProductRef: ref,
 				Reason:     "DependencyUnobserved",
 			}
-			if producer := graph.products[client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}]; producer != nil {
+			if ref.Namespace != product.Namespace {
+				status.Reason = "CrossNamespaceDependencyDenied"
+			} else if producer := graph.products[client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}]; producer != nil {
 				status.ProductID = producer.Spec.ID
 				status.Version = producer.Spec.Version
 				status.ObservedGeneration = producer.Generation
@@ -192,6 +194,12 @@ func (g *compositionGraph) visit(
 	defer delete(g.visiting, key)
 	for _, input := range product.Spec.Inputs {
 		ref := resolvedReference(product, input.ProductRef)
+		if ref.Namespace != product.Namespace {
+			return compositionObservation{
+				reason:  "CrossNamespaceDependencyDenied",
+				message: "Composition requires producers in the same namespace; cross-namespace producer authorization is not supported.",
+			}
+		}
 		producerKey := client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
 		producer := g.products[producerKey]
 		if producer == nil {
@@ -241,6 +249,7 @@ func (g *compositionGraph) visit(
 	return compositionObservation{}
 }
 
+// compositionLimit reports a stable, retryable boundary without exposing a partial graph as healthy.
 func compositionLimit() compositionObservation {
 	return compositionObservation{
 		reason:  "CompositionLimitExceeded",
@@ -248,6 +257,7 @@ func compositionLimit() compositionObservation {
 	}
 }
 
+// resolvedReference makes an omitted namespace relative to the product declaring the input.
 func resolvedReference(
 	product *datav1alpha1.DataProduct,
 	ref datav1alpha1.ProductReference,
@@ -258,6 +268,7 @@ func resolvedReference(
 	return ref
 }
 
+// findOutput selects the declared port by name without following its external URLs.
 func findOutput(product *datav1alpha1.DataProduct, name string) *datav1alpha1.OutputPort {
 	for i := range product.Spec.Outputs {
 		if product.Spec.Outputs[i].Name == name {
@@ -267,6 +278,7 @@ func findOutput(product *datav1alpha1.DataProduct, name string) *datav1alpha1.Ou
 	return nil
 }
 
+// inputCompatibility checks the selected port and optional publisher-declared contract requirement.
 func inputCompatibility(input datav1alpha1.InputPort, producer *datav1alpha1.DataProduct) string {
 	output := findOutput(producer, input.ProductRef.Output)
 	if output == nil {
@@ -282,6 +294,7 @@ func inputCompatibility(input datav1alpha1.InputPort, producer *datav1alpha1.Dat
 	return ""
 }
 
+// compatibleVersion accepts stable same-major upgrades, with exact matching before version one.
 func compatibleVersion(actual, minimum string) bool {
 	if !stableContractVersion.MatchString(actual) || !stableContractVersion.MatchString(minimum) {
 		return false
@@ -300,6 +313,7 @@ func compatibleVersion(actual, minimum string) bool {
 	return a.AtLeast(m)
 }
 
+// producerReady rejects stale success and products already being deleted.
 func producerReady(product *datav1alpha1.DataProduct) bool {
 	condition := meta.FindStatusCondition(product.Status.Conditions, datav1alpha1.ConditionReady)
 	return product.DeletionTimestamp.IsZero() && condition != nil &&
@@ -307,6 +321,7 @@ func producerReady(product *datav1alpha1.DataProduct) bool {
 		condition.ObservedGeneration == product.Generation
 }
 
+// setCompositionCondition binds a bounded graph observation to the consumer's current generation.
 func setCompositionCondition(
 	product *datav1alpha1.DataProduct,
 	observation compositionObservation,

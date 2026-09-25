@@ -24,6 +24,31 @@ wait_for 'public registry exposes verified composition' 120 probe --url http://d
 probe --url http://dpc/api/v1/products --contains '"productID":"urn:example:harbour"'
 echo 'PASS: public registry exposes observed producer lineage'
 
+# A namespace-scoped author must not gain producer metadata through the controller.
+kubectl --request-timeout=15s create namespace private-products
+kube get dataproduct harbour -o json | jq 'del(.metadata, .status) |
+  .metadata={name:"private-harbour",namespace:"private-products"} |
+  .spec.owner.name="Private producer team"' | kubectl --request-timeout=15s apply -f -
+kube create serviceaccount composition-reader
+kube create role composition-reader --verb=get --resource=dataproducts.data.devantler.tech
+kube create rolebinding composition-reader --role=composition-reader --serviceaccount=products:composition-reader
+if kubectl --request-timeout=15s --as=system:serviceaccount:products:composition-reader \
+	-n private-products get dataproduct private-harbour >/dev/null 2>&1; then
+	echo 'namespace-scoped reader unexpectedly accessed the foreign producer' >&2
+	exit 1
+fi
+kube patch dataproduct coastal-summary --type=json -p '[{"op":"replace","path":"/spec/inputs/0/productRef/name","value":"private-harbour"},{"op":"add","path":"/spec/inputs/0/productRef/namespace","value":"private-products"}]'
+wait_for 'cross-namespace composition is denied before observing the producer' 120 composition_ready CrossNamespaceDependencyDenied False
+kube --as=system:serviceaccount:products:composition-reader get dataproduct coastal-summary -o json |
+	jq -e '.status.inputs[] | select(.name=="observations") |
+    .reason=="CrossNamespaceDependencyDenied" and .ready==false and
+    .owner==null and .version==null and .productID==null and .output==null' >/dev/null
+echo 'PASS: namespace-scoped reader cannot obtain foreign producer metadata from consumer status'
+kube patch dataproduct coastal-summary --type=json -p '[{"op":"replace","path":"/spec/inputs/0/productRef/name","value":"harbour"},{"op":"remove","path":"/spec/inputs/0/productRef/namespace"}]'
+wait_for 'same-namespace producer restores composition after a denied reference' 120 composition_ready DependenciesReady True
+kubectl --request-timeout=15s delete namespace private-products --wait=false
+kubectl --request-timeout=15s -n private-products wait --for=delete dataproduct/private-harbour --timeout=60s
+
 kube patch dataproduct harbour --type=merge -p '{"spec":{"version":"v2.0.0"}}'
 wait_for 'breaking producer upgrade makes its consumer incompatible' 120 composition_ready ContractIncompatible False
 wait_for 'public registry reports incompatible composition' 120 probe --url http://dpc/api/v1/products --contains '"composition":{"reason":"ContractIncompatible"'

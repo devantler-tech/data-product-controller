@@ -41,6 +41,7 @@ type DataProductReconciler struct {
 	CompositionEnabled func(context.Context) bool
 }
 
+// requestsForDependency follows reverse edges, including transitive consumers when composition is enabled.
 func (r *DataProductReconciler) requestsForDependency(
 	ctx context.Context,
 	object client.Object,
