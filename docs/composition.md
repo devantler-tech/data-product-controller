@@ -49,16 +49,16 @@ with a `lineage` array containing each direct input's observed producer identity
 namespace, generation, version, owner, output and readiness. The UI shows these
 observations under **Inputs and lineage**, including requirements and failures.
 
-| Reason | Action |
-| --- | --- |
-| `CompositionFeatureDisabled` | Enable observation before using required input contracts. |
-| `DependencyCycle` | Remove the circular input reference named in the message. |
-| `DependencyNotFound` | Publish the referenced product or correct its namespace/name. |
-| `OutputNotFound` | Select a published output on the producer. |
-| `ContractIncompatible` | Choose a compatible producer version and protocol, or deliberately update the consumer requirement. |
-| `DependencyNotReady` | Resolve producer readiness and wait for its current generation. |
-| `DependencyUnavailable` | Restore Kubernetes API availability or controller access. |
-| `CompositionLimitExceeded` | Split a graph exceeding 256 products, 1,024 inputs, or 64 levels. |
+| Reason                       | Action                                                                                              |
+|------------------------------|-----------------------------------------------------------------------------------------------------|
+| `CompositionFeatureDisabled` | Enable observation before using required input contracts.                                           |
+| `DependencyCycle`            | Remove the circular input reference named in the message.                                           |
+| `DependencyNotFound`         | Publish the referenced product or correct its namespace/name.                                       |
+| `OutputNotFound`             | Select a published output on the producer.                                                          |
+| `ContractIncompatible`       | Choose a compatible producer version and protocol, or deliberately update the consumer requirement. |
+| `DependencyNotReady`         | Resolve producer readiness and wait for its current generation.                                     |
+| `DependencyUnavailable`      | Restore Kubernetes API availability or controller access.                                           |
+| `CompositionLimitExceeded`   | Split a graph exceeding 256 products, 1,024 inputs, or 64 levels.                                   |
 
 Checks share a five-second deadline. Recorded lineage is limited to 64 KiB of
 encoded JSON; excessive metadata reports `CompositionLimitExceeded` and clears

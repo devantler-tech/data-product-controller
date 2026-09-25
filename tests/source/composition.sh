@@ -56,7 +56,10 @@ kube set env deployment/dpc COMPOSITION_ENABLED=false
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 wait_for 'disabling composition invalidates required contracts after rollout' 120 composition_ready CompositionFeatureDisabled False
 lineage_count=$(kube get dataproduct coastal-summary -o json | jq '.status.inputs // [] | length')
-[[ "$lineage_count" == 0 ]] || { echo 'disabled composition retained lineage' >&2; exit 1; }
+[[ "$lineage_count" == 0 ]] || {
+	echo 'disabled composition retained lineage' >&2
+	exit 1
+}
 echo 'PASS: disabled composition clears observed lineage'
 kube delete -f "$repo_root/docs/examples/composition.yaml"
 wait_for 'composition example deletion clears the registry' 120 probe --url http://dpc/api/v1/products --contains '"products":[]'

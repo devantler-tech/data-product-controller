@@ -9,7 +9,10 @@ for enabled in false true; do
 		rendered=$(helm template controller "$chart" --namespace data-product-system --set composition.enabled=true)
 	fi
 	flag=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "COMPOSITION_ENABLED") | .value' -)
-	[ "$flag" = "$enabled" ] || { printf '%s\n' "composition flag must be $enabled"; exit 1; }
+	[ "$flag" = "$enabled" ] || {
+		printf '%s\n' "composition flag must be $enabled"
+		exit 1
+	}
 done
 if helm template controller "$chart" --set-string composition.enabled=invalid >/dev/null 2>&1; then
 	printf '%s\n' 'invalid composition flag accepted'
