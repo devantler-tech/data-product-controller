@@ -16,7 +16,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
-- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, connector readiness, and contract readiness are default-off.
+- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, connector readiness, contract readiness, and composition are default-off.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
@@ -30,6 +30,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `DataProduct` is control-plane metadata. Do not put records, payloads, passwords, tokens, or connection strings in spec or status.
 - Products publish standard external contracts. Protocol-specific schemas stay in OpenAPI, AsyncAPI, GraphQL, DCAT, or adapter documents rather than expanding the CRD for each technology.
 - Composition references a producer's named output. The controller reports missing or unready dependencies and automatically requeues consumers when producers change.
+- The default-off `composition` flag checks cycles and declared protocol/version requirements, records direct lineage, and requeues transitive consumers. Preserve the five-second, 256-product, 1,024-input and 64-level bounds. Compatibility is publisher-declared; never fetch schemas or product data. See `docs/composition.md`.
 - Provisioned sources remain owned by external controllers. The `crossplane/v1` adapter observes same-namespace resource readiness and Secret metadata with explicit scoped RBAC; it never provisions, adopts, deletes, or reads connection values. See `docs/provisioned-sources.md` for the publication and ownership contract.
 - The HTTP source connector is a separate data-plane workload. It reads its own projected Secret, exposes only a fixed GET export, and never gives the controller source credentials or data. Preserve TLS verification, redirect/proxy rejection, bounded reads, and the explicit consumer/egress policy. It does not register products or report Kubernetes conditions; see `docs/http-source.md`.
 - Connector observation supports only named same-namespace `apps/v1` Deployments through `deployment/v1`. Preserve exact-name read-only RBAC, full current-generation replica readiness, independent `ConnectorReady` refresh, and bounded polling. Never add workload ownership, Secret reads, or data-plane URL probes; see `docs/connector-readiness.md`.

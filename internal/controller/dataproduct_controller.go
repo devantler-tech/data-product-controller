@@ -37,6 +37,8 @@ type DataProductReconciler struct {
 	ConnectorsEnabled func(context.Context) bool
 	// ContractsEnabled evaluates the default-off contract-readiness release flag.
 	ContractsEnabled func(context.Context) bool
+	// CompositionEnabled evaluates the default-off graph and compatibility release flag.
+	CompositionEnabled func(context.Context) bool
 }
 
 func (r *DataProductReconciler) requestsForDependency(
@@ -55,22 +57,30 @@ func (r *DataProductReconciler) requestsForDependency(
 		return nil
 	}
 
-	requests := make([]reconcile.Request, 0)
+	consumers := make(map[client.ObjectKey][]client.ObjectKey)
 	for index := range products.Items {
 		consumer := &products.Items[index]
 		for _, input := range consumer.Spec.Inputs {
-			namespace := input.ProductRef.Namespace
-			if namespace == "" {
-				namespace = consumer.Namespace
+			ref := resolvedReference(consumer, input.ProductRef)
+			key := client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}
+			consumers[key] = append(consumers[key], client.ObjectKeyFromObject(consumer))
+		}
+	}
+	transitive := r.CompositionEnabled != nil && r.CompositionEnabled(ctx)
+	queue := []client.ObjectKey{client.ObjectKeyFromObject(producer)}
+	seen := make(map[client.ObjectKey]bool)
+	requests := make([]reconcile.Request, 0)
+	for len(queue) != 0 {
+		key := queue[0]
+		queue = queue[1:]
+		for _, consumer := range consumers[key] {
+			if seen[consumer] {
+				continue
 			}
-
-			if input.ProductRef.Name == producer.Name && namespace == producer.Namespace {
-				requests = append(
-					requests,
-					reconcile.Request{NamespacedName: client.ObjectKeyFromObject(consumer)},
-				)
-
-				break
+			seen[consumer] = true
+			requests = append(requests, reconcile.Request{NamespacedName: consumer})
+			if transitive {
+				queue = append(queue, consumer)
 			}
 		}
 	}
@@ -111,6 +121,21 @@ func (r *DataProductReconciler) Reconcile(
 	result := ctrl.Result{}
 	r.observeConnector(ctx, product)
 	r.observeContracts(ctx, product)
+	compositionError := r.observeComposition(ctx, product)
+	composition := meta.FindStatusCondition(
+		product.Status.Conditions,
+		datav1alpha1.ConditionCompositionReady,
+	)
+	if composition != nil {
+		result.RequeueAfter = 30 * time.Second
+	}
+	if compositionError != nil {
+		setReadiness(product, metav1.ConditionFalse, composition.Reason, composition.Message)
+		return result, errors.Join(
+			compositionError,
+			r.updateStatusIfChanged(ctx, product, previousStatus),
+		)
+	}
 	if product.Spec.Connector != nil || len(product.Spec.ContractChecks) != 0 {
 		result.RequeueAfter = 30 * time.Second
 	}
@@ -130,7 +155,15 @@ func (r *DataProductReconciler) Reconcile(
 		}
 	}
 
-	for _, input := range product.Spec.Inputs {
+	inputs := product.Spec.Inputs
+	if composition != nil {
+		if composition.Status != metav1.ConditionTrue {
+			setReadiness(product, metav1.ConditionFalse, composition.Reason, composition.Message)
+			return result, r.updateStatusIfChanged(ctx, product, previousStatus)
+		}
+		inputs = nil
+	}
+	for _, input := range inputs {
 		namespace := input.ProductRef.Namespace
 		if namespace == "" {
 			namespace = product.Namespace

@@ -105,5 +105,6 @@ assert_contains "$hosted_render" 'https://data-products.example.test/products/ha
 sh "$repo_root/scripts/http-source-chart.test.sh"
 sh "$repo_root/scripts/connector-chart.test.sh"
 sh "$repo_root/scripts/contract-chart.test.sh"
+sh "$repo_root/scripts/composition-chart.test.sh"
 
 printf '%s\n' 'chart behavior tests passed'

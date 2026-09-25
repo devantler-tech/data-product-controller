@@ -26,6 +26,11 @@ func ContractReadinessEnabled(value string) (bool, error) {
 	return featureEnabled("CONTRACT_READINESS_ENABLED", value)
 }
 
+// CompositionEnabled parses the default-off graph and declared compatibility release flag.
+func CompositionEnabled(value string) (bool, error) {
+	return featureEnabled("COMPOSITION_ENABLED", value)
+}
+
 // featureEnabled defaults an unset flag to false and names invalid settings in parsing errors.
 func featureEnabled(name, value string) (bool, error) {
 	if value == "" {

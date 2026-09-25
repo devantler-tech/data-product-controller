@@ -99,19 +99,21 @@ type productCollection struct {
 }
 
 type productDescriptor struct {
-	Namespace        string                    `json:"namespace"`
-	Name             string                    `json:"name"`
-	ID               string                    `json:"id"`
-	DisplayName      string                    `json:"displayName"`
-	Description      string                    `json:"description"`
-	Version          string                    `json:"version"`
-	Owner            datav1alpha1.ProductOwner `json:"owner"`
-	DocumentationURL string                    `json:"documentationUrl,omitempty"`
-	Inputs           []datav1alpha1.InputPort  `json:"inputs,omitempty"`
-	Outputs          []datav1alpha1.OutputPort `json:"outputs"`
-	UI               *datav1alpha1.ProductUI   `json:"ui,omitempty"`
-	Ready            bool                      `json:"ready"`
-	Readiness        readinessDescriptor       `json:"readiness"`
+	Namespace        string                     `json:"namespace"`
+	Name             string                     `json:"name"`
+	ID               string                     `json:"id"`
+	DisplayName      string                     `json:"displayName"`
+	Description      string                     `json:"description"`
+	Version          string                     `json:"version"`
+	Owner            datav1alpha1.ProductOwner  `json:"owner"`
+	DocumentationURL string                     `json:"documentationUrl,omitempty"`
+	Inputs           []datav1alpha1.InputPort   `json:"inputs,omitempty"`
+	Outputs          []datav1alpha1.OutputPort  `json:"outputs"`
+	UI               *datav1alpha1.ProductUI    `json:"ui,omitempty"`
+	Ready            bool                       `json:"ready"`
+	Readiness        readinessDescriptor        `json:"readiness"`
+	Composition      *readinessDescriptor       `json:"composition,omitempty"`
+	Lineage          []datav1alpha1.InputStatus `json:"lineage,omitempty"`
 }
 
 type readinessDescriptor struct {
@@ -163,6 +165,21 @@ func descriptorFor(product *datav1alpha1.DataProduct) productDescriptor {
 		}
 	}
 
+	var composition *readinessDescriptor
+	var lineage []datav1alpha1.InputStatus
+	if observed := meta.FindStatusCondition(
+		product.Status.Conditions,
+		datav1alpha1.ConditionCompositionReady,
+	); observed != nil {
+		composition = &readinessDescriptor{
+			Reason:  "StatusStale",
+			Message: "Composition has not been observed for the current product generation.",
+		}
+		if observed.ObservedGeneration == product.Generation {
+			composition.Reason, composition.Message = observed.Reason, observed.Message
+			lineage = product.Status.Inputs
+		}
+	}
 	return productDescriptor{
 		Namespace:        product.Namespace,
 		Name:             product.Name,
@@ -177,5 +194,7 @@ func descriptorFor(product *datav1alpha1.DataProduct) productDescriptor {
 		UI:               product.Spec.UI,
 		Ready:            ready,
 		Readiness:        readiness,
+		Composition:      composition,
+		Lineage:          lineage,
 	}
 }
