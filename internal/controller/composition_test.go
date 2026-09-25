@@ -18,6 +18,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
+// TestCompositionBoundsLineageSize catches status expansion from repeated or oversized producer metadata.
+func TestCompositionBoundsLineageSize(t *testing.T) {
+	t.Parallel()
+	p, consumer := testProduct("p"), testProduct("consumer")
+	p.Spec.Version = "v1.0.0"
+	p.Spec.Owner.Name = strings.Repeat("large owner ", 7000)
+	markCompositionProducerReady(p)
+	composeInput(t, consumer, p.Name, "v1.0.0")
+	got := reconcileComposition(t, compositionReconciler(t, p, consumer), consumer)
+	if readyCondition(t, got).Reason != "CompositionLimitExceeded" || len(got.Status.Inputs) != 0 {
+		t.Fatal("oversized lineage was published instead of a bounded failure")
+	}
+}
+
 // TestCompositionReadFailureClearsReadiness catches stale success and public leakage after API failures.
 func TestCompositionReadFailureClearsReadiness(t *testing.T) {
 	t.Parallel()

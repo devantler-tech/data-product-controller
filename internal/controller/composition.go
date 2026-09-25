@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
@@ -19,6 +20,7 @@ const (
 	maxCompositionProducts = 256
 	maxCompositionEdges    = 1024
 	maxCompositionDepth    = 64
+	maxLineageBytes        = 64 << 10
 )
 
 var stableContractVersion = regexp.MustCompile(
@@ -75,6 +77,7 @@ func (r *DataProductReconciler) observeComposition(
 	// Read only the already observed snapshot. A failed/limited traversal must not
 	// start a second unbounded walk to populate status.
 	if len(product.Spec.Inputs) <= maxCompositionEdges {
+		lineageBytes := 2 // JSON array delimiters.
 		for _, input := range product.Spec.Inputs {
 			ref := resolvedReference(product, input.ProductRef)
 			status := datav1alpha1.InputStatus{
@@ -98,6 +101,25 @@ func (r *DataProductReconciler) observeComposition(
 				}
 			} else if graph.missing[client.ObjectKey{Namespace: ref.Namespace, Name: ref.Name}] {
 				status.Reason = "DependencyNotFound"
+			}
+			encoded, err := json.Marshal(status)
+			if err != nil {
+				observation = compositionObservation{
+					reason:  "DependencyUnavailable",
+					message: "Input lineage could not be encoded.",
+					err:     err,
+				}
+				product.Status.Inputs = nil
+				break
+			}
+			lineageBytes += len(encoded) + 1
+			if lineageBytes > maxLineageBytes {
+				observation = compositionObservation{
+					reason:  "CompositionLimitExceeded",
+					message: "Observed lineage exceeds 64 KiB; shorten producer metadata or split the inputs.",
+				}
+				product.Status.Inputs = nil
+				break
 			}
 			product.Status.Inputs = append(product.Status.Inputs, status)
 		}

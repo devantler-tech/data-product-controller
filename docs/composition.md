@@ -60,7 +60,9 @@ observations under **Inputs and lineage**, including requirements and failures.
 | `DependencyUnavailable` | Restore Kubernetes API availability or controller access. |
 | `CompositionLimitExceeded` | Split a graph exceeding 256 products, 1,024 inputs, or 64 levels. |
 
-Checks share a five-second deadline. Product changes enqueue transitive consumers;
+Checks share a five-second deadline. Recorded lineage is limited to 64 KiB of
+encoded JSON; excessive metadata reports `CompositionLimitExceeded` and clears
+lineage instead of attempting an oversized status write. Product changes enqueue transitive consumers;
 observed compositions also retry after 30 seconds. Unchanged observations do not
 write status. The controller requests no additional permissions, credentials or
 network access. Source and connector lifecycle stays independent.

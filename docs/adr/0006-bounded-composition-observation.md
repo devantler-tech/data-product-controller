@@ -23,3 +23,5 @@ Changes to a producer enqueue its transitive consumers as well as direct consume
 Authors can diagnose missing products, missing ports, incompatible contracts and cycles without inspecting controller logs. The API remains metadata-only and adds no Kubernetes permissions. Large graphs fail explicitly instead of creating unbounded traversal. Readiness and lineage describe an eventually consistent observation; producer generations are included so clients can identify the revision observed. The registry does not claim an atomic snapshot across products.
 
 Production adoption and flag retirement require separate rollout evidence.
+
+Recorded lineage is limited to 64 KiB of encoded JSON. Oversized producer metadata clears lineage and reports `CompositionLimitExceeded` rather than amplifying status into an API write that cannot succeed.
