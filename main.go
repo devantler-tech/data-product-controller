@@ -29,9 +29,12 @@ const connectorReadinessFlag = "connector-readiness"
 
 const contractReadinessFlag = "contract-readiness"
 
+const compositionFlag = "composition"
+
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
 // main validates release flags, registers the controller and registry, and runs the manager until shutdown.
+// main validates release gates before starting the controller manager and read-only registry.
 func main() {
 	var metricsAddress string
 	var probeAddress string
@@ -96,12 +99,18 @@ func main() {
 		setupLog.Error(err, "invalid contract readiness configuration")
 		os.Exit(1)
 	}
+	compositionEnabled, err := config.CompositionEnabled(os.Getenv("COMPOSITION_ENABLED"))
+	if err != nil {
+		setupLog.Error(err, "invalid composition configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			registryUIFlag:         uiEnabled,
 			provisionedSourcesFlag: sourcesEnabled,
 			connectorReadinessFlag: connectorsEnabled,
 			contractReadinessFlag:  contractsEnabled,
+			compositionFlag:        compositionEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -133,6 +142,9 @@ func main() {
 		Scheme:          controllerManager.GetScheme(),
 		SourceReader:    controllerManager.GetAPIReader(),
 		ConnectorReader: controllerManager.GetAPIReader(),
+		CompositionEnabled: func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, compositionFlag)
+		},
 		ContractsEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, contractReadinessFlag)
 		},

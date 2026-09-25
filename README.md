@@ -12,6 +12,7 @@ The current foundation provides:
 
 - a namespaced `DataProduct` CRD with guarded HTTPS interfaces and stable URI identity;
 - composition through named output references, with dependency-aware readiness conditions;
+- default-off contract version checks, bounded cycle detection, and direct input lineage within a namespace in the API and UI;
 - a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
@@ -50,7 +51,12 @@ The [contract-readiness guide](docs/contract-readiness.md) describes independent
 selected output checks, scoped observation, metrics, and failure recovery. Network fetching stays
 outside the controller; probe configuration must match each selected output's current contract URL.
 
-Engine-specific provisioning, additional source adapters, richer composition semantics, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
+The [composition guide](docs/composition.md) covers declared version compatibility,
+cycle diagnosis, observed lineage, and a three-product example. Composition is
+control-plane observation; independently operated workloads perform data queries
+and transformations.
+
+Engine-specific provisioning, additional source adapters, schema-content compatibility, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Data product contract
 

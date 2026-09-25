@@ -1,0 +1,68 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: harbour
+  namespace: products
+spec:
+  id: urn:example:harbour
+  name: Harbour observations
+  description: Published harbour measurements.
+  version: v1.2.0
+  owner:
+    name: Harbour team
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://harbour.example.com/api/observations
+      contractUrl: https://harbour.example.com/openapi.json
+---
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: weather
+  namespace: products
+spec:
+  id: urn:example:weather
+  name: Coastal weather
+  description: Published coastal forecasts.
+  version: v1.0.0
+  owner:
+    name: Weather team
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://weather.example.com/api/forecast
+      contractUrl: https://weather.example.com/openapi.json
+---
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: coastal-summary
+  namespace: products
+spec:
+  id: urn:example:coastal-summary
+  name: Coastal summary
+  description: A product combining declared harbour and weather interfaces.
+  version: v1.0.0
+  owner:
+    name: Coastal team
+  inputs:
+    - name: observations
+      productRef:
+        name: harbour
+        output: query
+      contract:
+        protocol: OpenAPI
+        minimumVersion: v1.1.0
+    - name: forecast
+      productRef:
+        name: weather
+        output: query
+      contract:
+        protocol: OpenAPI
+        minimumVersion: v1.0.0
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://coastal.example.com/api/summary
+      contractUrl: https://coastal.example.com/openapi.json

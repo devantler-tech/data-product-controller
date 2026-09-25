@@ -337,6 +337,36 @@ h2 {
   height: 100%;
 }
 
+#composition-detail {
+  margin-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+#composition-detail p,
+#product-lineage {
+  color: var(--quiet);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+#product-lineage {
+  padding-left: 1.2rem;
+}
+
+#product-lineage li + li {
+  margin-top: 1rem;
+}
+
+#product-lineage strong,
+#product-lineage span {
+  display: block;
+}
+
+#product-lineage strong {
+  color: var(--ink);
+}
+
 .surface-empty {
   display: grid;
   place-content: center;

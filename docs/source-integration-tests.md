@@ -97,7 +97,15 @@ monitor network isolation, metrics during outages, and reference removal without
 workload deletion. `ContractsReady` and aggregate registry readiness follow the
 contract while `ConnectorReady` stays true.
 
+The same cluster applies the documented three-product composition example. It
+checks both release-flag states, API lineage, breaking and compatible upgrades,
+cycle diagnosis without status-write loops, missing ports, producer deletion and
+recreation, and clearing lineage when disabled. A namespace-scoped reader verifies
+that a denied cross-namespace reference cannot disclose producer metadata through
+consumer status. The example describes interfaces;
+it does not run their illustrative endpoints or transfer records.
+
 The hosted result is a controlled integration proxy. Platform rollout acceptance
-and release-flag retirement remain in issues #46, #49 and #101. The contract probe
+and release-flag retirement remain in issues #46, #49, #101 and #113. The contract probe
 uses a real TLS endpoint on the private test network; this does not prove production
 public-route reachability. The controller never fetches its data-plane URLs.

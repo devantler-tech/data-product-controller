@@ -9,6 +9,8 @@ const (
 	ConditionConnectorReady = "ConnectorReady"
 	// ConditionContractsReady reports the selected contracts' independently observed reachability.
 	ConditionContractsReady = "ContractsReady"
+	// ConditionCompositionReady reports graph and declared contract compatibility.
+	ConditionCompositionReady = "CompositionReady"
 )
 
 // ProductOwner identifies the team accountable for a data product.
@@ -49,6 +51,42 @@ type InputPort struct {
 
 	// ProductRef selects the producing data product and output port.
 	ProductRef ProductReference `json:"productRef"`
+
+	// Contract optionally requires a stable version and protocol from the producer.
+	Contract *InputContract `json:"contract,omitempty"`
+}
+
+// InputContract declares compatibility with the producer's product contract version.
+type InputContract struct {
+	// MinimumVersion accepts stable versions at least this new within the same major.
+	// Major-zero contracts require an exact version match.
+	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:Pattern=`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`
+	MinimumVersion string `json:"minimumVersion"`
+	// Protocol must match the selected output's declared contract family.
+	Protocol OutputProtocol `json:"protocol"`
+}
+
+// InputStatus records a direct lineage edge observed during composition checks.
+type InputStatus struct {
+	// Name identifies the consuming input port.
+	Name string `json:"name"`
+	// ProductRef identifies the producer with an explicit namespace and output.
+	ProductRef ProductReference `json:"productRef"`
+	// ProductID is the producer's stable identity when it could be observed.
+	ProductID string `json:"productID,omitempty"`
+	// ObservedGeneration identifies the producer revision used for this edge.
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// Version is the producer's declared product contract version.
+	Version string `json:"version,omitempty"`
+	// Owner names the producer's accountable team.
+	Owner *ProductOwner `json:"owner,omitempty"`
+	// Output contains the selected public interface metadata, never records or credentials.
+	Output *OutputPort `json:"output,omitempty"`
+	// Ready reports whether this direct input satisfies its contract and producer readiness.
+	Ready bool `json:"ready"`
+	// Reason explains this direct input's last observation.
+	Reason string `json:"reason"`
 }
 
 // OutputProtocol identifies the machine-readable contract published by an output.
@@ -232,6 +270,11 @@ type DataProductStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// Inputs records observed direct lineage; CompositionReady carries its consumer generation.
+	// +listType=map
+	// +listMapKey=name
+	Inputs []InputStatus `json:"inputs,omitempty"`
 }
 
 // DataProduct is the control-plane description of one independently operated data capability.

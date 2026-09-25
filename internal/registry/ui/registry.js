@@ -6,12 +6,43 @@ const empty = document.querySelector("#surface-empty");
 const interactionTitle = document.querySelector("#interaction-title");
 const interactionDescription = document.querySelector("#interaction-description");
 
+/** Render declared references and current observations as inert text, including untrusted owner metadata. */
+function showLineage(product) {
+  const section = document.querySelector("#composition-detail");
+  const list = document.querySelector("#product-lineage");
+  list.replaceChildren();
+  section.hidden = !product.inputs?.length;
+  document.querySelector("#composition-status").textContent = product.composition
+    ? `${product.composition.reason}: ${product.composition.message}`
+    : "Composition has not been observed. These are the declared input references.";
+  for (const input of product.inputs || []) {
+    const edge = product.lineage?.find((candidate) => candidate.name === input.name);
+    const ref = edge?.productRef || input.productRef;
+    const item = document.createElement("li");
+    const title = document.createElement("strong");
+    title.textContent = `${input.name} ← ${ref.namespace || product.namespace}/${ref.name} · ${ref.output}`;
+    const detail = document.createElement("span");
+    detail.textContent = edge
+      ? `${edge.version || "Version unobserved"} · ${edge.owner?.name || "Owner unobserved"} · ${edge.reason}`
+      : "Not observed";
+    item.append(title, detail);
+    if (input.contract) {
+      const requirement = document.createElement("span");
+      requirement.textContent = `Requires ${input.contract.protocol} from ${input.contract.minimumVersion} within the same major; major zero requires an exact match.`;
+      item.append(requirement);
+    }
+    list.append(item);
+  }
+}
+
+/** Select a descriptor and open its independent surface only while the product is ready. */
 function selectProduct(product, button) {
   document.querySelectorAll(".product-card").forEach((card) => {
     card.setAttribute("aria-pressed", String(card === button));
   });
 
   interactionTitle.textContent = product.displayName;
+  showLineage(product);
   interactionDescription.textContent = product.ready
     ? product.description
     : `${product.readiness.reason}: ${product.readiness.message}`;

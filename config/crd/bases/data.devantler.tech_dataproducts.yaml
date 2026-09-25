@@ -165,6 +165,31 @@ spec:
                   description: InputPort declares a composed input from another data
                     product.
                   properties:
+                    contract:
+                      description: Contract optionally requires a stable version and
+                        protocol from the producer.
+                      properties:
+                        minimumVersion:
+                          description: |-
+                            MinimumVersion accepts stable versions at least this new within the same major.
+                            Major-zero contracts require an exact version match.
+                          maxLength: 64
+                          pattern: ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$
+                          type: string
+                        protocol:
+                          description: Protocol must match the selected output's declared
+                            contract family.
+                          enum:
+                          - OpenAPI
+                          - AsyncAPI
+                          - GraphQL
+                          - DCAT
+                          - ArrowFlight
+                          type: string
+                      required:
+                      - minimumVersion
+                      - protocol
+                      type: object
                     name:
                       description: Name is unique within the consuming product.
                       maxLength: 63
@@ -413,6 +438,127 @@ spec:
                 type: array
                 x-kubernetes-list-map-keys:
                 - type
+                x-kubernetes-list-type: map
+              inputs:
+                description: Inputs records observed direct lineage; CompositionReady
+                  carries its consumer generation.
+                items:
+                  description: InputStatus records a direct lineage edge observed
+                    during composition checks.
+                  properties:
+                    name:
+                      description: Name identifies the consuming input port.
+                      type: string
+                    observedGeneration:
+                      description: ObservedGeneration identifies the producer revision
+                        used for this edge.
+                      format: int64
+                      type: integer
+                    output:
+                      description: Output contains the selected public interface metadata,
+                        never records or credentials.
+                      properties:
+                        contractUrl:
+                          description: |-
+                            ContractURL is an HTTPS machine-readable OpenAPI, AsyncAPI, GraphQL schema,
+                            DCAT document, or Arrow Flight service description.
+                          pattern: ^https://[^[:space:]]+$
+                          type: string
+                        mediaType:
+                          description: MediaType documents the primary response or
+                            message representation.
+                          type: string
+                        name:
+                          description: Name is unique within the product and is used
+                            by composed inputs.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        protocol:
+                          description: Protocol selects the contract family used by
+                            this interface.
+                          enum:
+                          - OpenAPI
+                          - AsyncAPI
+                          - GraphQL
+                          - DCAT
+                          - ArrowFlight
+                          type: string
+                        url:
+                          description: URL is the HTTPS runtime endpoint consumers
+                            use.
+                          pattern: ^https://[^[:space:]]+$
+                          type: string
+                      required:
+                      - contractUrl
+                      - name
+                      - protocol
+                      - url
+                      type: object
+                    owner:
+                      description: Owner names the producer's accountable team.
+                      properties:
+                        name:
+                          description: Name is the owner or team display name.
+                          minLength: 1
+                          type: string
+                        url:
+                          description: URL points to current ownership or support
+                            information.
+                          pattern: ^https://[^[:space:]]+$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    productID:
+                      description: ProductID is the producer's stable identity when
+                        it could be observed.
+                      type: string
+                    productRef:
+                      description: ProductRef identifies the producer with an explicit
+                        namespace and output.
+                      properties:
+                        name:
+                          description: Name is the referenced DataProduct name.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        namespace:
+                          description: Namespace defaults to the consuming product's
+                            namespace.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                        output:
+                          description: Output names the referenced product's output
+                            port.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          type: string
+                      required:
+                      - name
+                      - output
+                      type: object
+                    ready:
+                      description: Ready reports whether this direct input satisfies
+                        its contract and producer readiness.
+                      type: boolean
+                    reason:
+                      description: Reason explains this direct input's last observation.
+                      type: string
+                    version:
+                      description: Version is the producer's declared product contract
+                        version.
+                      type: string
+                  required:
+                  - name
+                  - productRef
+                  - ready
+                  - reason
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
                 x-kubernetes-list-type: map
               observedGeneration:
                 description: ObservedGeneration is the generation reflected in Conditions.

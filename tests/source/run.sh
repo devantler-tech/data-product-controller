@@ -331,3 +331,5 @@ retained_uids=$(independent_resource_uids "$product_uid")
 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 docker exec "$source_container" /fixture probe --url http://127.0.0.1:9000/healthz --timeout 3s
 echo 'PASS: product deletion retained independently owned workloads and credentials'
+
+source "$repo_root/tests/source/composition.sh"

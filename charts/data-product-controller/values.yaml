@@ -17,6 +17,9 @@ connectorReadiness:
 contractReadiness:
   enabled: false
 
+composition:
+  enabled: false
+
 contractProbe:
   enabled: false
   url: ""
