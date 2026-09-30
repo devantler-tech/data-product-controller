@@ -17,6 +17,7 @@ The current foundation provides:
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
+- a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
@@ -56,6 +57,14 @@ The [composition guide](docs/composition.md) covers declared version compatibili
 cycle diagnosis, observed lineage, and a three-product example. Composition is
 control-plane observation; independently operated workloads perform data queries
 and transformations.
+
+The [DCAT catalog guide](docs/dcat-catalog.md) describes publication for independent
+catalog consumers. Set the `data.devantler.tech/dcat-type: Dataset` annotation only
+when a product describes one logical dataset and every named output provides
+access to a representation of it. Enable the separate `dcatCatalog.enabled` chart
+flag and supply `dcatCatalog.id` to publish the catalog. Discovery grants no access
+to data and makes no availability claim. Production activation and flag retirement
+are tracked in [#123](https://github.com/devantler-tech/data-product-controller/issues/123).
 
 Engine-specific provisioning, additional source adapters, schema-content compatibility, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
 
@@ -174,6 +183,7 @@ cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.
 
 [ADR 0001](docs/adr/0001-portable-data-product-control-plane.md) records why the Kubernetes resource stays a small control-plane profile and how products remain portable. [ADR 0002](docs/adr/0002-delegated-provisioned-sources.md) defines delegated source ownership and observation.
 [ADR 0003](docs/adr/0003-read-only-http-source-connector.md) defines the reference connector's data-plane and credential boundaries.
+[ADR 0008](docs/adr/0008-dcat-catalog-projection.md) defines the opt-in DCAT projection and its bounded, metadata-only publication contract.
 
 The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base).
 This release does not claim full conformance with those standards.

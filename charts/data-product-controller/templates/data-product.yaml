@@ -4,6 +4,10 @@ kind: DataProduct
 metadata:
   name: harbour-observations
   namespace: {{ .Release.Namespace }}
+  {{- if .Values.dcatCatalog.enabled }}
+  annotations:
+    data.devantler.tech/dcat-type: Dataset
+  {{- end }}
   labels:
     {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:

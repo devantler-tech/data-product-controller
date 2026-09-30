@@ -39,6 +39,10 @@ spec:
           env:
             - name: REGISTRY_UI_ENABLED
               value: {{ .Values.registryUI.enabled | quote }}
+            - name: DCAT_CATALOG_ENABLED
+              value: {{ .Values.dcatCatalog.enabled | quote }}
+            - name: DCAT_CATALOG_ID
+              value: {{ .Values.dcatCatalog.id | quote }}
             - name: UI_CONTRACT_ENABLED
               value: {{ .Values.uiContract.enabled | quote }}
             - name: PROVISIONED_SOURCES_ENABLED

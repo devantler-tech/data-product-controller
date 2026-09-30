@@ -1,0 +1,22 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: catalog-harbour
+  namespace: products
+  annotations:
+    data.devantler.tech/dcat-type: Dataset
+spec:
+  id: urn:example:catalog-harbour
+  name: Harbour observations
+  description: Temperature and salinity observations available through one query service.
+  version: v1.0.0
+  owner:
+    name: Marine data team
+    url: https://example.com/marine-team
+  documentationUrl: https://example.com/harbour
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://example.com/harbour/api/observations
+      contractUrl: https://example.com/harbour/openapi.json
+      mediaType: application/json
