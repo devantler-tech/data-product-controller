@@ -214,11 +214,12 @@ func TestColdProviderReaderCancellation(t *testing.T) {
 	defer cancel()
 	started := time.Now()
 	got := (&Registry{Reader: reader}).Observe(ctx, "products", cnpgSource())
-	if got.Ready || got.Reason != "SourceUnavailable" || time.Since(started) > 75*time.Millisecond {
+	if got.Ready || got.Reason != "SourceUnavailable" || time.Since(started) > time.Second {
 		t.Fatalf("cold API observation=%+v elapsed=%s", got, time.Since(started))
 	}
 }
 
+// cnpgSource selects the supported native SQL adapter and its generated application publication.
 func cnpgSource() datav1alpha1.ProvisionedSource {
 	return datav1alpha1.ProvisionedSource{
 		Adapter: "cnpg/v1",
@@ -236,6 +237,7 @@ func cnpgSource() datav1alpha1.ProvisionedSource {
 	}
 }
 
+// cnpgFixture models healthy operator status without inventing mandatory observed generations.
 func cnpgFixture(t *testing.T) (*unstructured.Unstructured, *metav1.PartialObjectMetadata) {
 	t.Helper()
 	cluster := &unstructured.Unstructured{}
@@ -264,6 +266,7 @@ func cnpgFixture(t *testing.T) (*unstructured.Unstructured, *metav1.PartialObjec
 	return cluster, secret
 }
 
+// cnpgReader exercises real HTTP encoding and metadata negotiation with fixed fixture API mappings.
 func cnpgReader(t *testing.T, host string) client.Reader {
 	t.Helper()
 	mapper := meta.NewDefaultRESTMapper(

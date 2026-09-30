@@ -9,6 +9,7 @@ engine_deadline=$((SECONDS + 480))
 engine_product_file="$test_dir/engine-product.json"
 engine_cluster_file="$test_dir/engine-cluster.yaml"
 
+# Report the shared acceptance budget, failing once the module has exhausted it.
 engine_remaining() {
 	local remaining=$((engine_deadline - SECONDS))
 	if ((remaining <= 0)); then
@@ -18,6 +19,7 @@ engine_remaining() {
 	printf '%s\n' "$remaining"
 }
 
+# Bound each asynchronous observation to both its polling allowance and the remaining module budget.
 engine_wait() {
 	local description=$1 remaining
 	shift
@@ -26,6 +28,7 @@ engine_wait() {
 	wait_for "$description" "$remaining" "$@"
 }
 
+# Wait for gate changes to reach the actual controller Deployment within the shared budget.
 engine_rollout() {
 	local remaining
 	remaining=$(engine_remaining)
@@ -33,6 +36,7 @@ engine_rollout() {
 	kube --request-timeout=0 rollout status deployment/dpc --timeout="${remaining}s"
 }
 
+# Prevent a stuck finalizer from turning a lifecycle assertion into an unbounded deletion wait.
 engine_delete() {
 	local remaining
 	remaining=$(engine_remaining)
@@ -40,6 +44,7 @@ engine_delete() {
 	kube delete "$@" --wait=true --timeout="${remaining}s"
 }
 
+# Check both current-generation Kubernetes conditions and the public registry readiness projection.
 engine_ready() {
 	local status=$1 reason=$2
 	kube get dataproduct engine-warehouse -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -50,6 +55,7 @@ engine_ready() {
 		probe --url http://dpc/api/v1/products --contains "\"ready\":$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
 }
 
+# Count server-side schema rejection only; transport and authorization errors must fail acceptance.
 engine_reject() {
 	local description=$1 filter=$2
 	jq "$filter" "$engine_product_file" >"$test_dir/engine-invalid.json"
@@ -69,6 +75,7 @@ engine_reject() {
 	echo "PASS: engine admission rejects $description"
 }
 
+# Model an independent publisher binding synthetic credentials to the current source UID.
 engine_publish_secret() {
 	local cluster_uid=$1
 	jq -n --arg uid "$cluster_uid" '{apiVersion:"v1",kind:"Secret",
@@ -78,12 +85,14 @@ engine_publish_secret() {
 		kube apply -f - >/dev/null
 }
 
+# Publish synthetic operator readiness without claiming that a PostgreSQL server exists.
 engine_healthy_status() {
 	kube patch cluster.postgresql.cnpg.io warehouse --subresource=status --type=merge -p '{"status":{
     "instances":1,"readyInstances":1,"currentPrimary":"warehouse-1","targetPrimary":"warehouse-1",
     "conditions":[{"type":"Ready","status":"True","reason":"SyntheticReady","message":"Observation fixture."}]}}' >/dev/null
 }
 
+# Verify deletion retains both external resources without a product owner or deletion timestamp.
 engine_retained_uids() {
 	local product_uid=$1
 	kube get cluster.postgresql.cnpg.io/warehouse secret/warehouse-app -o json |

@@ -85,6 +85,7 @@ func (r *Registry) Observe(
 	return selected.Observe(ctx, namespace, source)
 }
 
+// unavailable constructs an unready observation with an explicit, caller-supplied public explanation.
 func unavailable(reason, message string) provisionerv1.Observation {
 	return provisionerv1.Observation{Reason: reason, Message: message}
 }

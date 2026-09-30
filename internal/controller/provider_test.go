@@ -190,6 +190,7 @@ type providerCountingReader struct {
 	calls atomic.Int64
 }
 
+// Get counts external reads so disabled gates cannot silently acquire observation permissions.
 func (r *providerCountingReader) Get(
 	ctx context.Context,
 	key client.ObjectKey,

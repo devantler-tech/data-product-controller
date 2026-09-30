@@ -129,6 +129,7 @@ func (c *CloudNativePG) Observe(
 	)
 }
 
+// readFailure maps API errors to stable public reasons without exposing provider error text.
 func readFailure(err error, missingReason, missingMessage string) provisionerv1.Observation {
 	if apierrors.IsNotFound(err) {
 		return unavailable(missingReason, missingMessage)
