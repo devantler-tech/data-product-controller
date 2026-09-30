@@ -119,6 +119,11 @@ an independent JSON-LD processor with pinned contexts to check RDF relationships
 The producer-to-exporter integration test uses the actual DCAT handler. None of
 these checks establishes a provider's runtime interoperability or enforcement.
 
+The hosted Kubernetes integration job also runs `tests/source/dsp-catalog.sh`
+against the exact image it builds, with networking disabled. This checks the
+packaged command, default-off behavior, enabled example and empty output on
+invalid bindings before the controller's cluster lifecycle tests proceed.
+
 [ADR 0009](adr/0009-offline-dsp-catalog-export.md) records the design.
 [Adoption and flag retirement #126](https://github.com/devantler-tech/data-product-controller/issues/126)
 has an owner and a review on **2026-10-30**. Enabling or removing the flag requires
