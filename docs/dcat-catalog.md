@@ -74,19 +74,19 @@ Dataset annotation. That resource still requires `demoProduct.enabled=true` and
 
 ## Metadata mapping and identity
 
-| Public metadata | RDF term or relationship |
-| --- | --- |
-| Configured catalog ID | Catalog `@id`; type `dcat:Catalog` |
-| Product `spec.id` | Dataset `@id`; literal `dcterms:identifier` |
-| Product name, description, version | `dcterms:title`, `dcterms:description`, `dcat:version` |
+| Public metadata                      | RDF term or relationship                                                         |
+| ------------------------------------ | -------------------------------------------------------------------------------- |
+| Configured catalog ID                | Catalog `@id`; type `dcat:Catalog`                                               |
+| Product `spec.id`                    | Dataset `@id`; literal `dcterms:identifier`                                      |
+| Product name, description, version   | `dcterms:title`, `dcterms:description`, `dcat:version`                           |
 | Owner name and support/ownership URL | `dcterms:publisher` as a `foaf:Agent`, with `foaf:name` and optional `foaf:page` |
-| Documentation URL | Optional `dcat:landingPage` |
-| Named output | `dcat:Distribution` linked by `dcat:distribution` |
-| Output URL | Distribution `dcat:accessURL` and service `dcat:endpointURL` |
-| Output's service | `dcat:DataService`, linked by `dcat:accessService` and catalog `dcat:service` |
-| Product served by the service | `dcat:servesDataset` |
-| Contract URL | `dcat:endpointDescription` |
-| Optional media-type description | Literal `dcterms:format`, preserving the declared text |
+| Documentation URL                    | Optional `dcat:landingPage`                                                      |
+| Named output                         | `dcat:Distribution` linked by `dcat:distribution`                                |
+| Output URL                           | Distribution `dcat:accessURL` and service `dcat:endpointURL`                     |
+| Output's service                     | `dcat:DataService`, linked by `dcat:accessService` and catalog `dcat:service`    |
+| Product served by the service        | `dcat:servesDataset`                                                             |
+| Contract URL                         | `dcat:endpointDescription`                                                       |
+| Optional media-type description      | Literal `dcterms:format`, preserving the declared text                           |
 
 Owner links use `foaf:page`: a shared support page does not identify two teams as
 the same agent. A contract document describes the actual endpoint; the projection
@@ -124,13 +124,13 @@ retained public metadata and 2 MiB of encoded JSON-LD. The scan budget includes
 products without the annotation. Failure never returns a partial catalog as a
 successful response.
 
-| Status | Meaning and action |
-| --- | --- |
-| 200 | Complete JSON-LD catalog, possibly containing no datasets. |
-| 404 | Release flag disabled; no Kubernetes read occurred. |
-| 413 | Scan or encoded-response bound exceeded; reduce the catalog's size. |
-| 422 | Invalid annotation, public metadata or conflicting identity, including metadata/output bounds; correct the publisher's declaration. |
-| 503 | Missing configured ID, unavailable/timed-out Kubernetes API, or another active catalog request; fix configuration or retry after recovery. |
+| Status | Meaning and action                                                                                                                         |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 200    | Complete JSON-LD catalog, possibly containing no datasets.                                                                                 |
+| 404    | Release flag disabled; no Kubernetes read occurred.                                                                                        |
+| 413    | Scan or encoded-response bound exceeded; reduce the catalog's size.                                                                        |
+| 422    | Invalid annotation, public metadata or conflicting identity, including metadata/output bounds; correct the publisher's declaration.        |
+| 503    | Missing configured ID, unavailable/timed-out Kubernetes API, or another active catalog request; fix configuration or retry after recovery. |
 
 Errors do not echo backend diagnostics or private resource references. The limits
 bound discovery work; they do not attest to a product's data quality or service
