@@ -33,6 +33,13 @@ engine_rollout() {
 	kube --request-timeout=0 rollout status deployment/dpc --timeout="${remaining}s"
 }
 
+engine_delete() {
+	local remaining
+	remaining=$(engine_remaining)
+	((remaining <= 20)) || remaining=20
+	kube delete "$@" --wait=true --timeout="${remaining}s"
+}
+
 engine_ready() {
 	local status=$1 reason=$2
 	kube get dataproduct engine-warehouse -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -231,14 +238,14 @@ kube patch cluster.postgresql.cnpg.io warehouse --subresource=status --type=merg
 engine_wait 'provider readiness loss reaches product and registry' engine_ready False SourceNotReady
 engine_healthy_status
 engine_wait 'provider readiness recovery reaches product and registry' engine_ready True SourceReady
-kube delete role engine-source-observer >/dev/null
+engine_delete role engine-source-observer >/dev/null
 engine_wait 'provider permission revocation is observed without a restart' engine_ready False SourceAccessDenied
 kube apply -f "$test_dir/engine-observer-rbac.yaml" >/dev/null
 
 # Orphaning retains the publication UID while removing its old owner. A recreated
 # source cannot satisfy ownership until its independent publisher binds it again.
 engine_secret_uid=$(kube get secret warehouse-app -o jsonpath='{.metadata.uid}')
-kube delete cluster.postgresql.cnpg.io warehouse --cascade=orphan --wait=true --timeout=20s >/dev/null
+engine_delete cluster.postgresql.cnpg.io warehouse --cascade=orphan >/dev/null
 engine_wait 'restored access observes source deletion in product and registry' engine_ready False SourceNotFound
 kube apply -f "$engine_cluster_file" >/dev/null
 engine_healthy_status
@@ -267,7 +274,7 @@ engine_rollout
 engine_wait 'disabling the provider gate withdraws product readiness' engine_ready False EngineProviderFeatureDisabled
 engine_product_uid=$(kube get dataproduct engine-warehouse -o jsonpath='{.metadata.uid}')
 engine_retained=$(engine_retained_uids "$engine_product_uid")
-kube delete dataproduct engine-warehouse >/dev/null
+engine_delete dataproduct engine-warehouse >/dev/null
 engine_wait 'deleting the typed product removes its registry entry' probe --url http://dpc/api/v1/products --contains '"products":[]'
 [[ "$(engine_retained_uids "$engine_product_uid")" == "$engine_retained" ]] || {
 	echo 'product deletion changed external provider or publication ownership' >&2
@@ -275,15 +282,15 @@ engine_wait 'deleting the typed product removes its registry entry' probe --url 
 }
 echo 'PASS: typed product deletion retains provider and publication UIDs'
 
-kube delete -f "$test_dir/engine-observer-rbac.yaml" >/dev/null
-kube delete cluster.postgresql.cnpg.io warehouse --cascade=orphan --wait=true --timeout=20s >/dev/null
-kube delete secret warehouse-app >/dev/null
+engine_delete -f "$test_dir/engine-observer-rbac.yaml" >/dev/null
+engine_delete cluster.postgresql.cnpg.io warehouse --cascade=orphan >/dev/null
+engine_delete secret warehouse-app >/dev/null
 kubectl --request-timeout=15s get crd clusters.postgresql.cnpg.io -o json |
 	jq -e --arg uid "$engine_crd_uid" '.metadata.uid == $uid and
     .metadata.labels["data.devantler.tech/test-fixture"] == "engine-provider"' >/dev/null || {
 	echo 'engine fixture CRD ownership changed before cleanup' >&2
 	exit 1
 }
-kubectl --request-timeout=15s delete crd clusters.postgresql.cnpg.io --wait=true --timeout=30s >/dev/null
+engine_delete crd clusters.postgresql.cnpg.io >/dev/null
 engine_remaining >/dev/null
 echo "PASS: synthetic engine admission and observation lifecycle ($((SECONDS - engine_started_at)) seconds); real CNPG acceptance remains separate"
