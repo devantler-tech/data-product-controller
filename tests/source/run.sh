@@ -148,6 +148,7 @@ done <<<"$cluster_nodes"
 
 # No GHCR write or release credentials: both images exist only in this cluster's registry.
 docker build --tag localhost:5055/data-product-controller:e2e "$repo_root"
+bash "$repo_root/tests/source/dsp-catalog.sh" localhost:5055/data-product-controller:e2e
 docker push localhost:5055/data-product-controller:e2e
 docker build --file "$repo_root/tests/source/fixture/Dockerfile" \
 	--tag localhost:5055/source-fixture:e2e "$repo_root"

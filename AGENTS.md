@@ -14,6 +14,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/connector/v1/` — versioned Deployment observation with bounded, uncached, exact-name reads.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
+- `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
 - `web/` and `cmd/ui-kit/` — portable UI protocol library and independent, default-off compatibility host.
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
@@ -51,6 +52,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
   1,024 outputs, 16-KiB fields, 1-MiB retained public metadata and 2-MiB encoded responses.
   Never fetch contexts, contracts or data in the controller. See `docs/dcat-catalog.md`.
 - `v1alpha1` is intentionally small and may change while real provisioned, integrated, and composed products validate the model. Never claim unimplemented roadmap capabilities.
+- DSP export uses the `dsp-catalog-export` OpenFeature gate. Preserve explicit provider/assigner identity, target-free offers and rule semantics, exact dataset/output selection, distinct DSP service/distribution identities, strict contexts and input/output bounds. Never infer permissions, transfer formats or connector services from query metadata. Compatibility covers the catalog data model only; see `docs/dsp-catalog.md`.
 
 ## Validation
 

@@ -12,3 +12,8 @@ indent_style = tab
 [*.{yml,yaml,json,md}]
 indent_style = space
 indent_size = 2
+
+# Preserve official upstream standards fixtures byte-for-byte (see their hashes).
+[internal/dataspace/testdata/dsp-2025-1-err2/{context-schema.json,context.jsonld}]
+end_of_line = unset
+insert_final_newline = unset

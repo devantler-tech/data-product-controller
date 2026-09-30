@@ -34,6 +34,10 @@ grep -F 'app-name: data-product-controller' "$workflow" >/dev/null ||
 	fail 'CD must identify the controller container for digest pinning'
 grep -F 'enable-caller-pin: true' "$workflow" >/dev/null ||
 	fail 'CD must require an immutable caller identity before signing'
+publisher=$(yq '.jobs.publish.uses' "$workflow")
+smoke=$(yq '.jobs.smoke.steps[] | select(.run != null) | .run' "$workflow")
+printf '%s\n' "$smoke" | grep -F -- "--certificate-identity https://github.com/$publisher " >/dev/null ||
+	fail 'published-image verification must trust the exact immutable publisher used by CD'
 
 [ -f "$deployment" ] || fail 'deploy/deployment.yaml is required by publish-app'
 cmp "$generated_crd" "$deploy_crd" || fail 'published and generated CRDs differ'
