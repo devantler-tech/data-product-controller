@@ -1,0 +1,30 @@
+{
+  "@context": {"dcat":"http://www.w3.org/ns/dcat#","dcterms":"http://purl.org/dc/terms/","foaf":"http://xmlns.com/foaf/0.1/"},
+  "@id": "urn:example:source-catalog",
+  "@type": "dcat:Catalog",
+  "dcat:dataset": [{
+    "@id": "urn:example:harbour",
+    "@type": ["dcat:Dataset", "dcat:Resource"],
+    "dcterms:identifier": "urn:example:harbour",
+    "dcterms:title": "Harbour observations",
+    "dcterms:description": "Public temperature observations.",
+    "dcat:version": "v1.0.0",
+    "dcterms:publisher": {"@type":"foaf:Agent","foaf:name":"Marine data team"},
+    "dcat:distribution": [{
+      "@id": "urn:example:observations",
+      "@type": "dcat:Distribution",
+      "dcterms:title": "observations",
+      "dcat:accessURL": {"@id":"https://data.example/observations"},
+      "dcat:accessService": {"@id":"urn:example:query-service"},
+      "dcterms:format": "application/json"
+    }]
+  }],
+  "dcat:service": [{
+    "@id": "urn:example:query-service",
+    "@type": ["dcat:DataService", "dcat:Resource"],
+    "dcterms:title": "observations",
+    "dcat:endpointURL": {"@id":"https://data.example/observations"},
+    "dcat:endpointDescription": {"@id":"https://data.example/openapi.json"},
+    "dcat:servesDataset": {"@id":"urn:example:harbour"}
+  }]
+}

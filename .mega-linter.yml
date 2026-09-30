@@ -23,6 +23,10 @@ DISABLE_LINTERS:
 
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: .github/prompts
 
+# Official DSP fixtures are hash-pinned upstream test inputs, not authored JSON.
+# Keep syntax/security checks; formatting must not rewrite their source bytes.
+JSON_PRETTIER_FILTER_REGEX_EXCLUDE: ^internal/dataspace/testdata/dsp-2025-1-err2/
+
 # Helm chart templates are Go templates, not YAML documents: yamllint parses `{{- if ... }}`
 # as a syntax error, which is a category error rather than a finding. devantler-tech/ksail
 # excludes them from the YAML linters for the same reason. Only yamllint needs it here —

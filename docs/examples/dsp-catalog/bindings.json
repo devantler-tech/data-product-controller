@@ -1,0 +1,24 @@
+{
+  "version": "dsp-catalog/v1",
+  "catalogId": "urn:example:dsp-catalog",
+  "participantId": "urn:example:provider",
+  "service": {"id":"urn:example:dsp-service","endpointURL":"https://connector.example/dsp"},
+  "datasets": [{
+    "id": "urn:example:harbour",
+    "distributions": [{
+      "sourceId": "urn:example:observations",
+      "id": "urn:example:dsp-observations",
+      "format": "https://example.com/transfer/harbour-pull"
+    }],
+    "offers": [{
+      "@id": "urn:example:harbour-offer",
+      "@type": "Offer",
+      "assigner": "urn:example:provider",
+      "permission": [{
+        "action": "use",
+        "constraint": [{"leftOperand":"http://www.w3.org/ns/odrl/2/purpose","operator":"eq","rightOperand":"research"}]
+      }],
+      "prohibition": [{"action":"http://www.w3.org/ns/odrl/2/sell"}]
+    }]
+  }]
+}

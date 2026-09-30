@@ -7,6 +7,7 @@ require (
 	github.com/open-feature/go-sdk v1.18.0
 	github.com/piprate/json-gold v0.8.0
 	github.com/prometheus/client_golang v1.24.1
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	k8s.io/api v0.37.0
 	k8s.io/apimachinery v0.37.0
 	k8s.io/client-go v0.37.0

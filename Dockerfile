@@ -10,12 +10,14 @@ ARG TARGETARCH
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /out/manager . && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /out/demo-product ./cmd/demo-product && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /out/http-source ./cmd/http-source && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /out/contract-probe ./cmd/contract-probe
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /out/contract-probe ./cmd/contract-probe && \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-amd64} go build -trimpath -ldflags="-s -w" -o /out/dsp-catalog ./cmd/dsp-catalog
 
 FROM gcr.io/distroless/static-debian13:nonroot
 COPY --from=build /out/manager /manager
 COPY --from=build /out/demo-product /demo-product
 COPY --from=build /out/http-source /http-source
 COPY --from=build /out/contract-probe /contract-probe
+COPY --from=build /out/dsp-catalog /dsp-catalog
 USER 65532:65532
 ENTRYPOINT ["/manager"]

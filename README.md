@@ -18,6 +18,7 @@ The current foundation provides:
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
+- a default-off [offline DSP catalog exporter](docs/dsp-catalog.md) that combines DCAT snapshots with explicit provider services, transfer formats and offers;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
@@ -184,6 +185,8 @@ cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.
 [ADR 0001](docs/adr/0001-portable-data-product-control-plane.md) records why the Kubernetes resource stays a small control-plane profile and how products remain portable. [ADR 0002](docs/adr/0002-delegated-provisioned-sources.md) defines delegated source ownership and observation.
 [ADR 0003](docs/adr/0003-read-only-http-source-connector.md) defines the reference connector's data-plane and credential boundaries.
 [ADR 0008](docs/adr/0008-dcat-catalog-projection.md) defines the opt-in DCAT projection and its bounded, metadata-only publication contract.
+
+[ADR 0009](docs/adr/0009-offline-dsp-catalog-export.md) defines the offline DSP catalog profile. It exports provider-supplied policies without implementing negotiation, enforcement or transfer.
 
 The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base).
 This release does not claim full conformance with those standards.
