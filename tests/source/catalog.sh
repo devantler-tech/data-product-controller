@@ -23,6 +23,17 @@ probe --url http://dpc/api/v1/catalog --want-status 422
 kube delete dataproduct duplicate-catalog-id
 probe --url http://dpc/api/v1/catalog --contains '"@id":"urn:example:catalog-harbour"'
 
+# More than one API page must produce a complete catalog with the real Kubernetes reader.
+kube get dataproduct catalog-harbour -o json | jq '. as $product |
+  {apiVersion:"v1",kind:"List",items:[range(0;17) as $index |
+    $product | del(.metadata,.status) |
+    .metadata={name:("catalog-page-" + ("0" + ($index|tostring))[-2:]),namespace:"products",
+      labels:{"catalog-pagination-test":"true"},annotations:{"data.devantler.tech/dcat-type":"Dataset"}} |
+    .spec.id=("urn:example:pagination:" + ($index|tostring))]}' | kube apply -f -
+probe --url http://dpc/api/v1/catalog --contains '"@id":"urn:example:pagination:0"'
+probe --url http://dpc/api/v1/catalog --contains '"@id":"urn:example:pagination:16"'
+kube delete dataproduct -l catalog-pagination-test=true
+
 install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 probe --url http://dpc/api/v1/catalog --want-status 404
