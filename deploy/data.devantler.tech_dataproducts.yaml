@@ -349,6 +349,47 @@ spec:
                 description: UI is an optional independently deployed product interaction
                   surface.
                 properties:
+                  contract:
+                    description: Contract optionally opts into the versioned, capability-limited
+                      UI protocol.
+                    properties:
+                      apiVersion:
+                        description: APIVersion identifies the manifest and postMessage
+                          protocol version.
+                        enum:
+                        - data-product-ui/v1
+                        type: string
+                      capabilities:
+                        description: Capabilities requests presentation hints; no
+                          credential or data access is granted.
+                        items:
+                          description: UICapability is a bounded presentation hint,
+                            never a data or authentication permission.
+                          enum:
+                          - status
+                          - resize
+                          type: string
+                        maxItems: 2
+                        type: array
+                        x-kubernetes-list-type: set
+                      hostOrigins:
+                        description: HostOrigins lists exact HTTPS origins without
+                          paths, wildcards or credentials.
+                        items:
+                          description: UIHostOrigin is a publisher-declared host origin;
+                            browsers also require canonical URL syntax.
+                          maxLength: 253
+                          pattern: ^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?$
+                          type: string
+                        maxItems: 16
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-type: set
+                    required:
+                    - apiVersion
+                    - capabilities
+                    - hostOrigins
+                    type: object
                   title:
                     description: Title is the accessible label hosts present for the
                       embedded surface.

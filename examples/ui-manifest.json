@@ -1,0 +1,9 @@
+{
+  "url": "https://products.example/harbour/ui",
+  "title": "Explore harbour observations",
+  "contract": {
+    "apiVersion": "data-product-ui/v1",
+    "hostOrigins": ["https://catalog.example", "https://kit.example"],
+    "capabilities": ["status", "resize"]
+  }
+}

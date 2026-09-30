@@ -5,6 +5,21 @@ const frame = document.querySelector("#product-surface");
 const empty = document.querySelector("#surface-empty");
 const interactionTitle = document.querySelector("#interaction-title");
 const interactionDescription = document.querySelector("#interaction-description");
+const contractStatus = document.querySelector("#ui-contract-status");
+let disposeSurface = () => {};
+let selection = 0;
+
+/** Map bounded presentation signals to accessible host-owned wording. */
+function surfaceState(state) {
+  contractStatus.hidden = false;
+  contractStatus.dataset.state = state;
+  contractStatus.textContent = {
+    loading: "Opening product interface…",
+    ready: "Product interface connected.",
+    error: "The product interface reported an error. Try its query again or select the product to retry.",
+    timeout: "The product interface did not respond. Select the product to retry.",
+  }[state];
+}
 
 /** Render declared references and current observations as inert text, including untrusted owner metadata. */
 function showLineage(product) {
@@ -36,7 +51,13 @@ function showLineage(product) {
 }
 
 /** Select a descriptor and open its independent surface only while the product is ready. */
-function selectProduct(product, button) {
+async function selectProduct(product, button) {
+  const selected = ++selection;
+  disposeSurface();
+  disposeSurface = () => {};
+  frame.removeAttribute("src");
+  frame.hidden = true;
+  contractStatus.hidden = true;
   document.querySelectorAll(".product-card").forEach((card) => {
     card.setAttribute("aria-pressed", String(card === button));
   });
@@ -58,6 +79,22 @@ function selectProduct(product, button) {
   }
 
   empty.hidden = true;
+  if (product.ui.contract) {
+    surfaceState("loading");
+    try {
+      const response = await fetch("/api/v1/ui-config", { cache: "no-store", credentials: "omit", signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error("The host could not read its UI configuration. Select the product to retry.");
+      const configuration = await response.json();
+      if (selected !== selection) return;
+      if (configuration.uiContractEnabled !== true) throw new Error("Portable UI contracts are disabled on this host.");
+      disposeSurface = DataProductUI.mount({ frame, manifest: product.ui, grants: ["status", "resize"], onState: surfaceState });
+    } catch (error) {
+      if (selected !== selection) return;
+      contractStatus.textContent = error.message;
+      contractStatus.dataset.state = "unavailable";
+    }
+    return;
+  }
   frame.title = product.ui.title;
   frame.src = product.ui.url;
   frame.hidden = false;

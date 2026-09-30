@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/web"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -17,14 +18,37 @@ import (
 var uiFiles embed.FS
 
 // NewHandler builds the registry API and optional UI handler.
-func NewHandler(reader client.Reader, uiEnabled func(context.Context) bool) http.Handler {
+func NewHandler(
+	reader client.Reader,
+	uiEnabled func(context.Context) bool,
+	contractEnabled ...func(context.Context) bool,
+) http.Handler {
 	server := &server{reader: reader, uiEnabled: uiEnabled}
+	if len(contractEnabled) == 1 {
+		server.contractEnabled = contractEnabled[0]
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/products", server.listProducts)
+	mux.HandleFunc("GET /api/v1/ui-config", server.uiConfig)
 	mux.HandleFunc("GET /", server.registryUI)
 	mux.HandleFunc("GET /assets/{asset}", server.registryAsset)
 
 	return mux
+}
+
+// uiConfig advertises only current release capability, never user or credential context.
+func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
+	if !s.uiEnabled(request.Context()) {
+		http.NotFound(writer, request)
+		return
+	}
+	writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(writer).Encode(struct {
+		UIContractEnabled bool `json:"uiContractEnabled"`
+	}{
+		UIContractEnabled: s.contractEnabled != nil && s.contractEnabled(request.Context()),
+	})
 }
 
 func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
@@ -54,6 +78,17 @@ func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request
 	}
 
 	asset := request.PathValue("asset")
+	if asset == "ui-contract.js" {
+		contents, err := web.Assets.ReadFile("ui-contract.js")
+		if err != nil {
+			http.NotFound(writer, request)
+			return
+		}
+		setUISecurityHeaders(writer)
+		writer.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+		_, _ = writer.Write(contents)
+		return
+	}
 	contentType := map[string]string{
 		"registry.css": "text/css; charset=utf-8",
 		"registry.js":  "text/javascript; charset=utf-8",
@@ -90,8 +125,9 @@ func setUISecurityHeaders(writer http.ResponseWriter) {
 }
 
 type server struct {
-	reader    client.Reader
-	uiEnabled func(context.Context) bool
+	reader          client.Reader
+	uiEnabled       func(context.Context) bool
+	contractEnabled func(context.Context) bool
 }
 
 type productCollection struct {

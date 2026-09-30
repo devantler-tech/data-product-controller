@@ -138,7 +138,35 @@ type ProductUI struct {
 	// Title is the accessible label hosts present for the embedded surface.
 	// +kubebuilder:validation:MinLength=1
 	Title string `json:"title"`
+
+	// Contract optionally opts into the versioned, capability-limited UI protocol.
+	Contract *UIContract `json:"contract,omitempty"`
 }
+
+// UIContract declares public host constraints; capabilities remain subject to host policy.
+type UIContract struct {
+	// APIVersion identifies the manifest and postMessage protocol version.
+	// +kubebuilder:validation:Enum=data-product-ui/v1
+	APIVersion string `json:"apiVersion"`
+	// HostOrigins lists exact HTTPS origins without paths, wildcards or credentials.
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=set
+	HostOrigins []UIHostOrigin `json:"hostOrigins"`
+	// Capabilities requests presentation hints; no credential or data access is granted.
+	// +kubebuilder:validation:MaxItems=2
+	// +listType=set
+	Capabilities []UICapability `json:"capabilities"`
+}
+
+// UIHostOrigin is a publisher-declared host origin; browsers also require canonical URL syntax.
+// +kubebuilder:validation:MaxLength=253
+// +kubebuilder:validation:Pattern=`^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?$`
+type UIHostOrigin string
+
+// UICapability is a bounded presentation hint, never a data or authentication permission.
+// +kubebuilder:validation:Enum=status;resize
+type UICapability string
 
 // ProvisionedResourceReference identifies a custom resource in the product's namespace.
 type ProvisionedResourceReference struct {
