@@ -124,3 +124,23 @@ func TestHandlerRejectsUnsupportedMethods(t *testing.T) {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusMethodNotAllowed)
 	}
 }
+
+// TestUIProtocolDefaultsOff verifies that an unconfigured product publishes no trusted host origins.
+func TestUIProtocolDefaultsOff(t *testing.T) {
+	t.Parallel()
+	response := httptest.NewRecorder()
+	demoproduct.NewHandler().
+		ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), "GET", "/ui-contract-config", nil))
+	var config struct {
+		HostOrigins []string `json:"hostOrigins"`
+	}
+	if response.Code != http.StatusOK {
+		t.Fatalf("configuration status=%d", response.Code)
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &config); err != nil {
+		t.Fatal(err)
+	}
+	if len(config.HostOrigins) != 0 {
+		t.Fatal("unconfigured product must not trust a host")
+	}
+}

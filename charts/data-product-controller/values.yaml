@@ -12,6 +12,8 @@ dcatCatalog:
   enabled: false
   # Stable absolute HTTPS or URN identity; required when the catalog is enabled.
   id: ""
+uiContract:
+  enabled: false
 
 provisionedSources:
   enabled: false

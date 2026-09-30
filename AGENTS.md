@@ -14,6 +14,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/connector/v1/` — versioned Deployment observation with bounded, uncached, exact-name reads.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
+- `web/` and `cmd/ui-kit/` — portable UI protocol library and independent, default-off compatibility host.
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
@@ -41,6 +42,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - Connector observation supports only named same-namespace `apps/v1` Deployments through `deployment/v1`. Preserve exact-name read-only RBAC, full current-generation replica readiness, independent `ConnectorReady` refresh, and bounded polling. Never add workload ownership, Secret reads, or data-plane URL probes; see `docs/connector-readiness.md`.
 - Contract checks bind selected outputs to independently owned probe Deployments. Preserve literal URL binding, the shared observation deadline, independent `ContractsReady` refresh, and the separation between controller reads and probe network traffic; see `docs/contract-readiness.md`.
 - A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
+- The default-off `ui-contract` feature permits only bounded status and resize hints. Preserve opaque iframe origins, exact source/session checks, publisher-owned host approval, grant intersection, navigation revocation, and timeout cleanup. See `docs/ui-contract.md`.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - DCAT publication requires the explicit `data.devantler.tech/dcat-type: Dataset` annotation and
   the default-off `dcat-catalog` gate. It projects public metadata only; a listing grants no access

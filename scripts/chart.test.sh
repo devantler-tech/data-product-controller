@@ -141,5 +141,6 @@ sh "$repo_root/scripts/http-source-chart.test.sh"
 sh "$repo_root/scripts/connector-chart.test.sh"
 sh "$repo_root/scripts/contract-chart.test.sh"
 sh "$repo_root/scripts/composition-chart.test.sh"
+sh "$repo_root/scripts/ui-contract-chart.test.sh"
 
 printf '%s\n' 'chart behavior tests passed'
