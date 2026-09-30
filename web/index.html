@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Check an independently published product UI against the portable data product UI contract."
+    />
+    <title>Product UI compatibility kit</title>
+    <link rel="stylesheet" href="kit.css" />
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Publisher tools · data-product-ui/v1</p>
+      <h1>Bring your own product.</h1>
+      <p>
+        Check a product interface without a registry, a cluster, or a central
+        application release.
+      </p>
+      <form id="manifest-form">
+        <label for="manifest">Public UI manifest (JSON, up to 16 KiB)</label>
+        <p id="manifest-help">
+          Paste the descriptor’s <code>ui</code> object. Opening it runs the
+          publisher’s code in an isolated frame. Use public metadata only.
+        </p>
+        <textarea
+          id="manifest"
+          aria-describedby="manifest-help"
+          rows="12"
+          maxlength="16384"
+          required
+          spellcheck="false"
+        ></textarea>
+        <fieldset>
+          <legend>Allow these presentation hints</legend>
+          <label
+            ><input id="grant-status" type="checkbox" /> Report interface errors
+            and recovery</label
+          >
+          <label
+            ><input id="grant-resize" type="checkbox" /> Adjust frame height
+            (240–1200 pixels)</label
+          >
+        </fieldset>
+        <div class="actions">
+          <button id="validate" type="submit">Validate and open</button
+          ><button id="close" type="button">Close interface</button>
+        </div>
+      </form>
+      <p id="kit-status" role="status" aria-live="polite">
+        Paste a manifest to begin.
+      </p>
+      <iframe
+        id="product-surface"
+        title="Product under test"
+        sandbox="allow-forms allow-scripts"
+        referrerpolicy="no-referrer"
+        hidden
+      ></iframe>
+      <p class="note">
+        A successful handshake proves this UI speaks the protocol. Check
+        keyboard navigation, small screens, query errors and recovery too. It
+        does not certify publisher security or accessibility.
+      </p>
+    </main>
+    <script src="ui-contract.js" defer></script>
+    <script src="kit.js" defer></script>
+  </body>
+</html>

@@ -8,6 +8,9 @@ image:
 registryUI:
   enabled: false
 
+uiContract:
+  enabled: false
+
 provisionedSources:
   enabled: false
 

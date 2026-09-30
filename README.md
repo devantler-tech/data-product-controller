@@ -18,6 +18,7 @@ The current foundation provides:
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
+- a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
 - an opt-in, Secret-backed HTTPS JSON export connector with a read-only API, OpenAPI contract, probes, and metrics;
 - a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing.
@@ -105,7 +106,12 @@ The `spec.ui.url` page belongs to the data product, not the registry. A compatib
 - passes no bearer token, Secret, or Kubernetes identity;
 - never imports product JavaScript into the catalogue document.
 
-This keeps each product portable across the reference registry and third-party catalogue implementations. Cross-window capabilities and authentication are deliberately deferred until they have a versioned, least-privilege protocol.
+The default-off `ui-contract` feature adds a versioned manifest, publisher-approved
+host origins, per-navigation sessions, and explicit grants for bounded status and
+resize hints. The standalone compatibility kit loads the same demo without a
+registry or Kubernetes. See the [publisher guide](docs/ui-contract.md) for the
+manifest, complete message contract, independent host, and accessibility checks.
+Authentication and credential transfer remain outside this protocol.
 
 ## Install
 

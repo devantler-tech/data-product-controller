@@ -31,6 +31,8 @@ const contractReadinessFlag = "contract-readiness"
 
 const compositionFlag = "composition"
 
+const uiContractFlag = "ui-contract"
+
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
 // main validates release flags, registers the controller and registry, and runs the manager until shutdown.
@@ -104,6 +106,11 @@ func main() {
 		setupLog.Error(err, "invalid composition configuration")
 		os.Exit(1)
 	}
+	uiContractEnabled, err := config.UIContractEnabled(os.Getenv("UI_CONTRACT_ENABLED"))
+	if err != nil {
+		setupLog.Error(err, "invalid UI contract configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			registryUIFlag:         uiEnabled,
@@ -111,6 +118,7 @@ func main() {
 			connectorReadinessFlag: connectorsEnabled,
 			contractReadinessFlag:  contractsEnabled,
 			compositionFlag:        compositionEnabled,
+			uiContractFlag:         uiContractEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -164,6 +172,9 @@ func main() {
 		controllerManager.GetAPIReader(),
 		func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, registryUIFlag)
+		},
+		func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, uiContractFlag)
 		},
 	)
 	registryServer := &http.Server{

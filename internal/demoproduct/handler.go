@@ -36,8 +36,16 @@ var observations = []observation{
 }
 
 // NewHandler returns the example product's API, contract, and decentralized UI.
-func NewHandler() http.Handler {
+func NewHandler(hostOrigins ...string) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /ui-contract-config", func(response http.ResponseWriter, _ *http.Request) {
+		response.Header().Set("Content-Type", "application/json")
+		response.Header().Set("Cache-Control", "no-store")
+		response.Header().Set("Access-Control-Allow-Origin", "*")
+		_ = json.NewEncoder(response).Encode(struct {
+			HostOrigins []string `json:"hostOrigins"`
+		}{HostOrigins: hostOrigins})
+	})
 	mux.HandleFunc("/api/observations", observationsHandler)
 	mux.HandleFunc("/openapi.json", openAPIHandler)
 	mux.HandleFunc("/ui", uiHandler)

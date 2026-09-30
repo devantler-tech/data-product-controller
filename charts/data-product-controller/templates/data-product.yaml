@@ -24,4 +24,10 @@ spec:
   ui:
     title: Explore harbour observations
     url: https://{{ .Values.route.host }}/products/harbour/ui
+    {{- if .Values.uiContract.enabled }}
+    contract:
+      apiVersion: data-product-ui/v1
+      hostOrigins: [{{ printf "https://%s" .Values.route.host | quote }}]
+      capabilities: [status, resize]
+    {{- end }}
 {{- end }}
