@@ -118,7 +118,7 @@ func TestDemoWorksInTwoHosts(t *testing.T) {
 	}
 	kitPage := browser.MustPage().Timeout(30 * time.Second).MustNavigate(kit.URL).MustWaitLoad()
 	kitPage.MustSetViewport(375, 812, 1, false)
-	if !kitPage.MustEval(`() => document.querySelector('#kit-status').getAttribute('role') === 'status' && document.querySelector('#kit-status').getAttribute('aria-live') === 'polite' && document.querySelector('label[for="manifest"]') !== null`).
+	if !kitPage.MustEval(`() => document.querySelector('#kit-status').getAttribute('role') === 'status' && document.querySelector('#kit-status').getAttribute('aria-live') === 'polite' && document.querySelector('#manifest').labels.length === 1`).
 		Bool() {
 		t.Fatal("kit lost its live status or form label")
 	}

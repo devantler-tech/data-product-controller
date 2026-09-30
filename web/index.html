@@ -19,19 +19,21 @@
         application release.
       </p>
       <form id="manifest-form">
-        <label for="manifest">Public UI manifest (JSON, up to 16 KiB)</label>
         <p id="manifest-help">
           Paste the descriptor’s <code>ui</code> object. Opening it runs the
           publisher’s code in an isolated frame. Use public metadata only.
         </p>
-        <textarea
-          id="manifest"
-          aria-describedby="manifest-help"
-          rows="12"
-          maxlength="16384"
-          required
-          spellcheck="false"
-        ></textarea>
+        <label
+          >Public UI manifest (JSON, up to 16 KiB)
+          <textarea
+            id="manifest"
+            aria-describedby="manifest-help"
+            rows="12"
+            maxlength="16384"
+            required
+            spellcheck="false"
+          ></textarea>
+        </label>
         <fieldset>
           <legend>Allow these presentation hints</legend>
           <label

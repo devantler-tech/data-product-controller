@@ -167,15 +167,15 @@ test fixtures; production hosts must use verified HTTPS.
 
 For a third-party UI, use the kit and check all of the following:
 
-1. A manifest for the wrong host or version is rejected without opening a frame.
-2. The loading message changes only after a compatible handshake; blocked or
-   unavailable pages time out and can be retried.
-3. Query controls work with the keyboard, have labels and visible focus, and status
-   changes are announced. Closing the interface is keyboard accessible.
-4. At 375 pixels wide, controls and results fit without horizontal scrolling.
-5. A query failure reports a useful message; a successful retry restores results.
-6. Unchecking a grant prevents that hint from affecting the host. Closing or
-   navigating the frame makes the old session unusable.
+- A manifest for the wrong host or version is rejected without opening a frame.
+- The loading message changes only after a compatible handshake; blocked or
+  unavailable pages time out and can be retried.
+- Query controls work with the keyboard, have labels and visible focus, and status
+  changes are announced. Closing the interface is keyboard accessible.
+- At 375 pixels wide, controls and results fit without horizontal scrolling.
+- A query failure reports a useful message; a successful retry restores results.
+- Unchecking a grant prevents that hint from affecting the host. Closing or
+  navigating the frame makes the old session unusable.
 
 The bundled browser tests cover keyboard submission, narrow-screen overflow and
 live status semantics, but do not replace screen-reader testing of each product.
