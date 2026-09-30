@@ -30,6 +30,8 @@ type DataProductReconciler struct {
 	Scheme *runtime.Scheme
 	// SourceReader bypasses the cache for external resources and Secret metadata.
 	SourceReader client.Reader
+	// SourceProvider supplies versioned dispatch with separately configured, bounded engine reads.
+	SourceProvider providerv1.Provider
 	// SourcesEnabled evaluates the default-off provisioned-sources release flag.
 	SourcesEnabled func(context.Context) bool
 	// EngineProvidersEnabled evaluates the independent default-off engine-provider release gate.
@@ -311,11 +313,11 @@ func (r *DataProductReconciler) observeSource(
 				Message: "Enable engine-providers to observe this product's selected engine.",
 			}
 		} else {
-			observation = (&providerv1.Registry{Reader: r.SourceReader, Mapper: r.RESTMapper()}).Observe(
-				ctx,
-				product.Namespace,
-				source,
-			)
+			provider := r.SourceProvider
+			if provider == nil {
+				provider = &providerv1.Registry{Reader: r.SourceReader, Mapper: r.RESTMapper()}
+			}
+			observation = provider.Observe(ctx, product.Namespace, source)
 		}
 	}
 	if source.Engine != nil {

@@ -69,18 +69,20 @@ func (c *CloudNativePG) Observe(
 		)
 	}
 	// A supplied bootstrap Secret is independently owned and is outside the generated-publication contract.
-	if _, present, err := unstructured.NestedFieldNoCopy(
-		cluster.Object,
-		"spec",
-		"bootstrap",
-		"initdb",
-		"secret",
-	); err != nil ||
-		present {
-		return unavailable(
-			"ConnectionPublicationUnsupported",
-			"Use the operator-generated application Secret; custom bootstrap credentials require a separate adapter.",
-		)
+	for _, bootstrap := range []string{"initdb", "recovery", "pg_basebackup"} {
+		if _, present, err := unstructured.NestedFieldNoCopy(
+			cluster.Object,
+			"spec",
+			"bootstrap",
+			bootstrap,
+			"secret",
+		); err != nil ||
+			present {
+			return unavailable(
+				"ConnectionPublicationUnsupported",
+				"Use the operator-generated application Secret; custom bootstrap credentials require a separate adapter.",
+			)
+		}
 	}
 	if !cnpgReady(cluster) {
 		return unavailable(

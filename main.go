@@ -12,6 +12,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/catalog"
 	"github.com/devantler-tech/data-product-controller/internal/config"
 	productcontroller "github.com/devantler-tech/data-product-controller/internal/controller"
+	providerv1 "github.com/devantler-tech/data-product-controller/internal/provider/v1"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -153,7 +154,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	controllerManager, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	managerConfig := ctrl.GetConfigOrDie()
+	engineReader, err := providerv1.NewEngineReader(managerConfig)
+	if err != nil {
+		setupLog.Error(err, "create engine provider reader")
+		os.Exit(1)
+	}
+	controllerManager, err := ctrl.NewManager(managerConfig, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddress},
 		HealthProbeBindAddress: probeAddress,
@@ -169,6 +176,11 @@ func main() {
 		Client:       controllerManager.GetClient(),
 		Scheme:       controllerManager.GetScheme(),
 		SourceReader: controllerManager.GetAPIReader(),
+		SourceProvider: &providerv1.Registry{
+			Reader:       engineReader,
+			LegacyReader: controllerManager.GetAPIReader(),
+			Mapper:       controllerManager.GetRESTMapper(),
+		},
 		EngineProvidersEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, engineProvidersFlag)
 		},

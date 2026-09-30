@@ -41,7 +41,8 @@ The `cnpg/v1` adapter requires:
   UID, name, API group and kind.
 
 The adapter accepts the operator-generated application Secret only. A supplied
-`spec.bootstrap.initdb.secret` is outside this publication contract and reports
+`spec.bootstrap.initdb.secret`, `spec.bootstrap.recovery.secret` or
+`spec.bootstrap.pg_basebackup.secret` is outside this publication contract and reports
 `ConnectionPublicationUnsupported`. Application workloads use the generated credentials directly;
 the controller never requests their values. See CloudNativePG's [application connection guide](https://cloudnative-pg.io/docs/1.28/applications/)
 and [Cluster API reference](https://cloudnative-pg.io/docs/1.28/cloudnative-pg.v1/).
@@ -49,7 +50,7 @@ and [Cluster API reference](https://cloudnative-pg.io/docs/1.28/cloudnative-pg.v
 `SourceReady` refreshes independently of other dependencies. Missing sources, publication ownership
 mismatches, lost permissions, unready replicas and deletion produce stable reasons without copying
 provider messages into product status. Aggregate readiness also requires the product's other
-declared dependencies. Observation uses fresh exact-name reads, a five-second deadline and
+declared dependencies. Typed observation uses a fixed resource mapping, fresh exact-name reads, a five-second deadline and
 30-second polling; unchanged observations do not rewrite status.
 
 CloudNativePG may omit observed generations. In that case the observer cannot establish that status

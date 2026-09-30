@@ -53,6 +53,12 @@ func TestCNPGObservation(t *testing.T) {
 		{name: "incomplete replicas", reason: "SourceNotReady", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			_ = unstructured.SetNestedField(c.Object, int64(0), "status", "readyInstances")
 		}},
+		{name: "custom recovery secret", reason: "ConnectionPublicationUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, map[string]any{"name": "warehouse-app"}, "spec", "bootstrap", "recovery", "secret")
+		}},
+		{name: "custom base backup secret", reason: "ConnectionPublicationUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, map[string]any{"name": "warehouse-app"}, "spec", "bootstrap", "pg_basebackup", "secret")
+		}},
 		{name: "primary changing", reason: "SourceNotReady", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			_ = unstructured.SetNestedField(c.Object, "warehouse-2", "status", "targetPrimary")
 		}},
@@ -183,6 +189,33 @@ func TestProviderHonorsCancellation(t *testing.T) {
 	got := (&Registry{Reader: cnpgReader(t, server.URL)}).Observe(ctx, "products", cnpgSource())
 	if got.Ready || got.Reason != "SourceUnavailable" || time.Since(started) > time.Second {
 		t.Fatalf("cancellation=%+v elapsed=%s", got, time.Since(started))
+	}
+}
+
+// TestColdProviderReaderCancellation models the manager's cold uncached reader with unavailable discovery.
+func TestColdProviderReaderCancellation(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api" || r.URL.Path == "/apis" ||
+			r.URL.Path == "/apis/postgresql.cnpg.io/v1" {
+			t.Error("typed observation performed discovery outside its deadline")
+			time.Sleep(100 * time.Millisecond)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		<-r.Context().Done()
+	}))
+	t.Cleanup(server.Close)
+	reader, err := NewEngineReader(&rest.Config{Host: server.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 25*time.Millisecond)
+	defer cancel()
+	started := time.Now()
+	got := (&Registry{Reader: reader}).Observe(ctx, "products", cnpgSource())
+	if got.Ready || got.Reason != "SourceUnavailable" || time.Since(started) > 75*time.Millisecond {
+		t.Fatalf("cold API observation=%+v elapsed=%s", got, time.Since(started))
 	}
 }
 

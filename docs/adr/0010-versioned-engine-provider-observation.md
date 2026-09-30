@@ -28,7 +28,8 @@ Cluster UID. Custom bootstrap credentials require a separate publication contrac
 messages nor credential values are copied to product status or the registry.
 
 Typed `SourceReady` refreshes independently of composition and other dependencies. Each source
-observation has a five-second deadline and a 30-second poll. The separate `engine-providers`
+engine observation uses fixed API mapping, a five-second deadline and a 30-second poll. Legacy
+Crossplane observation retains its separately configured discovery behavior. The `engine-providers`
 OpenFeature gate is default-off alongside `provisioned-sources`; both disabled states prevent reads.
 Its rollout and retirement are tracked in #128.
 
