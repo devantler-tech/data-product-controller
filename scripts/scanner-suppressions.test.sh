@@ -76,6 +76,7 @@ expected_trivy_allowlist=$(
 	printf '%s\n' \
 		'DS-0026 Dockerfile' \
 		'KSV-0013 deploy/deployment.yaml' \
+		'KSV-0113 docs/examples/sql-provider-observer-rbac.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/controller-deployment.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/demo-deployment.yaml' \
 		'KSV-0125 deploy/deployment.yaml' \
@@ -84,5 +85,13 @@ expected_trivy_allowlist=$(
 )
 [ "$actual_trivy_allowlist" = "$expected_trivy_allowlist" ] ||
 	fail 'Trivy suppressions must match the approved artifact allowlist'
+
+# RBAC cannot restrict Secret gets to metadata. This optional example grants one publication only.
+observer_rbac="$repo_root/docs/examples/sql-provider-observer-rbac.yaml"
+secret_rules=$(yq ea -N '[select(.kind == "Role") | .rules[] | select(.resources[] == "secrets")]' "$observer_rbac")
+[ "$(printf '%s' "$secret_rules" | yq 'length')" = '1' ] || fail 'the observer must have one Secret rule'
+secret_grant=$(printf '%s' "$secret_rules" | yq -o=json -I=0 '.[0] | [.apiGroups, .resources, .resourceNames, .verbs]')
+[ "$secret_grant" = '[[""],["secrets"],["warehouse-app"],["get"]]' ] ||
+	fail 'the optional observer grant must stay limited to getting the named application Secret'
 
 printf '%s\n' 'scanner suppression tests passed'

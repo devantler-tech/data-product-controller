@@ -1,4 +1,8 @@
 misconfigurations:
+  - id: KSV-0113
+    paths:
+      - docs/examples/sql-provider-observer-rbac.yaml
+    statement: The optional observer needs a whole-Secret get grant for metadata negotiation; the contract test limits it to the single named application publication, with no list, watch or mutation.
   - id: KSV-0013
     paths:
       - deploy/deployment.yaml
