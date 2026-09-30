@@ -36,6 +36,6 @@ kube delete dataproduct -l catalog-pagination-test=true
 
 install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
-probe --url http://dpc/api/v1/catalog --want-status 404
+wait_for 'disabled catalog returns 404 after rollback' 60 probe --url http://dpc/api/v1/catalog --want-status 404
 kube delete -f "$repo_root/docs/examples/dcat-product.yaml"
 echo 'PASS: DCAT chart flag, publisher opt-in, duplicate rejection and rollback'
