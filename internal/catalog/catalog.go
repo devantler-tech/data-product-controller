@@ -303,6 +303,7 @@ func entityID(kind, product, output string) string {
 	)
 }
 
+// optionalReference omits undeclared links instead of emitting empty RDF nodes.
 func optionalReference(value string) *reference {
 	if value == "" {
 		return nil
@@ -374,6 +375,7 @@ func validIRI(value string) bool {
 	return parsed.Scheme == "https" && parsed.Hostname() != "" && parsed.Opaque == ""
 }
 
+// validHTTPS narrows graph identities to public HTTPS access and documentation links.
 func validHTTPS(
 	value string,
 ) bool {

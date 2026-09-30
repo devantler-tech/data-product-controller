@@ -153,6 +153,7 @@ type blockingReader struct {
 	calls            atomic.Int32
 }
 
+// catalogHandler binds tests to an enabled deployment with an explicit stable catalog identity.
 func catalogHandler(source client.Reader) (http.Handler, error) {
 	return catalog.NewHandler(
 		source,
@@ -163,6 +164,7 @@ func catalogHandler(source client.Reader) (http.Handler, error) {
 	)
 }
 
+// List holds the first request until released so overlapping scans can be observed.
 func (r *blockingReader) List(
 	ctx context.Context,
 	_ client.ObjectList,
@@ -186,6 +188,7 @@ type pageReader struct {
 	calls, fail int
 }
 
+// List enforces continuation and page budgets while providing a deterministic API snapshot.
 func (r *pageReader) List(
 	_ context.Context,
 	list client.ObjectList,

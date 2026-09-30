@@ -353,6 +353,7 @@ type listSpy struct {
 	deadline     time.Duration
 }
 
+// List records read bounds and injects API errors or incomplete snapshots.
 func (s *listSpy) List(
 	ctx context.Context,
 	list client.ObjectList,
@@ -372,6 +373,7 @@ func (s *listSpy) List(
 	return s.err
 }
 
+// fixture includes public dataset metadata and a private source sentinel that must never escape.
 func fixture() *datav1.DataProduct {
 	return &datav1.DataProduct{
 		ObjectMeta: metav1.ObjectMeta{
@@ -405,6 +407,7 @@ func fixture() *datav1.DataProduct {
 	}
 }
 
+// reader partitions immutable fixtures into the pages returned by the Kubernetes API.
 func reader(t *testing.T, products ...*datav1.DataProduct) client.Reader {
 	t.Helper()
 	// controller-runtime's fake client ignores Limit; model real API pagination explicitly.
@@ -418,6 +421,7 @@ func reader(t *testing.T, products ...*datav1.DataProduct) client.Reader {
 	return &pageReader{t: t, pages: pages}
 }
 
+// request exercises the public handler with hostile routing headers to check identity independence.
 func request(
 	t *testing.T,
 	source client.Reader,
@@ -446,10 +450,12 @@ func request(
 
 type offlineLoader struct{}
 
+// LoadDocument makes unexpected remote JSON-LD context resolution fail the consumer test.
 func (offlineLoader) LoadDocument(string) (*ld.RemoteDocument, error) {
 	return nil, errors.New("remote JSON-LD resolution is forbidden")
 }
 
+// asRDF processes the HTTP response with an independent offline JSON-LD implementation.
 func asRDF(t *testing.T, body []byte) string {
 	t.Helper()
 	var document any
@@ -470,6 +476,7 @@ func asRDF(t *testing.T, body []byte) string {
 	return rdf
 }
 
+// linkedIRI follows an RDF relationship without relying on the producer document structure.
 func linkedIRI(t *testing.T, rdf, subject, predicate string) string {
 	t.Helper()
 	pattern := regexp.MustCompile(
