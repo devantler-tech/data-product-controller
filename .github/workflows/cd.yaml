@@ -18,3 +18,39 @@ jobs:
     with:
       app-name: data-product-controller
       enable-caller-pin: true
+
+  smoke:
+    name: Verify published DSP exporter
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout released examples and smoke test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Verify and exercise the published image by digest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          image="ghcr.io/devantler-tech/data-product-controller:${RELEASE_TAG#v}"
+          docker pull "$image"
+          digest=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')
+          [[ "$digest" =~ ^ghcr.io/devantler-tech/data-product-controller@sha256:[a-f0-9]{64}$ ]]
+          cosign verify \
+            --certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@df7fd4f83edade31c121a9de563d9a7b9b1f900d \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-github-workflow-repository devantler-tech/data-product-controller \
+            --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
+            --certificate-github-workflow-sha "$EXPECTED_SHA" \
+            "$digest"
+          [[ "$(docker image inspect "$digest" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" == "$EXPECTED_SHA" ]]
+          bash tests/source/dsp-catalog.sh "$digest"

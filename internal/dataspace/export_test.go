@@ -12,6 +12,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 )
 
+// example uses the runnable operator examples as shared consumer fixtures.
 func example(t *testing.T, name string) []byte {
 	t.Helper()
 	b, err := fs.ReadFile(os.DirFS("../../docs/examples/dsp-catalog"), name+".json")
@@ -21,6 +22,7 @@ func example(t *testing.T, name string) []byte {
 	return b
 }
 
+// object decodes an asserted fixture object for semantic mutation or comparison.
 func object(t *testing.T, b []byte) map[string]any {
 	t.Helper()
 	var v map[string]any
@@ -30,6 +32,7 @@ func object(t *testing.T, b []byte) map[string]any {
 	return v
 }
 
+// encode serializes test data without swallowing fixture errors.
 func encode(t *testing.T, v any) []byte {
 	t.Helper()
 	b, err := json.Marshal(v)
@@ -39,6 +42,7 @@ func encode(t *testing.T, v any) []byte {
 	return b
 }
 
+// TestExportPreservesProviderIntent compares every emitted field and policy rule.
 func TestExportPreservesProviderIntent(t *testing.T) {
 	t.Parallel()
 	b, err := dataspace.Export(
@@ -60,6 +64,7 @@ func TestExportPreservesProviderIntent(t *testing.T) {
 	}
 }
 
+// TestExportRejectsAmbiguousOrIncompleteBindings checks stale selections and unsupported claims.
 func TestExportRejectsAmbiguousOrIncompleteBindings(t *testing.T) {
 	t.Parallel()
 	cases := []struct{ name, old, replacement string }{
@@ -120,6 +125,7 @@ func TestExportRejectsAmbiguousOrIncompleteBindings(t *testing.T) {
 	}
 }
 
+// TestEmptySelectionKeepsService preserves the required service without an invalid empty dataset array.
 func TestEmptySelectionKeepsService(t *testing.T) {
 	t.Parallel()
 	bindings := object(t, example(t, "bindings"))

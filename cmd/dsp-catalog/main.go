@@ -13,6 +13,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 )
 
+// main reports errors separately from catalog output and returns a failing exit status.
 func main() {
 	if err := run(os.Args[1:], os.Getenv("DSP_CATALOG_EXPORT_ENABLED"), os.Stdout); err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, err)
@@ -20,6 +21,7 @@ func main() {
 	}
 }
 
+// run evaluates the OpenFeature gate before opening inputs and writes only a complete export.
 func run(args []string, setting string, out io.Writer) error {
 	if setting != "" && setting != "false" && setting != "true" {
 		return errors.New("DSP_CATALOG_EXPORT_ENABLED must be true or false")

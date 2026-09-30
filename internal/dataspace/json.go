@@ -26,6 +26,7 @@ func checkJSON(b []byte) error {
 	return nil
 }
 
+// value checks one bounded JSON subtree before typed decoding can discard ambiguity.
 func value(d *json.Decoder, depth int) error {
 	if depth > 32 {
 		return errors.New("input exceeds 32 nesting levels")
@@ -78,6 +79,7 @@ func value(d *json.Decoder, depth int) error {
 	return nil
 }
 
+// knownKey forbids case aliases; typed decoding then checks each key's exact location.
 func knownKey(s string) bool {
 	switch s {
 	case "@id", "@type", "@context", "dcat", "dcterms", "foaf",

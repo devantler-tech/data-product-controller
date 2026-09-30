@@ -196,6 +196,7 @@ type constraint struct {
 	Right    string `json:"rightOperand"`
 }
 
+// validate accepts only the documented target-free policy subset with its explicit assigner.
 func (o offer) validate(participant string) error {
 	if o.Type != "Offer" || o.Assigner != participant || len(o.Permission)+len(o.Prohibition) == 0 {
 		return errors.New(
@@ -242,6 +243,7 @@ func (o offer) validate(participant string) error {
 	return nil
 }
 
+// claim rejects invalid or reused identities across the source and exported resources.
 func claim(ids map[string]bool, id string) error {
 	if !validID(id) || ids[id] {
 		return errors.New("invalid or conflicting resource identity")
@@ -250,8 +252,10 @@ func claim(ids map[string]bool, id string) error {
 	return nil
 }
 
+// validID implements the catalog's restricted HTTPS and URN identity profile.
 func validID(s string) bool { return urnPattern.MatchString(s) || publicURL(s, false) }
 
+// publicURL validates public HTTPS IRIs, with stricter rules for connector base addresses.
 func publicURL(s string, base bool) bool {
 	if strings.ContainsAny(s, "<>\"{}|^`\\") ||
 		strings.ContainsFunc(

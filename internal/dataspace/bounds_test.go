@@ -9,6 +9,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 )
 
+// TestInvalidSourceAndJSON rejects ambiguous graphs, malformed JSON and oversized inputs.
 func TestInvalidSourceAndJSON(t *testing.T) {
 	t.Parallel()
 	base := example(t, "catalog")
@@ -69,6 +70,7 @@ func TestInvalidSourceAndJSON(t *testing.T) {
 	}
 }
 
+// TestRejectsNonIRICharacters catches strings that URL parsing accepts but RDF IRIs forbid.
 func TestRejectsNonIRICharacters(t *testing.T) {
 	t.Parallel()
 	for _, char := range []string{"{", "}", "<", ">", "|", "^", "`", "[", "]", "\u00a0", "\u0085", "\u2003"} {
@@ -92,6 +94,7 @@ func TestRejectsNonIRICharacters(t *testing.T) {
 	}
 }
 
+// TestAcceptsEncodedPathAndIPv6 keeps valid bracket uses distinct from illegal raw paths.
 func TestAcceptsEncodedPathAndIPv6(t *testing.T) {
 	t.Parallel()
 	for _, endpoint := range []string{"https://[2001:db8::1]/dsp", "https://example.com/path%5B1%5D"} {
@@ -109,6 +112,7 @@ func TestAcceptsEncodedPathAndIPv6(t *testing.T) {
 	}
 }
 
+// TestBindingPolicyLimits preserves rejection coverage independently of example formatting.
 func TestBindingPolicyLimits(t *testing.T) {
 	t.Parallel()
 	for name, mutate := range map[string]func(*testing.T, map[string]any){
@@ -154,6 +158,7 @@ func TestBindingPolicyLimits(t *testing.T) {
 	}
 }
 
+// FuzzExportNeverReturnsPartialJSON checks arbitrary input for panics and partial error output.
 func FuzzExportNeverReturnsPartialJSON(f *testing.F) {
 	f.Add([]byte(`{}`), []byte(`{}`))
 	f.Fuzz(func(t *testing.T, catalog, bindings []byte) {

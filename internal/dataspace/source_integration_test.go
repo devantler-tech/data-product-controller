@@ -91,6 +91,7 @@ func TestControllerSnapshotToProviderCatalog(t *testing.T) {
 	}
 }
 
+// TestAggregateLimitsAndLateFailure checks full-size graphs and errors after earlier valid datasets.
 func TestAggregateLimitsAndLateFailure(t *testing.T) {
 	t.Parallel()
 	for _, count := range []int{256, 257} {
@@ -165,8 +166,10 @@ func TestAggregateLimitsAndLateFailure(t *testing.T) {
 	}
 }
 
+// stringID creates a deterministic distinct fixture identity suffix.
 func stringID(i int) string { return fmt.Sprint(i) }
 
+// decodeArray restores generated fixture lists after replacing their provider identity.
 func decodeArray(t *testing.T, b []byte) []any {
 	t.Helper()
 	var a []any

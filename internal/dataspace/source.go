@@ -50,6 +50,7 @@ type sourceService struct {
 	Dataset  reference `json:"dcat:servesDataset"`
 }
 
+// index validates the complete source graph before exposing any dataset for selection.
 func (s sourceCatalog) index() (map[string]sourceDataset, map[string]bool, error) {
 	fail := func() (map[string]sourceDataset, map[string]bool, error) {
 		return nil, nil, errors.New("source is not a valid bounded controller DCAT catalog")
@@ -125,6 +126,7 @@ func (s sourceCatalog) index() (map[string]sourceDataset, map[string]bool, error
 	return index, ids, nil
 }
 
+// types accepts only the two declared types in the controller's publication profile.
 func types(got []string, kind string) bool {
 	return len(got) == 2 && slices.Contains(got, kind) && slices.Contains(got, "dcat:Resource")
 }

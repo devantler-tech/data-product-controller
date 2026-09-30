@@ -55,7 +55,7 @@ administration API is assumed. Production controller behavior is unchanged.
 
 Offline tests use unmodified pinned official schemas and contexts, an independent
 JSON Schema validator and JSON-LD expansion. Documentation includes runnable
-examples and [adoption/flag-retirement issue #126](https://github.com/devantler-tech/data-product-controller/issues/126), reviewed on 2026-10-30.
+examples and [adoption/flag-retirement issue #126](https://github.com/devantler-tech/data-product-controller/issues/126), with its review scheduled for 2026-10-30.
 
 ## References
 

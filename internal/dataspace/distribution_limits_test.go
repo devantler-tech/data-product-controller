@@ -9,6 +9,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 )
 
+// firstObject asserts the fixture structure before a test mutates nested metadata.
 func firstObject(t *testing.T, v any) map[string]any {
 	t.Helper()
 	a, ok := v.([]any)
@@ -22,6 +23,7 @@ func firstObject(t *testing.T, v any) map[string]any {
 	return m
 }
 
+// TestDistributionBudget accepts the documented limit and rejects one extra representation.
 func TestDistributionBudget(t *testing.T) {
 	t.Parallel()
 	for _, n := range []int{1024, 1025} {
@@ -61,6 +63,7 @@ func TestDistributionBudget(t *testing.T) {
 	}
 }
 
+// TestOfferAndBindingByteLimits verifies both offer-count and input-byte budgets.
 func TestOfferAndBindingByteLimits(t *testing.T) {
 	t.Parallel()
 	for _, n := range []int{16, 17} {

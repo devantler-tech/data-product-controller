@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestCommandGateAndRealFiles proves default-off behavior precedes file access.
 func TestCommandGateAndRealFiles(t *testing.T) {
 	// OpenFeature registration is process-wide; exercise these sequentially.
 	for _, setting := range []string{"", "false", "invalid", " true "} {
@@ -37,6 +38,7 @@ func TestCommandGateAndRealFiles(t *testing.T) {
 	}
 }
 
+// TestCommandErrorsWriteNoOutput prevents failed commands from publishing data or input values.
 func TestCommandErrorsWriteNoOutput(t *testing.T) {
 	dir := t.TempDir()
 	bad := filepath.Join(dir, "bad.json")

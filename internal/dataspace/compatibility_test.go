@@ -17,12 +17,14 @@ var standards embed.FS
 
 type offlineSchemas struct{}
 
+// Load rejects any schema dependency outside the registered offline resources.
 func (offlineSchemas) Load(string) (any, error) {
 	return nil, errors.New("schema network loading forbidden")
 }
 
 type offlineContexts struct{ docs map[string]any }
 
+// LoadDocument resolves only pinned contexts without permitting a network fallback.
 func (l offlineContexts) LoadDocument(u string) (*ld.RemoteDocument, error) {
 	d, ok := l.docs[u]
 	if !ok {

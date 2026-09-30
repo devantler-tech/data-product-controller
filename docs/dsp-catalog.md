@@ -123,6 +123,9 @@ The hosted Kubernetes integration job also runs `tests/source/dsp-catalog.sh`
 against the exact image it builds, with networking disabled. This checks the
 packaged command, default-off behavior, enabled example and empty output on
 invalid bindings before the controller's cluster lifecycle tests proceed.
+After publication, the release workflow verifies the image signature against the
+pinned publisher and this repository's exact release tag and commit, checks the
+image's source revision, and runs the same smoke test against its immutable digest.
 
 [ADR 0009](adr/0009-offline-dsp-catalog-export.md) records the design.
 [Adoption and flag retirement #126](https://github.com/devantler-tech/data-product-controller/issues/126)
