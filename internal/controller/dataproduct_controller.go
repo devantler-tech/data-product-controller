@@ -10,6 +10,7 @@ import (
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	connectorv1 "github.com/devantler-tech/data-product-controller/internal/connector/v1"
+	providerv1 "github.com/devantler-tech/data-product-controller/internal/provider/v1"
 	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,8 +30,12 @@ type DataProductReconciler struct {
 	Scheme *runtime.Scheme
 	// SourceReader bypasses the cache for external resources and Secret metadata.
 	SourceReader client.Reader
+	// SourceProvider supplies versioned dispatch with separately configured, bounded engine reads.
+	SourceProvider providerv1.Provider
 	// SourcesEnabled evaluates the default-off provisioned-sources release flag.
 	SourcesEnabled func(context.Context) bool
+	// EngineProvidersEnabled evaluates the independent default-off engine-provider release gate.
+	EngineProvidersEnabled func(context.Context) bool
 	// ConnectorReader performs uncached, scoped workload reads.
 	ConnectorReader client.Reader
 	// ConnectorsEnabled evaluates the default-off connector-readiness release flag.
@@ -122,6 +127,7 @@ func (r *DataProductReconciler) Reconcile(
 	result := ctrl.Result{}
 	r.observeConnector(ctx, product)
 	r.observeContracts(ctx, product)
+	sourceObservation := r.observeSource(ctx, product)
 	compositionError := r.observeComposition(ctx, product)
 	composition := meta.FindStatusCondition(
 		product.Status.Conditions,
@@ -142,16 +148,13 @@ func (r *DataProductReconciler) Reconcile(
 	}
 	if product.Spec.Source != nil {
 		result.RequeueAfter = 30 * time.Second
-		observation := provisionerv1.Observation{
-			Reason:  "SourceFeatureDisabled",
-			Message: "Enable the provisioned-sources feature to observe this product's source.",
-		}
-		if r.SourcesEnabled != nil && r.SourcesEnabled(ctx) {
-			observer := &provisionerv1.Crossplane{Reader: r.SourceReader, Mapper: r.RESTMapper()}
-			observation = observer.Observe(ctx, product.Namespace, *product.Spec.Source)
-		}
-		if !observation.Ready {
-			setReadiness(product, metav1.ConditionFalse, observation.Reason, observation.Message)
+		if !sourceObservation.Ready {
+			setReadiness(
+				product,
+				metav1.ConditionFalse,
+				sourceObservation.Reason,
+				sourceObservation.Message,
+			)
 			return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 		}
 	}
@@ -189,7 +192,15 @@ func (r *DataProductReconciler) Reconcile(
 				return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 			}
 
-			if len(product.Spec.ContractChecks) != 0 ||
+			if meta.FindStatusCondition(
+				product.Status.Conditions,
+				datav1alpha1.ConditionSourceReady,
+			) != nil ||
+				meta.FindStatusCondition(
+					previousStatus.Conditions,
+					datav1alpha1.ConditionSourceReady,
+				) != nil ||
+				len(product.Spec.ContractChecks) != 0 ||
 				meta.FindStatusCondition(
 					previousStatus.Conditions,
 					datav1alpha1.ConditionContractsReady,
@@ -283,6 +294,57 @@ func (r *DataProductReconciler) Reconcile(
 	}
 
 	return result, nil
+}
+
+// observeSource refreshes typed source readiness even when composition or another capability blocks readiness.
+func (r *DataProductReconciler) observeSource(
+	ctx context.Context,
+	product *datav1alpha1.DataProduct,
+) provisionerv1.Observation {
+	if product.Spec.Source == nil {
+		meta.RemoveStatusCondition(&product.Status.Conditions, datav1alpha1.ConditionSourceReady)
+		return provisionerv1.Observation{Ready: true}
+	}
+	source := *product.Spec.Source
+	if source.Engine == nil {
+		meta.RemoveStatusCondition(&product.Status.Conditions, datav1alpha1.ConditionSourceReady)
+	}
+	observation := provisionerv1.Observation{
+		Reason:  "SourceFeatureDisabled",
+		Message: "Enable the provisioned-sources feature to observe this product's source.",
+	}
+	if r.SourcesEnabled != nil && r.SourcesEnabled(ctx) {
+		if source.Engine != nil &&
+			(r.EngineProvidersEnabled == nil || !r.EngineProvidersEnabled(ctx)) {
+			observation = provisionerv1.Observation{
+				Reason:  "EngineProviderFeatureDisabled",
+				Message: "Enable engine-providers to observe this product's selected engine.",
+			}
+		} else {
+			provider := r.SourceProvider
+			if provider == nil {
+				provider = &providerv1.Registry{Reader: r.SourceReader, Mapper: r.RESTMapper()}
+			}
+			observation = provider.Observe(ctx, product.Namespace, source)
+		}
+	}
+	if source.Engine != nil {
+		status := metav1.ConditionFalse
+		if observation.Ready {
+			status = metav1.ConditionTrue
+		}
+		meta.SetStatusCondition(
+			&product.Status.Conditions,
+			metav1.Condition{
+				Type:               datav1alpha1.ConditionSourceReady,
+				Status:             status,
+				ObservedGeneration: product.Generation,
+				Reason:             observation.Reason,
+				Message:            observation.Message,
+			},
+		)
+	}
+	return observation
 }
 
 // observeConnector refreshes its independent condition even when other capabilities block aggregate readiness.

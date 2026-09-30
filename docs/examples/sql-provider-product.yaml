@@ -1,0 +1,29 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: warehouse-product
+  namespace: products
+spec:
+  id: urn:example:warehouse
+  name: Warehouse
+  description: Curated warehouse queries backed by an independently operated SQL cluster.
+  version: v1.0.0
+  owner:
+    name: warehouse-team
+  source:
+    adapter: cnpg/v1
+    engine:
+      apiVersion: engine-provider/v1
+      type: sql
+      provider: native
+    resourceRef:
+      apiVersion: postgresql.cnpg.io/v1
+      kind: Cluster
+      name: warehouse
+    connectionSecretRef:
+      name: warehouse-app
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://warehouse.example.com/query
+      contractUrl: https://warehouse.example.com/openapi.json

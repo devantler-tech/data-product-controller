@@ -335,3 +335,4 @@ echo 'PASS: product deletion retained independently owned workloads and credenti
 
 source "$repo_root/tests/source/composition.sh"
 source "$repo_root/tests/source/catalog.sh"
+source "$repo_root/tests/source/engine-provider.sh"

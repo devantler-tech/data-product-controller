@@ -14,6 +14,7 @@ The current foundation provides:
 - composition through named output references, with dependency-aware readiness conditions;
 - default-off contract version checks, bounded cycle detection, and direct input lineage within a namespace in the API and UI;
 - a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
+- default-off, versioned engine selection with SQL/native CloudNativePG observation and admission rules that reject unsupported providers;
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
@@ -43,6 +44,11 @@ Deployment policy must match this chart identity separately from the shared cont
 manifest publisher. Platform configuration owns signature enforcement and rollout.
 
 Provisioned sources use delegated provisioning: an external controller owns infrastructure and credentials. The versioned `crossplane/v1` observer checks readiness and connection publication without creating resources or reading Secret values. See the [provisioned-source guide](docs/provisioned-sources.md) for its contract, scoped access, enablement, and limitations.
+
+The [engine-provider guide](docs/engine-providers.md) explains typed source selection, the
+CloudNativePG application-Secret contract, independent `SourceReady` status, scoped permissions and
+rollout gates. Database lifecycle remains externally owned; document, graph and hybrid adapters
+remain roadmap work.
 
 Connector workloads remain independently owned. The `deployment/v1` observer reads one named Deployment in the product's namespace and publishes `ConnectorReady` alongside aggregate readiness. See the [connector-readiness guide](docs/connector-readiness.md) for flag enablement, narrowly scoped RBAC, an authored product example, and rollout semantics.
 
@@ -187,6 +193,8 @@ cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.
 [ADR 0008](docs/adr/0008-dcat-catalog-projection.md) defines the opt-in DCAT projection and its bounded, metadata-only publication contract.
 
 [ADR 0009](docs/adr/0009-offline-dsp-catalog-export.md) defines the offline DSP catalog profile. It exports provider-supplied policies without implementing negotiation, enforcement or transfer.
+
+[ADR 0010](docs/adr/0010-versioned-engine-provider-observation.md) defines engine dispatch and admission while preserving delegated source ownership.
 
 The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base).
 This release does not claim full conformance with those standards.

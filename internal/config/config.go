@@ -20,6 +20,11 @@ func ProvisionedSourcesEnabled(value string) (bool, error) {
 	return featureEnabled("PROVISIONED_SOURCES_ENABLED", value)
 }
 
+// EngineProvidersEnabled parses the default-off typed engine observation release flag.
+func EngineProvidersEnabled(value string) (bool, error) {
+	return featureEnabled("ENGINE_PROVIDERS_ENABLED", value)
+}
+
 // ConnectorReadinessEnabled parses the default-off workload observation release flag.
 func ConnectorReadinessEnabled(value string) (bool, error) {
 	return featureEnabled("CONNECTOR_READINESS_ENABLED", value)
