@@ -47,7 +47,10 @@ func TestControllerSnapshotToProviderCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/v1/catalog", nil))
+	handler.ServeHTTP(
+		response,
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/catalog", nil),
+	)
 	if response.Code != http.StatusOK {
 		t.Fatalf("producer failed: %s", response.Body)
 	}
