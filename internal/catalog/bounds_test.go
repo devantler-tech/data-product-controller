@@ -28,6 +28,7 @@ func TestCatalogPagination(t *testing.T) {
 		{"complete", 0, http.StatusOK}, {"later API failure", 2, http.StatusServiceUnavailable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			source := &pageReader{
 				t:     t,
 				pages: [][]datav1.DataProduct{{*second}, {*first}},
@@ -77,6 +78,7 @@ func TestCatalogAggregateBounds(t *testing.T) {
 	t.Parallel()
 	for _, kind := range []string{"metadata", "outputs"} {
 		t.Run(kind, func(t *testing.T) {
+			t.Parallel()
 			var products []*datav1.DataProduct
 			for i := 0; i < 70; i++ {
 				p := fixture()

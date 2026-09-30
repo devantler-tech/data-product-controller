@@ -83,7 +83,7 @@ func NewHandler(reader client.Reader, options Options) (http.Handler, error) {
 			return
 		}
 		body, err := json.Marshal(document)
-		if err != nil || len(body) > maxResponse {
+		if err != nil || len(body)+1 > maxResponse {
 			http.Error(
 				w,
 				"Catalog exceeds the 2-MiB response limit; no partial catalog is returned.",
@@ -92,7 +92,7 @@ func NewHandler(reader client.Reader, options Options) (http.Handler, error) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/ld+json")
-		_, _ = w.Write(body)
+		_ = json.NewEncoder(w).Encode(document)
 	}), nil
 }
 
@@ -120,13 +120,13 @@ func readProducts(
 		); err != nil ||
 			ctx.Err() != nil {
 			return nil, http.StatusServiceUnavailable, errors.New(
-				"Unable to read the catalog. Retry after the product API recovers.",
+				"unable to read the catalog. Retry after the product API recovers",
 			)
 		}
 		scanned += len(list.Items)
 		if len(list.Items) > limit || scanned > maxProducts {
 			return nil, http.StatusRequestEntityTooLarge, errors.New(
-				"Catalog exceeds the 256-product scan limit; no partial catalog is returned.",
+				"catalog exceeds the 256-product scan limit; no partial catalog is returned",
 			)
 		}
 		for _, product := range list.Items {
@@ -136,7 +136,7 @@ func readProducts(
 			}
 			if profile != "Dataset" {
 				return nil, http.StatusUnprocessableEntity, errors.New(
-					"Catalog profile must be Dataset; remove the annotation to exclude a product.",
+					"catalog profile must be Dataset; remove the annotation to exclude a product",
 				)
 			}
 			spec := product.Spec
@@ -146,7 +146,7 @@ func readProducts(
 			outputs += len(spec.Outputs)
 			if outputs > maxOutputs {
 				return nil, http.StatusUnprocessableEntity, errors.New(
-					"Catalog exceeds the 1,024-output limit.",
+					"catalog exceeds the 1,024-output limit",
 				)
 			}
 			products = append(products, datav1.DataProductSpec{
@@ -165,7 +165,7 @@ func readProducts(
 		continuation = list.Continue
 	}
 	return nil, http.StatusRequestEntityTooLarge, errors.New(
-		"Catalog exceeds the bounded page scan; no partial catalog is returned.",
+		"catalog exceeds the bounded page scan; no partial catalog is returned",
 	)
 }
 
@@ -234,7 +234,7 @@ func project(id string, products []datav1.DataProductSpec) (catalogDocument, err
 	for _, spec := range products {
 		if !validIRI(spec.ID) || identities[spec.ID] {
 			return document, errors.New(
-				"Catalog contains an invalid or conflicting product identity.",
+				"catalog contains an invalid or conflicting product identity",
 			)
 		}
 		identities[spec.ID] = true
@@ -262,7 +262,7 @@ func project(id string, products []datav1.DataProductSpec) (catalogDocument, err
 			distributionID := entityID("distribution", spec.ID, port.Name)
 			serviceID := entityID("service", spec.ID, port.Name)
 			if identities[distributionID] || identities[serviceID] {
-				return document, errors.New("Catalog contains conflicting output identities.")
+				return document, errors.New("catalog contains conflicting output identities")
 			}
 			identities[distributionID], identities[serviceID] = true, true
 			entry.Distributions = append(entry.Distributions, distribution{
@@ -314,7 +314,7 @@ func validateMetadata(spec datav1.DataProductSpec, size *int) error {
 		len(spec.Outputs) == 0 ||
 		len(spec.Outputs) > maxOutputs {
 		return errors.New(
-			"Dataset profile requires identity, title, description, version, owner and bounded named outputs.",
+			"dataset profile requires identity, title, description, version, owner and bounded named outputs",
 		)
 	}
 	fields := []string{
@@ -329,14 +329,14 @@ func validateMetadata(spec datav1.DataProductSpec, size *int) error {
 	for _, value := range []string{spec.Owner.URL, spec.DocumentationURL} {
 		if value != "" && !validHTTPS(value) {
 			return errors.New(
-				"Catalog documentation and owner links must be absolute public HTTPS URLs.",
+				"catalog documentation and owner links must be absolute public HTTPS URLs",
 			)
 		}
 	}
 	for _, port := range spec.Outputs {
 		if port.Name == "" || !validHTTPS(port.URL) || !validHTTPS(port.ContractURL) {
 			return errors.New(
-				"Catalog outputs require names and absolute public HTTPS endpoint and contract URLs.",
+				"catalog outputs require names and absolute public HTTPS endpoint and contract URLs",
 			)
 		}
 		fields = append(fields, port.Name, port.URL, port.ContractURL, port.MediaType)
@@ -345,7 +345,7 @@ func validateMetadata(spec datav1.DataProductSpec, size *int) error {
 		*size += len(value)
 		if len(value) > 16*1024 || *size > maxMetadata || !utf8.ValidString(value) {
 			return errors.New(
-				"Catalog exceeds the 16-KiB field or 1-MiB metadata limit, or contains invalid UTF-8.",
+				"catalog exceeds the 16-KiB field or 1-MiB metadata limit, or contains invalid UTF-8",
 			)
 		}
 	}

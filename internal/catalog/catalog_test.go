@@ -59,6 +59,9 @@ func TestCatalogIndependentConsumer(t *testing.T) {
 		t.Fatal("dataset, catalog and service relationships disagree")
 	}
 	endpoint := linkedIRI(t, rdf, service, dcat+"endpointURL")
+	if endpoint != demo.URL+"/api/observations" {
+		t.Fatal("discovered endpoint is outside the test-owned TLS server")
+	}
 	if linkedIRI(t, rdf, distribution, dcat+"accessURL") != endpoint {
 		t.Fatal("service-backed distribution lost its access URL")
 	}
@@ -71,11 +74,12 @@ func TestCatalogIndependentConsumer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// #nosec G704 -- The discovered URL is asserted to equal this test's owned TLS server above.
 	result, err := demo.Client().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer result.Body.Close()
+	defer func() { _ = result.Body.Close() }()
 	body, err := io.ReadAll(result.Body)
 	if err != nil {
 		t.Fatal(err)
