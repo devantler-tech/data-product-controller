@@ -10,33 +10,40 @@
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
 }
+
 main {
   width: min(64rem, calc(100% - 2rem));
   margin: 3rem auto;
 }
+
 h1 {
   font:
     500 clamp(2.5rem, 7vw, 4.5rem)/1.1 Georgia,
     serif;
   margin: 1rem 0;
 }
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 0.75rem;
 }
+
 form {
   padding: clamp(1rem, 4vw, 2rem);
   border: 1px solid #9db9ac;
   background: white;
 }
+
 label {
   display: block;
   font-weight: 600;
 }
+
 textarea {
   width: 100%;
   padding: 0.75rem;
@@ -46,15 +53,18 @@ textarea {
   resize: vertical;
   border: 1px solid #5d7a6a;
 }
+
 fieldset {
   margin: 1rem 0;
   padding: 1rem;
   border: 1px solid #9db9ac;
 }
+
 fieldset label {
   margin: 0.5rem 0;
   font-weight: 400;
 }
+
 button {
   min-height: 44px;
   padding: 0.65rem 1rem;
@@ -64,34 +74,41 @@ button {
   cursor: pointer;
   font: inherit;
 }
+
 #close {
   color: #173f4d;
   background: white;
 }
+
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+
 :focus-visible {
   outline: 3px solid #b45125;
   outline-offset: 3px;
 }
+
 iframe {
   width: 100%;
   height: 700px;
   min-height: 240px;
   border: 1px solid #5d7a6a;
 }
+
 #kit-status {
   padding: 1rem;
   background: #e0ece5;
   overflow-wrap: anywhere;
 }
+
 .note,
 #manifest-help {
   font-size: 0.9rem;
 }
+
 [hidden] {
   display: none !important;
 }

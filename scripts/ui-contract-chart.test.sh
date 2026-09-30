@@ -10,7 +10,10 @@ for enabled in false true; do
 	fi
 	for container in controller product; do
 		flag=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "'"$container"'") | .env[] | select(.name == "UI_CONTRACT_ENABLED") | .value' -)
-		[ "$flag" = "$enabled" ] || { printf '%s\n' "$container UI contract flag must be $enabled"; exit 1; }
+		[ "$flag" = "$enabled" ] || {
+			printf '%s\n' "$container UI contract flag must be $enabled"
+			exit 1
+		}
 	done
 	version=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.apiVersion' -)
 	publisher_origins=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "product") | .env[] | select(.name == "UI_HOST_ORIGINS") | .value' -)

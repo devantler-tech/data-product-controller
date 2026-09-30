@@ -71,12 +71,12 @@ Every message is an object with exactly the documented keys. All messages carry
 `apiVersion: "data-product-ui/v1"` and the current `session` string. Unsupported
 versions, unknown fields, stale sessions, and ungranted hints are ignored.
 
-| Direction | Type | Additional fields | Meaning |
-| --- | --- | --- | --- |
-| Host → product | `init` | `capabilities: []` | Fresh UUID session and intersection of requested capabilities with host policy |
-| Product → host | `ready` | None | This document accepted initialization and speaks v1 |
-| Product → host | `status` | `state: "ready"` or `"error"` | Optional interface status hint; requires `status` grant |
-| Product → host | `resize` | `height: integer` | Optional height in CSS pixels, 240–1200 inclusive; requires `resize` grant |
+| Direction      | Type     | Additional fields             | Meaning                                                                        |
+|----------------|----------|-------------------------------|--------------------------------------------------------------------------------|
+| Host → product | `init`   | `capabilities: []`            | Fresh UUID session and intersection of requested capabilities with host policy |
+| Product → host | `ready`  | None                          | This document accepted initialization and speaks v1                            |
+| Product → host | `status` | `state: "ready"` or `"error"` | Optional interface status hint; requires `status` grant                        |
+| Product → host | `resize` | `height: integer`             | Optional height in CSS pixels, 240–1200 inclusive; requires `resize` grant     |
 
 The registry grants `status` and `resize` when requested; these are its fixed
 local presentation policy. The kit grants neither until its operator selects
