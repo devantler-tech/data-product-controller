@@ -108,6 +108,11 @@ messages also closes the frame with an error; hints are for discrete UI changes,
 not continuous telemetry. Select the product again to start a fresh session. A
 query failure can report `error` followed by `ready` on recovery within a session.
 
+In the kit, a host-closed interface directs the user to **Validate and open**;
+a product-reported error keeps its own recovery controls available. The kit and
+demo servers bound request reads to ten seconds, writes to fifteen seconds, and
+idle connections to sixty seconds.
+
 The sandbox does not certify publisher code, prevent every network request it
 can make, or authenticate a redirected destination. Loaded code remains untrusted.
 Hosts need their own publication policy, TLS, CSP, and product access controls.

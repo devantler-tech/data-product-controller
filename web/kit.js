@@ -10,8 +10,9 @@ function showState(state) {
     loading: "Manifest accepted. Waiting for the product interface…",
     ready:
       "Compatible handshake received. Exercise the product and check its keyboard and small-screen behavior.",
-    error:
-      "The product reported an interface error. Check recovery through its own controls.",
+    error: frame.hidden
+      ? "The host closed the interface after a protocol failure. Validate and open it again to retry."
+      : "The product reported an interface error. Check recovery through its own controls.",
     timeout:
       "No compatible handshake arrived within 10 seconds. Check the publisher’s host origins, version, availability and embedding policy, then retry.",
   }[state];

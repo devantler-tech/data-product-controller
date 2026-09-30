@@ -278,6 +278,56 @@ func TestUIHostMessageBoundary(t *testing.T) {
 	)
 }
 
+// TestKitRecoveryInstructions distinguishes a recoverable product error from host-enforced closure.
+func TestKitRecoveryInstructions(t *testing.T) {
+	child := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<!doctype html><title>Recovery fixture</title><script>
+		addEventListener('message', e => { if (e.source !== parent || e.data.type !== 'init') return;
+		window.session = e.data.session; window.hostOrigin = e.origin;
+		parent.postMessage({apiVersion:'data-product-ui/v1',type:'ready',session},e.origin);
+		});</script>`))
+	}))
+	t.Cleanup(child.Close)
+	host := httptest.NewTLSServer(web.KitHandler(func() bool { return true }))
+	t.Cleanup(host.Close)
+	page := contractBrowser(
+		t,
+	).MustPage().
+		Timeout(15 * time.Second).
+		MustNavigate(host.URL).
+		MustWaitLoad()
+	page.MustEval(
+		`(url) => { document.querySelector('#manifest').value=JSON.stringify({url,title:'Recovery',contract:{apiVersion:'data-product-ui/v1',hostOrigins:[location.origin],capabilities:['status']}}); }`,
+		child.URL,
+	)
+	page.MustElement("#grant-status").MustClick()
+	page.MustElement("#validate").MustClick()
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
+	frame := page.MustElement("#product-surface").MustFrame()
+	frame.MustEval(
+		`() => parent.postMessage({apiVersion:'data-product-ui/v1',type:'status',session,state:'error'},hostOrigin)`,
+	)
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'error'`)
+	if !page.MustEval(`() => !document.querySelector('iframe').hidden && document.querySelector('#kit-status').textContent.includes('own controls')`).
+		Bool() {
+		t.Fatal("recoverable error lost the visible product's recovery instructions")
+	}
+	frame.MustEval(
+		`() => {for(let i=0;i<257;i++) parent.postMessage({apiVersion:'data-product-ui/v1',type:'status',session,state:'error'},hostOrigin);}`,
+	)
+	page.MustWait(`() => document.querySelector('iframe').hidden`)
+	if !page.MustEval(`() => document.querySelector('#kit-status').textContent.includes('Validate and open')`).
+		Bool() {
+		t.Fatal("closed interface does not explain how to reopen it")
+	}
+	page.MustElement("#validate").MustClick()
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
+	if page.MustEval(`() => document.querySelector('iframe').hidden`).Bool() {
+		t.Fatal("retry did not restore the interface")
+	}
+}
+
 // TestUIManifestValidation rejects unsafe contracts before any iframe navigation.
 func TestUIManifestValidation(t *testing.T) {
 	scheme := runtime.NewScheme()

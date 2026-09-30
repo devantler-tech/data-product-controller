@@ -54,6 +54,9 @@ func run() error {
 			func() bool { return featureflag.Enabled(context.Background(), client, "ui-contract") },
 		),
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 	if err := server.ListenAndServeTLS(
 		*cert,
