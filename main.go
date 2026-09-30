@@ -9,6 +9,7 @@ import (
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/catalog"
 	"github.com/devantler-tech/data-product-controller/internal/config"
 	productcontroller "github.com/devantler-tech/data-product-controller/internal/controller"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
@@ -30,6 +31,8 @@ const connectorReadinessFlag = "connector-readiness"
 const contractReadinessFlag = "contract-readiness"
 
 const compositionFlag = "composition"
+
+const dcatCatalogFlag = "dcat-catalog"
 
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
@@ -104,6 +107,11 @@ func main() {
 		setupLog.Error(err, "invalid composition configuration")
 		os.Exit(1)
 	}
+	dcatCatalogEnabled, err := config.DCATCatalogEnabled(os.Getenv("DCAT_CATALOG_ENABLED"))
+	if err != nil {
+		setupLog.Error(err, "invalid DCAT catalog configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			registryUIFlag:         uiEnabled,
@@ -111,6 +119,7 @@ func main() {
 			connectorReadinessFlag: connectorsEnabled,
 			contractReadinessFlag:  contractsEnabled,
 			compositionFlag:        compositionEnabled,
+			dcatCatalogFlag:        dcatCatalogEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -166,10 +175,26 @@ func main() {
 			return featureflag.Enabled(ctx, flagClient, registryUIFlag)
 		},
 	)
+	catalogHandler, err := catalog.NewHandler(controllerManager.GetAPIReader(), catalog.Options{
+		ID: os.Getenv("DCAT_CATALOG_ID"),
+		Enabled: func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, dcatCatalogFlag)
+		},
+	})
+	if err != nil {
+		setupLog.Error(err, "configure DCAT catalog")
+		os.Exit(1)
+	}
+	registryMux := http.NewServeMux()
+	registryMux.Handle("GET /api/v1/catalog", catalogHandler)
+	registryMux.Handle("/", registryHandler)
 	registryServer := &http.Server{
 		Addr:              registryAddress,
-		Handler:           registryHandler,
+		Handler:           registryMux,
 		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 	if err := controllerManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
 		go func() {

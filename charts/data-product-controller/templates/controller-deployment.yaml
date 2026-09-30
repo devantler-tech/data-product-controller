@@ -39,6 +39,10 @@ spec:
           env:
             - name: REGISTRY_UI_ENABLED
               value: {{ .Values.registryUI.enabled | quote }}
+            - name: DCAT_CATALOG_ENABLED
+              value: {{ .Values.dcatCatalog.enabled | quote }}
+            - name: DCAT_CATALOG_ID
+              value: {{ .Values.dcatCatalog.id | quote }}
             - name: PROVISIONED_SOURCES_ENABLED
               value: {{ .Values.provisionedSources.enabled | quote }}
             - name: CONNECTOR_READINESS_ENABLED

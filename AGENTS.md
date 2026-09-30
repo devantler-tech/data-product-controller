@@ -13,10 +13,11 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/provisioner/v1/` — versioned, read-only provisioner observation contract.
 - `internal/connector/v1/` — versioned Deployment observation with bounded, uncached, exact-name reads.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
+- `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
-- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, connector readiness, contract readiness, and composition are default-off.
+- `pkg/featureflag/` — OpenFeature boundary; registry UI, provisioned sources, connector readiness, contract readiness, composition, and DCAT publication are default-off.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
@@ -41,6 +42,12 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - Contract checks bind selected outputs to independently owned probe Deployments. Preserve literal URL binding, the shared observation deadline, independent `ContractsReady` refresh, and the separation between controller reads and probe network traffic; see `docs/contract-readiness.md`.
 - A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
+- DCAT publication requires the explicit `data.devantler.tech/dcat-type: Dataset` annotation and
+  the default-off `dcat-catalog` gate. It projects public metadata only; a listing grants no access
+  and asserts no readiness. Preserve the configured catalog identity, stable output identities,
+  one concurrent request, 16-object pages, 256-product/17-request/five-second scan bounds,
+  1,024 outputs, 16-KiB fields, 1-MiB retained public metadata and 2-MiB encoded responses.
+  Never fetch contexts, contracts or data in the controller. See `docs/dcat-catalog.md`.
 - `v1alpha1` is intentionally small and may change while real provisioned, integrated, and composed products validate the model. Never claim unimplemented roadmap capabilities.
 
 ## Validation

@@ -105,7 +105,20 @@ that a denied cross-namespace reference cannot disclose producer metadata throug
 consumer status. The example describes interfaces;
 it does not run their illustrative endpoints or transfer records.
 
+The same run sources `tests/source/catalog.sh` to exercise DCAT publication through
+the installed controller and chart. It verifies the default 404, explicit activation
+with a stable catalog ID, dataset/service/contract relationships, annotation withdrawal,
+invalid-profile and duplicate-identity rejection, recovery, and rollback to 404.
+Its [dataset example](examples/dcat-product.yaml) publishes illustrative URLs; the
+Kubernetes catalog check does not query those endpoints. The separate
+`TestCatalogIndependentConsumer` Go test expands the catalog HTTP response with an
+independent JSON-LD processor whose document loader rejects network access, then
+discovers and queries the actual local TLS demo product. See the
+[DCAT catalog guide](dcat-catalog.md) for the profile and limits.
+
 The hosted result is a controlled integration proxy. Platform rollout acceptance
-and release-flag retirement remain in issues #46, #49, #101 and #113. The contract probe
+and release-flag retirement remain in issues #46, #49, #101, #113 and
+[#123](https://github.com/devantler-tech/data-product-controller/issues/123).
+The DCAT activation/retirement review is due 2026-10-30. The contract probe
 uses a real TLS endpoint on the private test network; this does not prove production
 public-route reachability. The controller never fetches its data-plane URLs.

@@ -333,3 +333,4 @@ docker exec "$source_container" /fixture probe --url http://127.0.0.1:9000/healt
 echo 'PASS: product deletion retained independently owned workloads and credentials'
 
 source "$repo_root/tests/source/composition.sh"
+source "$repo_root/tests/source/catalog.sh"

@@ -102,6 +102,41 @@ assert_contains "$hosted_render" 'name: harbour-observations'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/ui'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/openapi.json'
 
+dcat_flag=$(printf '%s' "$default_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "DCAT_CATALOG_ENABLED") | .value' -)
+[ "$dcat_flag" = 'false' ] || fail 'DCAT catalog must default off'
+dcat_id=$(printf '%s' "$default_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "DCAT_CATALOG_ID") | .value' -)
+[ -z "$dcat_id" ] || fail 'DCAT catalog must not invent a default identity'
+dcat_type=$(printf '%s' "$hosted_render" | yq ea 'select(.kind == "DataProduct") | .metadata.annotations."data.devantler.tech/dcat-type"' -)
+[ "$dcat_type" = 'null' ] || fail 'demo product must not opt into DCAT by default'
+
+dcat_render=$(helm template data-product-controller "$chart" \
+	--namespace data-product-system \
+	--set dcatCatalog.enabled=true \
+	--set-string dcatCatalog.id=urn:example:catalog:harbour \
+	--set route.enabled=true \
+	--set route.host=data-products.example.test)
+dcat_flag=$(printf '%s' "$dcat_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "DCAT_CATALOG_ENABLED") | .value' -)
+[ "$dcat_flag" = 'true' ] || fail 'DCAT catalog must be explicitly enableable'
+dcat_id=$(printf '%s' "$dcat_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "DCAT_CATALOG_ID") | .value' -)
+[ "$dcat_id" = 'urn:example:catalog:harbour' ] || fail 'DCAT catalog identity must reach the controller unchanged'
+dcat_type=$(printf '%s' "$dcat_render" | yq ea 'select(.kind == "DataProduct") | .metadata.annotations."data.devantler.tech/dcat-type"' -)
+[ "$dcat_type" = 'Dataset' ] || fail 'enabled demo product must declare its dataset semantics'
+if helm template data-product-controller "$chart" --set dcatCatalog.enabled=true >/dev/null 2>&1; then
+	fail 'enabled DCAT catalog must require an explicit identity'
+fi
+if helm template data-product-controller "$chart" --set dcatCatalog.enabled=true --set-string 'dcatCatalog.id=   ' >/dev/null 2>&1; then
+	fail 'enabled DCAT catalog must reject a blank identity'
+fi
+if helm template data-product-controller "$chart" --set-string dcatCatalog.enabled=true >/dev/null 2>&1; then
+	fail 'DCAT catalog flag must be a boolean'
+fi
+if helm template data-product-controller "$chart" --set dcatCatalog.id=42 >/dev/null 2>&1; then
+	fail 'DCAT catalog identity must be a string'
+fi
+if helm template data-product-controller "$chart" --set dcatCatalog.enabled=true --set-string 'dcatCatalog.id=https://example.test/catalog/$(TOKEN)' >/dev/null 2>&1; then
+	fail 'DCAT catalog identity must not expand environment variables'
+fi
+
 sh "$repo_root/scripts/http-source-chart.test.sh"
 sh "$repo_root/scripts/connector-chart.test.sh"
 sh "$repo_root/scripts/contract-chart.test.sh"
