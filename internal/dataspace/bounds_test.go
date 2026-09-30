@@ -111,34 +111,41 @@ func TestAcceptsEncodedPathAndIPv6(t *testing.T) {
 
 func TestBindingPolicyLimits(t *testing.T) {
 	t.Parallel()
-	for _, tt := range []struct{ name, old, replacement string }{
-		{"null rules", `"prohibition": [{"action":"http://www.w3.org/ns/odrl/2/sell"}]`, `"prohibition":null`},
-		{"empty rules", `"prohibition": [{"action":"http://www.w3.org/ns/odrl/2/sell"}]`, `"prohibition":[]`},
-		{"too many rules", `"prohibition": [{"action":"http://www.w3.org/ns/odrl/2/sell"}]`, `"prohibition":[` + strings.TrimSuffix(strings.Repeat(`{"action":"use"},`, 33), ",") + `]`},
-		{"empty constraint", `"rightOperand":"research"`, `"rightOperand":""`},
-		{"numeric constraint", `"rightOperand":"research"`, `"rightOperand":123`},
-		{"ambiguous operator", `"operator":"eq"`, `"operator":"unknown"`},
-		{"obligation alone", `"permission":`, `"obligation":`},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-			input := bytes.ReplaceAll(
-				example(t, "bindings"),
-				[]byte(tt.old),
-				[]byte(tt.replacement),
-			)
-			if tt.name == "obligation alone" {
-				input = bytes.ReplaceAll(
-					input,
-					[]byte(
-						",\n      \"prohibition\": [{\"action\":\"http://www.w3.org/ns/odrl/2/sell\"}]",
-					),
-					nil,
-				)
+	for name, mutate := range map[string]func(*testing.T, map[string]any){
+		"null rules":  func(_ *testing.T, o map[string]any) { o["prohibition"] = nil },
+		"empty rules": func(_ *testing.T, o map[string]any) { o["prohibition"] = []any{} },
+		"too many rules": func(_ *testing.T, o map[string]any) {
+			var rules []any
+			for range 33 {
+				rules = append(rules, map[string]any{"action": "use"})
 			}
+			o["prohibition"] = rules
+		},
+		"empty constraint": func(t *testing.T, o map[string]any) {
+			t.Helper()
+			firstObject(t, firstObject(t, o["permission"])["constraint"])["rightOperand"] = ""
+		},
+		"numeric constraint": func(t *testing.T, o map[string]any) {
+			t.Helper()
+			firstObject(t, firstObject(t, o["permission"])["constraint"])["rightOperand"] = 123
+		},
+		"ambiguous operator": func(t *testing.T, o map[string]any) {
+			t.Helper()
+			firstObject(t, firstObject(t, o["permission"])["constraint"])["operator"] = "unknown"
+		},
+		"obligation alone": func(_ *testing.T, o map[string]any) {
+			o["obligation"] = o["permission"]
+			delete(o, "permission")
+			delete(o, "prohibition")
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			input := object(t, example(t, "bindings"))
+			mutate(t, firstObject(t, firstObject(t, input["datasets"])["offers"]))
 			b, err := dataspace.Export(
 				bytes.NewReader(example(t, "catalog")),
-				bytes.NewReader(input),
+				bytes.NewReader(encode(t, input)),
 			)
 			if err == nil || len(b) > 0 {
 				t.Fatalf("unsafe policy published: %v", err)
