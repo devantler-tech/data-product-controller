@@ -3,19 +3,23 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 )
 
 // TestEngineProviderDefaultsOff proves the independent engine release gate blocks observation.
@@ -188,6 +192,113 @@ func TestProviderReconciliation(t *testing.T) {
 type providerCountingReader struct {
 	client.Reader
 	calls atomic.Int64
+}
+
+// TestProviderStatusSurvivesDependencyReadErrors preserves independent source health and removal during API failure.
+func TestProviderStatusSurvivesDependencyReadErrors(t *testing.T) {
+	t.Parallel()
+	for _, mode := range []string{"new source", "recovered source", "source removed", "engine selection removed"} {
+		t.Run(mode, func(t *testing.T) {
+			t.Parallel()
+			product := testProduct("sql-product")
+			product.Generation = 2
+			product.Spec.Source = &datav1alpha1.ProvisionedSource{
+				Adapter: "cnpg/v1",
+				Engine: &datav1alpha1.EngineSelection{
+					APIVersion: "engine-provider/v1", Type: "sql", Provider: "native",
+				},
+			}
+			product.Spec.Inputs = []datav1alpha1.InputPort{
+				{
+					Name:       "upstream",
+					ProductRef: datav1alpha1.ProductReference{Name: "producer", Output: "query"},
+				},
+			}
+			setReadiness(product, metav1.ConditionTrue, "DependenciesReady", "Previously ready")
+			if mode != "new source" {
+				meta.SetStatusCondition(&product.Status.Conditions, metav1.Condition{
+					Type:               datav1alpha1.ConditionSourceReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "SourceNotReady",
+					Message:            "Previous observation",
+					ObservedGeneration: 1,
+				})
+			}
+			remove := mode == "source removed" || mode == "engine selection removed"
+			switch mode {
+			case "source removed":
+				product.Spec.Source = nil
+			case "engine selection removed":
+				product.Spec.Source.Engine = nil
+				product.Spec.Source.Adapter = "crossplane/v1"
+			}
+			scheme := testScheme(t)
+			store := fake.NewClientBuilder().WithScheme(scheme).
+				WithStatusSubresource(&datav1alpha1.DataProduct{}).WithObjects(product).Build()
+			r := &DataProductReconciler{
+				Client: interceptor.NewClient(store, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if key.Name == "producer" {
+							return apierrors.NewForbidden(
+								datav1alpha1.GroupVersion.WithResource("dataproducts").
+									GroupResource(),
+								key.Name,
+								errors.New("sensitive sentinel"),
+							)
+						}
+						return c.Get(ctx, key, obj, opts...)
+					},
+				}),
+				Scheme: scheme, SourceProvider: readySourceProvider{},
+				SourcesEnabled:         func(context.Context) bool { return true },
+				EngineProvidersEnabled: func(context.Context) bool { return true },
+			}
+			key := client.ObjectKeyFromObject(product)
+			if _, err := r.Reconcile(
+				t.Context(),
+				ctrl.Request{NamespacedName: key},
+			); !apierrors.IsForbidden(
+				err,
+			) {
+				t.Fatalf("dependency failure must remain retryable: %v", err)
+			}
+			if err := store.Get(t.Context(), key, product); err != nil {
+				t.Fatal(err)
+			}
+			condition := meta.FindStatusCondition(
+				product.Status.Conditions,
+				datav1alpha1.ConditionSourceReady,
+			)
+			if remove && condition != nil {
+				t.Fatalf("removed engine retained source status: %+v", condition)
+			}
+			if !remove &&
+				(condition == nil || condition.Status != metav1.ConditionTrue || condition.ObservedGeneration != product.Generation) {
+				t.Fatalf("fresh source observation was discarded: %+v", condition)
+			}
+			ready := readyCondition(t, product)
+			if ready.Status != metav1.ConditionFalse || ready.Reason != "DependencyUnavailable" ||
+				strings.Contains(ready.Message, "sensitive sentinel") {
+				t.Fatalf("dependency failure retained readiness or leaked details: %+v", ready)
+			}
+		})
+	}
+}
+
+// readySourceProvider isolates status persistence from the separately tested engine API observation.
+type readySourceProvider struct{}
+
+// Observe supplies a successful source observation while the product-dependency API fails.
+func (readySourceProvider) Observe(
+	context.Context,
+	string,
+	datav1alpha1.ProvisionedSource,
+) provisionerv1.Observation {
+	return provisionerv1.Observation{
+		Ready:   true,
+		Reason:  "SourceReady",
+		Message: "Observed test source",
+	}
 }
 
 // Get counts external reads so disabled gates cannot silently acquire observation permissions.

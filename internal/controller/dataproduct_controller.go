@@ -192,7 +192,15 @@ func (r *DataProductReconciler) Reconcile(
 				return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 			}
 
-			if len(product.Spec.ContractChecks) != 0 ||
+			if meta.FindStatusCondition(
+				product.Status.Conditions,
+				datav1alpha1.ConditionSourceReady,
+			) != nil ||
+				meta.FindStatusCondition(
+					previousStatus.Conditions,
+					datav1alpha1.ConditionSourceReady,
+				) != nil ||
+				len(product.Spec.ContractChecks) != 0 ||
 				meta.FindStatusCondition(
 					previousStatus.Conditions,
 					datav1alpha1.ConditionContractsReady,
