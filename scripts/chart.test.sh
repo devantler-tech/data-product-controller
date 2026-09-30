@@ -133,7 +133,7 @@ fi
 if helm template data-product-controller "$chart" --set dcatCatalog.id=42 >/dev/null 2>&1; then
 	fail 'DCAT catalog identity must be a string'
 fi
-if helm template data-product-controller "$chart" --set dcatCatalog.enabled=true --set-string 'dcatCatalog.id=https://example.test/catalog/$(TOKEN)' >/dev/null 2>&1; then
+if helm template data-product-controller "$chart" --set dcatCatalog.enabled=true --set-string "dcatCatalog.id=https://example.test/catalog/\$(TOKEN)" >/dev/null 2>&1; then
 	fail 'DCAT catalog identity must not expand environment variables'
 fi
 

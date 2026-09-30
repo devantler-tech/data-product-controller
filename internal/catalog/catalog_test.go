@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"regexp"
 	"strings"
 	"testing"
@@ -36,7 +37,8 @@ func TestCatalogIndependentConsumer(t *testing.T) {
 		t.Fatalf("catalog status %d: %s", response.Code, response.Body)
 	}
 	if response.Header().Get("Content-Type") != "application/ld+json" ||
-		response.Header().Get("Cache-Control") != "no-store" {
+		response.Header().Get("Cache-Control") != "no-store" ||
+		response.Header().Get("X-Content-Type-Options") != "nosniff" {
 		t.Fatal("catalog lacks JSON-LD or fresh-response headers")
 	}
 	rdf := asRDF(t, response.Body.Bytes())
@@ -232,7 +234,7 @@ func TestCatalogIdentityStability(t *testing.T) {
 func TestCatalogOrderingAndLiteralMetadata(t *testing.T) {
 	t.Parallel()
 	p := fixture()
-	p.Spec.Name = `Øresund {"@id":"https://attacker.test/"}`
+	p.Spec.Name = `Øresund <script>alert(1)</script> {"@id":"https://attacker.test/"}`
 	p.Spec.Owner.URL, p.Spec.DocumentationURL = "", ""
 	p.Spec.Outputs = nil
 	for i, protocol := range []datav1.OutputProtocol{datav1.ProtocolOpenAPI, datav1.ProtocolAsyncAPI, datav1.ProtocolGraphQL, datav1.ProtocolDCAT, datav1.ProtocolArrowFlight} {
@@ -250,6 +252,9 @@ func TestCatalogOrderingAndLiteralMetadata(t *testing.T) {
 	first := request(t, reader(t, p), true, "urn:example:catalog")
 	if first.Code != http.StatusOK {
 		t.Fatal(first.Body.String())
+	}
+	if strings.Contains(first.Body.String(), "<script>") {
+		t.Fatal("JSON response did not escape publisher-controlled HTML")
 	}
 	rdf := asRDF(t, first.Body.Bytes())
 	if strings.Count(rdf, "<"+dcat+"DataService>") != 5 ||
@@ -280,9 +285,12 @@ func TestCatalogOrderingAndLiteralMetadata(t *testing.T) {
 // TestCatalogRejectsInvalidLinksAndOversizedMetadata prevents malformed or unbounded graphs.
 func TestCatalogRejectsInvalidLinksAndOversizedMetadata(t *testing.T) {
 	t.Parallel()
+	credentialURL := (&url.URL{
+		Scheme: "https", Host: "example.test", User: url.UserPassword("test-user", "test-password"),
+	}).String()
 	for _, change := range []func(*datav1.DataProduct){
 		func(p *datav1.DataProduct) { p.Spec.ID = "relative" },
-		func(p *datav1.DataProduct) { p.Spec.Outputs[0].URL = "https://user:password@example.test/query" },
+		func(p *datav1.DataProduct) { p.Spec.Outputs[0].URL = credentialURL + "/query" },
 		func(p *datav1.DataProduct) { p.Spec.Outputs[0].ContractURL = "http://example.test/contract" },
 		func(p *datav1.DataProduct) { p.Spec.Owner.URL = "javascript:alert(1)" },
 		func(p *datav1.DataProduct) { p.Spec.Description = strings.Repeat("x", 16*1024+1) },
@@ -315,7 +323,7 @@ func TestCatalogRejectsInvalidLinksAndOversizedMetadata(t *testing.T) {
 	if got := request(t, reader(t), true, ""); got.Code != http.StatusServiceUnavailable {
 		t.Fatalf("enabled catalog with missing identity: %d", got.Code)
 	}
-	for _, id := range []string{"/relative", "_:blank", "https://user:pass@example.test/", "urn:missing-namespace", "urn::catalog", "urn:a:data", "urn:-invalid:data", "urn:example:data%GG", "urn:example:data[bad]", "urn:example:data?plain", "https://example.test/has space"} {
+	for _, id := range []string{"/relative", "_:blank", credentialURL, "urn:missing-namespace", "urn::catalog", "urn:a:data", "urn:-invalid:data", "urn:example:data%GG", "urn:example:data[bad]", "urn:example:data?plain", "https://example.test/has space"} {
 		if _, err := catalog.NewHandler(nil, catalog.Options{ID: id}); err == nil {
 			t.Fatalf("invalid catalog ID accepted: %s", id)
 		}

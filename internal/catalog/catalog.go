@@ -92,7 +92,9 @@ func NewHandler(reader client.Reader, options Options) (http.Handler, error) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/ld+json")
-		_ = json.NewEncoder(w).Encode(document)
+		// #nosec G705 -- json.Marshal HTML-escapes this immutable JSON document; the exact
+		// checked bytes are served as application/ld+json with nosniff, never interpreted as HTML.
+		_, _ = w.Write(append(body, '\n'))
 	}), nil
 }
 
