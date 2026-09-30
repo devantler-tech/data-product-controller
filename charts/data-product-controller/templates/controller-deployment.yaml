@@ -47,6 +47,8 @@ spec:
               value: {{ .Values.uiContract.enabled | quote }}
             - name: PROVISIONED_SOURCES_ENABLED
               value: {{ .Values.provisionedSources.enabled | quote }}
+            - name: ENGINE_PROVIDERS_ENABLED
+              value: {{ .Values.engineProviders.enabled | quote }}
             - name: CONNECTOR_READINESS_ENABLED
               value: {{ .Values.connectorReadiness.enabled | quote }}
             - name: CONTRACT_READINESS_ENABLED

@@ -18,6 +18,9 @@ uiContract:
 provisionedSources:
   enabled: false
 
+engineProviders:
+  enabled: false
+
 connectorReadiness:
   enabled: false
 

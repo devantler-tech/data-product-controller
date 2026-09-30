@@ -11,6 +11,8 @@ const (
 	ConditionContractsReady = "ContractsReady"
 	// ConditionCompositionReady reports graph and declared contract compatibility.
 	ConditionCompositionReady = "CompositionReady"
+	// ConditionSourceReady reports independently observed provisioner and connection publication readiness.
+	ConditionSourceReady = "SourceReady"
 )
 
 // ProductOwner identifies the team accountable for a data product.
@@ -190,11 +192,27 @@ type ConnectionSecretReference struct {
 	Name string `json:"name"`
 }
 
+// EngineSelection selects one supported versioned provider observation implementation.
+type EngineSelection struct {
+	// APIVersion identifies the provider selection contract.
+	// +kubebuilder:validation:Enum=engine-provider/v1
+	APIVersion string `json:"apiVersion"`
+	// Type describes the source's data model; support is constrained by the admission matrix.
+	// +kubebuilder:validation:Enum=sql;document;graph
+	Type string `json:"type"`
+	// Provider describes the engine strategy; unsupported combinations are rejected.
+	// +kubebuilder:validation:Enum=native;cnpg-hybrid
+	Provider string `json:"provider"`
+}
+
 // ProvisionedSource observes a source whose creation, credentials, and deletion belong to a provisioner.
+// +kubebuilder:validation:XValidation:rule="has(self.engine) ? (self.engine.type == 'sql' && self.engine.provider == 'native' && self.adapter == 'cnpg/v1' && self.resourceRef.apiVersion == 'postgresql.cnpg.io/v1' && self.resourceRef.kind == 'Cluster' && self.connectionSecretRef.name == self.resourceRef.name + '-app') : self.adapter == 'crossplane/v1'",message="Use an untyped crossplane/v1 source or engine-provider/v1 sql/native with cnpg/v1, a postgresql.cnpg.io/v1 Cluster and its generated application Secret."
 type ProvisionedSource struct {
 	// Adapter selects a versioned readiness contract.
-	// +kubebuilder:validation:Enum=crossplane/v1
+	// +kubebuilder:validation:Enum=crossplane/v1;cnpg/v1
 	Adapter string `json:"adapter"`
+	// Engine optionally selects a supported engine; omission retains the Crossplane contract.
+	Engine *EngineSelection `json:"engine,omitempty"`
 	// ResourceRef points to the provisioner-owned resource; the controller never writes it.
 	ResourceRef ProvisionedResourceReference `json:"resourceRef"`
 	// ConnectionSecretRef names the connection contract. Only Secret metadata is requested.

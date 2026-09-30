@@ -26,6 +26,8 @@ const registryUIFlag = "registry-ui"
 
 const provisionedSourcesFlag = "provisioned-sources"
 
+const engineProvidersFlag = "engine-providers"
+
 const connectorReadinessFlag = "connector-readiness"
 
 const contractReadinessFlag = "contract-readiness"
@@ -91,6 +93,13 @@ func main() {
 		setupLog.Error(err, "invalid provisioned sources configuration")
 		os.Exit(1)
 	}
+	engineProvidersEnabled, err := config.EngineProvidersEnabled(
+		os.Getenv("ENGINE_PROVIDERS_ENABLED"),
+	)
+	if err != nil {
+		setupLog.Error(err, "invalid engine provider configuration")
+		os.Exit(1)
+	}
 	connectorsEnabled, err := config.ConnectorReadinessEnabled(
 		os.Getenv("CONNECTOR_READINESS_ENABLED"),
 	)
@@ -124,6 +133,7 @@ func main() {
 		map[string]bool{
 			registryUIFlag:         uiEnabled,
 			provisionedSourcesFlag: sourcesEnabled,
+			engineProvidersFlag:    engineProvidersEnabled,
 			connectorReadinessFlag: connectorsEnabled,
 			contractReadinessFlag:  contractsEnabled,
 			compositionFlag:        compositionEnabled,
@@ -156,9 +166,12 @@ func main() {
 	}
 
 	reconciler := &productcontroller.DataProductReconciler{
-		Client:          controllerManager.GetClient(),
-		Scheme:          controllerManager.GetScheme(),
-		SourceReader:    controllerManager.GetAPIReader(),
+		Client:       controllerManager.GetClient(),
+		Scheme:       controllerManager.GetScheme(),
+		SourceReader: controllerManager.GetAPIReader(),
+		EngineProvidersEnabled: func(ctx context.Context) bool {
+			return featureflag.Enabled(ctx, flagClient, engineProvidersFlag)
+		},
 		ConnectorReader: controllerManager.GetAPIReader(),
 		CompositionEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, compositionFlag)

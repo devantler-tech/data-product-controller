@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: warehouse-observer
+  namespace: products
+rules:
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [clusters]
+    resourceNames: [warehouse]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [warehouse-app]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: warehouse-observer
+  namespace: products
+subjects:
+  - kind: ServiceAccount
+    name: data-product-controller
+    namespace: data-product-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: warehouse-observer
