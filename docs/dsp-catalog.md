@@ -59,17 +59,17 @@ Use the [example binding file](examples/dsp-catalog/bindings.json) as a starting
 point. Its example addresses, offer IDs and format are placeholders, not an
 existing provider or a standardized transfer format.
 
-| Binding | Meaning |
-| --- | --- |
-| `version` | Exactly `dsp-catalog/v1`. |
-| `catalogId` | Stable identity of this DSP catalog, distinct from the source catalog. |
-| `participantId` | Provider identity; must match every offer's explicit assigner. |
+| Binding                             | Meaning                                                                                                                                   |
+|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| `version`                           | Exactly `dsp-catalog/v1`.                                                                                                                 |
+| `catalogId`                         | Stable identity of this DSP catalog, distinct from the source catalog.                                                                    |
+| `participantId`                     | Provider identity; must match every offer's explicit assigner.                                                                            |
 | `service.id`, `service.endpointURL` | Stable service identity and HTTPS base of the provider's DSP 2025-1 negotiation/transfer service. No user information, query or fragment. |
-| `datasets[].id` | Exact dataset `@id` from the source snapshot. |
-| `distributions[].sourceId` | Exact source distribution `@id` within that selected dataset. |
-| `distributions[].id` | Distinct stable identity for the DSP representation. Do not reuse the direct-query distribution ID. |
-| `distributions[].format` | Explicit absolute IRI of a transfer format supported by the provider. A source media type such as `application/json` is insufficient. |
-| `offers` | Provider-known ODRL Offers with distinct `@id`, explicit `@type: Offer`, matching `assigner` and supported rules. |
+| `datasets[].id`                     | Exact dataset `@id` from the source snapshot.                                                                                             |
+| `distributions[].sourceId`          | Exact source distribution `@id` within that selected dataset.                                                                             |
+| `distributions[].id`                | Distinct stable identity for the DSP representation. Do not reuse the direct-query distribution ID.                                       |
+| `distributions[].format`            | Explicit absolute IRI of a transfer format supported by the provider. A source media type such as `application/json` is insufficient.     |
+| `offers`                            | Provider-known ODRL Offers with distinct `@id`, explicit `@type: Offer`, matching `assigner` and supported rules.                         |
 
 All selected datasets need at least one distribution and one offer. Unbound
 datasets and outputs are omitted. A stale or repeated selection fails the whole
@@ -106,13 +106,13 @@ different exporter or wait for a separately reviewed profile extension.
 
 ## Limits and validation
 
-| Resource | Limit |
-| --- | --- |
-| Source snapshot | 2 MiB; 256 datasets; 1,024 distributions and 1,024 services. |
-| Binding file | 1 MiB; 256 selected datasets; 1,024 distributions in total. |
-| Policy | 16 offers per dataset; 32 rules per category per offer; 16 constraints per rule. |
-| JSON | 16 KiB per decoded string; 32 nesting levels; one value; no duplicate keys, case aliases, nulls or lossy Unicode. |
-| Encoded result | 2 MiB including trailing newline. |
+| Resource        | Limit                                                                                                             |
+|-----------------|-------------------------------------------------------------------------------------------------------------------|
+| Source snapshot | 2 MiB; 256 datasets; 1,024 distributions and 1,024 services.                                                      |
+| Binding file    | 1 MiB; 256 selected datasets; 1,024 distributions in total.                                                       |
+| Policy          | 16 offers per dataset; 32 rules per category per offer; 16 constraints per rule.                                  |
+| JSON            | 16 KiB per decoded string; 32 nesting levels; one value; no duplicate keys, case aliases, nulls or lossy Unicode. |
+| Encoded result  | 2 MiB including trailing newline.                                                                                 |
 
 Offline tests validate exports against the unmodified official schemas and use
 an independent JSON-LD processor with pinned contexts to check RDF relationships.
