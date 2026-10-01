@@ -97,6 +97,7 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	}
 }
 
+// TestRegistryUIFeatureFlagControlsTheUserSurface checks the document gate and iframe restrictions.
 func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
 	t.Parallel()
 
@@ -150,6 +151,7 @@ func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
 	}
 }
 
+// TestRegistryAssetFingerprintsRespectTheUIFlag rejects immutable asset URLs when the UI is disabled.
 func TestRegistryAssetFingerprintsRespectTheUIFlag(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()

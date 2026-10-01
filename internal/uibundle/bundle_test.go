@@ -11,6 +11,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/uibundle"
 )
 
+// TestDocumentReferencesTheExactImmutableAsset prevents stale or mismatched release bytes being served.
 func TestDocumentReferencesTheExactImmutableAsset(t *testing.T) {
 	t.Parallel()
 	var previous string

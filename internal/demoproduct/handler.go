@@ -135,6 +135,7 @@ func openAPIHandler(response http.ResponseWriter, request *http.Request) {
 	_, _ = response.Write([]byte(openAPIDocument))
 }
 
+// setUISecurityHeaders permits the independent sample to be embedded without granting origin access.
 func setUISecurityHeaders(response http.ResponseWriter) {
 	response.Header().Set(
 		"Content-Security-Policy",

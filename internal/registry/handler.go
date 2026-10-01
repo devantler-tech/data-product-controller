@@ -71,6 +71,7 @@ func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 	})
 }
 
+// registryUI serves the current document only while the registry surface is enabled.
 func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
 	if !s.uiEnabled(request.Context()) {
 		http.NotFound(writer, request)
@@ -88,6 +89,7 @@ func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
 	s.bundle.ServeHTML(writer)
 }
 
+// registryAsset applies the UI gate before resolving an exact compiled asset name.
 func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request) {
 	if !s.uiEnabled(request.Context()) {
 		http.NotFound(writer, request)
