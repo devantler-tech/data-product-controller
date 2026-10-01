@@ -167,7 +167,13 @@ func TestAppearanceGates(t *testing.T) {
 		t.Run(
 			fmt.Sprintf("contract=%t/appearance=%t", gates.contract, gates.appearance),
 			func(t *testing.T) {
-				page, loads := themeWorkspace(t, false, gates.contract, gates.appearance, gates.contract && gates.appearance)
+				page, loads := themeWorkspace(
+					t,
+					false,
+					gates.contract,
+					gates.appearance,
+					gates.contract && gates.appearance,
+				)
 				page.MustElement(".product-card").MustClick()
 				page.MustElement("#ui-contract-status").
 					MustWait(`() => this.dataset.state === 'unavailable'`)
@@ -238,7 +244,9 @@ func TestProductAppearanceGate(t *testing.T) {
 	page, loads := themeWorkspace(t, false, true, true, false)
 	page.MustElement(".product-card").MustClick()
 	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'timeout'`)
-	if loads.Load() != 1 || page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).Bool() {
+	if loads.Load() != 1 ||
+		page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
+			Bool() {
 		t.Fatal("product appearance gate did not fail closed after refusing the handshake")
 	}
 }
@@ -254,27 +262,35 @@ func TestAppearanceSessionLimits(t *testing.T) {
 			frame := page.MustElement("#product-surface").MustFrame()
 			frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'light'`)
 			if side == "host" {
-				page.MustEval(`() => {for(let i=0;i<255;i++) disposeSurface.setAppearance(i%2===0?'dark':'light')}`)
+				page.MustEval(
+					`() => {for(let i=0;i<255;i++) disposeSurface.setAppearance(i%2===0?'dark':'light')}`,
+				)
 				frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'dark'`)
 				if !page.MustElement("#product-surface").MustVisible() {
 					t.Fatal("host revoked the connection before its hint allowance")
 				}
 				page.MustEval(`() => disposeSurface.setAppearance('light')`)
-				page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'error'`)
-				if page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).Bool() {
+				page.MustElement("#ui-contract-status").
+					MustWait(`() => this.dataset.state === 'error'`)
+				if page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
+					Bool() {
 					t.Fatal("host retained navigation after exhausting its hint allowance")
 				}
 			} else {
-				frame.MustEval(`() => {for(let i=0;i<255;i++) dispatchEvent(new MessageEvent('message', {
+				frame.MustEval(
+					`() => {for(let i=0;i<255;i++) dispatchEvent(new MessageEvent('message', {
 					source:parent,origin:connection.origin,data:{apiVersion:'data-product-ui/v2',type:'appearance',
-					session:connection.session,appearance:i%2===0?'dark':'light'}}))}`)
-				if !frame.MustEval(`() => !!connection && document.documentElement.dataset.appearance === 'dark'`).Bool() {
+					session:connection.session,appearance:i%2===0?'dark':'light'}}))}`,
+				)
+				if !frame.MustEval(`() => !!connection && document.documentElement.dataset.appearance === 'dark'`).
+					Bool() {
 					t.Fatal("product revoked the connection before its hint allowance")
 				}
 				frame.MustEval(`() => {const origin=connection.origin, session=connection.session;
 					for(let i=0;i<2;i++) dispatchEvent(new MessageEvent('message', {source:parent,origin,
 					data:{apiVersion:'data-product-ui/v2',type:'appearance',session,appearance:'light'}}))}`)
-				if !frame.MustEval(`() => !connection && document.documentElement.dataset.appearance === 'dark'`).Bool() {
+				if !frame.MustEval(`() => !connection && document.documentElement.dataset.appearance === 'dark'`).
+					Bool() {
 					t.Fatal("product accepted a hint after exhausting its session allowance")
 				}
 			}
