@@ -75,7 +75,6 @@ func TestAuthenticatedWorkspace(t *testing.T) {
 			}
 			reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(published).Build()
 			registryHandler = registry.NewHandlerWithOptions(reader, registry.HandlerOptions{
-				UIEnabled:         func(context.Context) bool { return true },
 				ContractEnabled:   func(context.Context) bool { return true },
 				AppearanceEnabled: func(context.Context) bool { return appearance },
 			})

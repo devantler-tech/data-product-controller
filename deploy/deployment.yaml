@@ -32,9 +32,6 @@ spec:
           imagePullPolicy: Always
           command: [/manager]
           args: [--leader-elect]
-          env:
-            - name: REGISTRY_UI_ENABLED
-              value: "false"
           ports:
             - name: registry
               containerPort: 8082

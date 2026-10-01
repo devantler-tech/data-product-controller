@@ -62,7 +62,7 @@ func TestThreeProductComposition(t *testing.T) {
 		}
 	}
 	server := httptest.NewServer(
-		registry.NewHandler(reader, func(context.Context) bool { return true }),
+		registry.NewHandler(reader),
 	)
 	t.Cleanup(server.Close)
 	request, err := http.NewRequestWithContext(

@@ -10,8 +10,8 @@ into its own document, proxies product requests, or owns the product runtime.
 
 The OpenFeature flag `ui-contract` defaults off in the controller, demo product,
 and kit. Set `UI_CONTRACT_ENABLED=true` explicitly for a development evaluation.
-The chart exposes `uiContract.enabled: true`; the registry additionally requires
-`registryUI.enabled: true`. With routing enabled, the chart declares the catalogue
+The chart exposes `uiContract.enabled: true`. The registry workspace is available
+by default. With routing enabled, the chart declares the catalogue
 origin in the demo manifest and in the demo's separate `UI_HOST_ORIGINS` setting.
 
 A contract-bearing UI is unavailable in the registry while the flag is off.

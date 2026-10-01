@@ -33,7 +33,7 @@ The controller exposes a read-only JSON registry derived from ready and unready 
 
 Each product may publish an absolute HTTPS UI URL. The reference registry loads it in a sandboxed iframe without `allow-same-origin`, passes no credentials, and does not import product JavaScript. Product UIs are therefore independently deployed and can be embedded by any compatible host. A versioned capability and messaging contract will be added before hosts exchange state or credentials.
 
-The registry UI is a release feature behind the repository's OpenFeature-based `registry-ui` flag. It is off by default in the application and tested in both states. A deployment may enable it only after the API and trust boundary are verified.
+The registry workspace is available by default on the read-only registry listener. It renders the same public descriptors as the JSON API, so a separate UI release gate provides no access boundary. Public routing remains opt-in and platform-owned authentication protects both surfaces. Optional portable UI messaging and appearance grants retain their independent OpenFeature gates.
 
 The controller ships as an OCI image and a Helm chart. The chart installs the CRD, least-privilege RBAC, one controller Deployment, one ClusterIP Service, and optional HTTPRoute resources. Platform configuration pins immutable released artifacts and owns public routing, policy, and production rollout.
 

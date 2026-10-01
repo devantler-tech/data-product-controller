@@ -76,10 +76,11 @@ func TestDemoWorksInTwoHosts(t *testing.T) {
 	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).Build()
 	registryServer := httptest.NewTLSServer(
-		registry.NewHandler(
+		registry.NewHandlerWithOptions(
 			reader,
-			func(context.Context) bool { return true },
-			func(context.Context) bool { return enabled.Load() },
+			registry.HandlerOptions{
+				ContractEnabled: func(context.Context) bool { return enabled.Load() },
+			},
 		),
 	)
 	t.Cleanup(registryServer.Close)
@@ -188,7 +189,6 @@ func TestUIHostMessageBoundary(t *testing.T) {
 	host := httptest.NewTLSServer(
 		registry.NewHandler(
 			fake.NewClientBuilder().WithScheme(scheme).Build(),
-			func(context.Context) bool { return true },
 		),
 	)
 	t.Cleanup(host.Close)
@@ -338,7 +338,6 @@ func TestUIManifestValidation(t *testing.T) {
 		fake.NewClientBuilder().
 			WithScheme(scheme).
 			Build(),
-		func(context.Context) bool { return true },
 	))
 	t.Cleanup(server.Close)
 	browser := contractBrowser(t)
