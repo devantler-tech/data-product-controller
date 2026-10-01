@@ -56,6 +56,7 @@ spec:
               port: http
           securityContext:
             allowPrivilegeEscalation: false
+            runAsNonRoot: true
             capabilities:
               drop: [ALL]
             readOnlyRootFilesystem: true

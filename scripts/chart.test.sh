@@ -28,6 +28,16 @@ assert_not_contains() {
 }
 
 default_render=$(helm template data-product-controller "$chart" --namespace data-product-system)
+assert_nonroot_containers() {
+	rendered=$1
+	expected_count=$2
+	variant=$3
+	container_count=$(printf '%s' "$rendered" | yq ea '[select(.kind == "Deployment") | .spec.template.spec.containers[]] | length' -)
+	[ "$container_count" = "$expected_count" ] || fail "$variant must render $expected_count workload containers"
+	missing_nonroot=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.securityContext.runAsNonRoot != true) | .name' -)
+	[ -z "$missing_nonroot" ] || fail "$variant containers must explicitly declare non-root execution: $missing_nonroot"
+}
+assert_nonroot_containers "$default_render" 2 default
 chart_crds=$(helm show crds "$chart")
 assert_contains "$chart_crds" 'kind: CustomResourceDefinition'
 assert_contains "$chart_crds" 'name: dataproducts.data.devantler.tech'
@@ -143,5 +153,18 @@ sh "$repo_root/scripts/contract-chart.test.sh"
 sh "$repo_root/scripts/composition-chart.test.sh"
 sh "$repo_root/scripts/ui-contract-chart.test.sh"
 sh "$repo_root/scripts/engine-provider-chart.test.sh"
+
+optional_render=$(helm template data-product-controller "$chart" \
+	--namespace data-product-system \
+	--set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+	--set httpSource.enabled=true \
+	--set httpSource.secretName=existing-export \
+	--set httpSource.sourceCIDR=192.0.2.10/32 \
+	--set httpSource.consumerPodLabels.app=trusted-consumer \
+	--set contractProbe.enabled=true \
+	--set contractProbe.url=https://contracts.example.com/schema \
+	--set contractProbe.targetCIDR=192.0.2.1/32 \
+	--set contractProbe.monitorPodLabels.app=monitor)
+assert_nonroot_containers "$optional_render" 4 optional
 
 printf '%s\n' 'chart behavior tests passed'
