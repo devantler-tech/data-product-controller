@@ -4,11 +4,15 @@ package demoproduct
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/devantler-tech/data-product-controller/internal/config"
 	"github.com/devantler-tech/data-product-controller/internal/uibundle"
 )
 
@@ -39,6 +43,34 @@ var observations = []observation{
 
 // NewHandler returns the example product's API, contract, and decentralized UI.
 func NewHandler(hostOrigins ...string) http.Handler {
+	return newHandler("", hostOrigins...)
+}
+
+// NewHandlerWithPublicURL restricts sandboxed reads to the sample's configured public endpoints.
+func NewHandlerWithPublicURL(baseURL string, hostOrigins ...string) (http.Handler, error) {
+	if baseURL != "" {
+		parsed, err := url.Parse(baseURL)
+		if err != nil || len(baseURL) > 1024 {
+			return nil, fmt.Errorf(
+				"PUBLIC_BASE_URL requires an exact HTTPS URL with an optional path prefix",
+			)
+		}
+		origin := "https://" + parsed.Host
+		if _, err = config.UIHostOrigins(origin); err != nil ||
+			parsed.Scheme != "https" || parsed.User != nil ||
+			baseURL != origin+parsed.Path || !publicPath.MatchString(parsed.Path) {
+			return nil, fmt.Errorf(
+				"PUBLIC_BASE_URL requires an exact HTTPS URL with an optional path prefix",
+			)
+		}
+	}
+	return newHandler(baseURL, hostOrigins...), nil
+}
+
+var publicPath = regexp.MustCompile(`^(/[A-Za-z0-9_-]+)*$`)
+
+// newHandler serves independently published sample data and its matching UI bundle.
+func newHandler(baseURL string, hostOrigins ...string) http.Handler {
 	bundle, bundleErr := uibundle.Load(
 		uiFiles,
 		"ui/index.html",
@@ -62,7 +94,7 @@ func NewHandler(hostOrigins ...string) http.Handler {
 			http.Error(response, "product interface unavailable", http.StatusInternalServerError)
 			return
 		}
-		setUISecurityHeaders(response)
+		setUISecurityHeaders(response, baseURL)
 		if request.URL.Path == "/ui" {
 			bundle.ServeHTML(response)
 			return
@@ -136,10 +168,14 @@ func openAPIHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 // setUISecurityHeaders permits the independent sample to be embedded without granting origin access.
-func setUISecurityHeaders(response http.ResponseWriter) {
+func setUISecurityHeaders(response http.ResponseWriter, baseURL string) {
+	connectSources := "'self'"
+	if baseURL != "" {
+		connectSources = baseURL + "/api/observations " + baseURL + "/ui-contract-config"
+	}
 	response.Header().Set(
 		"Content-Security-Policy",
-		"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors https:; object-src 'none'; base-uri 'none'",
+		"default-src 'self'; script-src 'self'; style-src 'self'; connect-src "+connectSources+"; frame-ancestors https:; object-src 'none'; base-uri 'none'",
 	)
 	response.Header().Set("Referrer-Policy", "no-referrer")
 	response.Header().Set("X-Content-Type-Options", "nosniff")

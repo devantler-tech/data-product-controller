@@ -39,6 +39,10 @@ spec:
           env:
             - name: UI_CONTRACT_ENABLED
               value: {{ .Values.uiContract.enabled | quote }}
+            {{- if or .Values.demoProduct.publicBaseURL .Values.route.enabled }}
+            - name: PUBLIC_BASE_URL
+              value: {{ .Values.demoProduct.publicBaseURL | default (printf "https://%s/products/harbour" .Values.route.host) | quote }}
+            {{- end }}
             {{- if and .Values.uiContract.enabled .Values.route.enabled }}
             - name: UI_HOST_ORIGINS
               value: {{ printf "https://%s" .Values.route.host | quote }}
