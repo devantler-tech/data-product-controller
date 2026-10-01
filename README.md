@@ -133,6 +133,14 @@ data-access footer appears only on its standalone page.
 The registry and Harbour pages use content-addressed scripts and styles. Their HTML is not
 cached, so upgrades load the matching assets even when a browser or CDN retains an older release.
 
+The sample's `PUBLIC_BASE_URL` declares the HTTPS address under which its endpoints are published.
+It permits credential-free reads of only the observation and UI-configuration paths when embedded,
+including in Safari. The chart derives this address from its shared-host route, or accepts
+`demoProduct.publicBaseURL` for a separate host. Values contain an exact HTTPS origin and an optional
+path prefix of letters, digits, underscores and hyphens, without a trailing slash. Request and
+forwarded host headers never select the allowed address. Without this setting, standalone use
+retains the same-origin policy.
+
 The reference registry preserves these boundaries:
 
 - loads only absolute HTTPS URLs supplied by the product descriptor;

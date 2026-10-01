@@ -117,13 +117,7 @@ func newHandler(options HandlerOptions) http.Handler {
 			http.Error(response, "product interface unavailable", http.StatusInternalServerError)
 			return
 		}
-		setUISecurityHeaders(response)
-		if options.PublicBaseURL != "" {
-			response.Header().
-				Set("Content-Security-Policy", strings.Replace(response.Header().Get("Content-Security-Policy"),
-					"connect-src 'self'", "connect-src "+options.PublicBaseURL+"/api/observations "+options.PublicBaseURL+"/ui-contract-config", 1),
-				)
-		}
+		setUISecurityHeaders(response, options.PublicBaseURL)
 		if request.URL.Path == "/ui" {
 			bundle.ServeHTML(response)
 			return
@@ -198,10 +192,14 @@ func openAPIHandler(response http.ResponseWriter, request *http.Request) {
 }
 
 // setUISecurityHeaders permits the independent sample to be embedded without granting origin access.
-func setUISecurityHeaders(response http.ResponseWriter) {
+func setUISecurityHeaders(response http.ResponseWriter, baseURL string) {
+	connectSources := "'self'"
+	if baseURL != "" {
+		connectSources = baseURL + "/api/observations " + baseURL + "/ui-contract-config"
+	}
 	response.Header().Set(
 		"Content-Security-Policy",
-		"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors https:; object-src 'none'; base-uri 'none'",
+		"default-src 'self'; script-src 'self'; style-src 'self'; connect-src "+connectSources+"; frame-ancestors https:; object-src 'none'; base-uri 'none'",
 	)
 	response.Header().Set("Referrer-Policy", "no-referrer")
 	response.Header().Set("X-Content-Type-Options", "nosniff")

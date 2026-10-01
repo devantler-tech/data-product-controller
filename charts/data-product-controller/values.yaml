@@ -81,6 +81,8 @@ controller:
 demoProduct:
   enabled: true
   replicas: 1
+  # Empty derives the shared-host path when route.enabled is true.
+  publicBaseURL: ""
   resources:
     requests:
       cpu: 10m
