@@ -5,6 +5,7 @@
   background: #eef1f5;
   font-size: 15px;
   line-height: 1.5;
+
   --line: #cbd3df;
   --muted: #556475;
   --blue: #2f5b9a;
@@ -13,32 +14,39 @@
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
 }
+
 h1,
 h2,
 h3,
 p {
   margin: 0;
 }
+
 h1 {
   font-size: 1.25rem;
   font-weight: 600;
 }
+
 h2 {
   font-size: 1.6rem;
   font-weight: 600;
   line-height: 1.25;
 }
+
 h3 {
   font-size: 1rem;
   font-weight: 600;
 }
+
 a {
   color: #24538e;
   text-underline-offset: 0.18em;
 }
+
 button,
 input,
 select {
@@ -46,13 +54,16 @@ select {
   min-height: 2.75rem;
   border-radius: 4px;
 }
+
 button {
   cursor: pointer;
 }
+
 button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
+
 input,
 select {
   width: 100%;
@@ -61,13 +72,16 @@ select {
   color: inherit;
   background: white;
 }
+
 :focus-visible {
   outline: 3px solid #bd7800;
   outline-offset: 3px;
 }
+
 [hidden] {
   display: none !important;
 }
+
 .skip-link {
   position: fixed;
   top: 0.5rem;
@@ -77,9 +91,11 @@ select {
   background: white;
   transform: translateY(-150%);
 }
+
 .skip-link:focus {
   transform: none;
 }
+
 .masthead {
   display: flex;
   align-items: center;
@@ -89,12 +105,14 @@ select {
   color: white;
   background: #16324c;
 }
+
 .masthead button {
   padding: 0.4rem 0.8rem;
   border: 1px solid #8da4bf;
   background: transparent;
   color: white;
 }
+
 .workspace {
   display: grid;
   grid-template-columns: 21rem minmax(0, 1fr);
@@ -102,12 +120,14 @@ select {
   min-height: calc(100vh - 5rem);
   margin: auto;
 }
+
 .catalog-panel {
   min-width: 0;
   padding: 1.4rem 1rem;
   border-right: 1px solid var(--line);
   background: #f7f9fc;
 }
+
 .section-heading {
   display: flex;
   flex-wrap: wrap;
@@ -116,28 +136,35 @@ select {
   gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
+
 .section-heading h2 {
   font-size: 1rem;
 }
+
 #product-count,
 .status {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
 .filters {
   display: grid;
   gap: 0.4rem;
 }
+
 .filters label {
   font-size: 0.85rem;
   font-weight: 600;
 }
+
 .filters label:not(:first-child) {
   margin-top: 0.5rem;
 }
+
 .status {
   margin: 1rem 0 0.75rem;
 }
+
 .text-button {
   padding: 0.4rem 0;
   color: var(--blue);
@@ -145,10 +172,12 @@ select {
   border: none;
   text-decoration: underline;
 }
+
 .product-grid {
   display: grid;
   gap: 0.25rem;
 }
+
 .product-card {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -163,17 +192,21 @@ select {
   color: inherit;
   background: transparent;
 }
+
 .product-card:hover {
   background: #e7edf5;
 }
+
 .product-card[aria-pressed="true"] {
   border-color: var(--line);
   border-left-color: var(--blue);
   background: white;
 }
+
 .product-name {
   font-weight: 600;
 }
+
 .product-description {
   display: block;
   font-size: 0.9rem;
@@ -181,6 +214,7 @@ select {
   line-height: 1.4;
   margin-top: 0.2rem;
 }
+
 .product-summary {
   display: flex;
   flex-wrap: wrap;
@@ -190,57 +224,69 @@ select {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
 .readiness {
   color: #256444;
 }
+
 [data-ready="false"] .readiness {
   color: #925700;
 }
+
 .interaction-panel {
   min-width: 0;
   padding: 2rem clamp(1rem, 3vw, 3rem);
   background: white;
 }
+
 .interaction-copy {
   overflow-wrap: anywhere;
 }
+
 #interaction-description {
   max-width: 70ch;
   margin-top: 0.6rem;
   color: var(--muted);
 }
+
 #product-metadata {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem 2.5rem;
   margin: 1.5rem 0;
 }
+
 dt {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
 dd {
   margin: 0.2rem 0 0;
   font-weight: 500;
 }
+
 #readiness-detail {
   padding: 0.7rem 0.9rem;
   margin: 0 0 1rem;
   border-left: 3px solid #bd7800;
   background: #fff6e6;
 }
+
 #interfaces-detail,
 #composition-detail {
   border-top: 1px solid var(--line);
   padding-top: 1rem;
   margin-top: 1rem;
 }
+
 #product-interfaces,
 #product-lineage {
   list-style: none;
   padding: 0;
   margin: 0.6rem 0 1.25rem;
 }
+
 #product-interfaces li {
   display: flex;
   flex-wrap: wrap;
@@ -248,26 +294,32 @@ dd {
   gap: 0.5rem 1rem;
   padding: 0.6rem 0;
 }
+
 .interface-meta {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
 #product-lineage li + li {
   margin-top: 0.8rem;
 }
+
 #product-lineage strong,
 #product-lineage span {
   display: block;
 }
+
 #product-lineage span,
 #composition-status {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
 #ui-contract-status {
   margin: 1rem 0;
   color: var(--muted);
 }
+
 #product-surface {
   display: block;
   width: 100%;
@@ -278,6 +330,7 @@ dd {
   border-radius: 6px;
   background: #f7f9fc;
 }
+
 .surface-empty {
   margin-top: 1.25rem;
   padding: 1rem;
@@ -289,40 +342,51 @@ dd {
   .workspace {
     grid-template-columns: 1fr;
   }
+
   .catalog-panel {
     border-right: none;
     border-bottom: 1px solid var(--line);
     padding: 1rem;
   }
+
   .section-heading {
     margin-bottom: 0.75rem;
   }
+
   .filters {
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.7fr);
   }
+
   .filters label {
     margin: 0 !important;
   }
+
   .filters label[for="product-search"] {
     grid-column: 1;
     grid-row: 1;
   }
+
   .filters label[for="readiness-filter"] {
     grid-column: 2;
     grid-row: 1;
   }
+
   .filters input {
     grid-column: 1;
   }
+
   .filters select {
     grid-column: 2;
   }
+
   .interaction-panel {
     padding: 1.25rem 1rem;
   }
+
   .masthead {
     padding: 0.75rem 1rem;
   }
+
   .masthead button {
     font-size: 0.85rem;
   }

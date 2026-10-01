@@ -10,23 +10,28 @@
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
 }
+
 main {
   max-width: 70rem;
   margin: auto;
   padding: clamp(1rem, 4vw, 2rem);
 }
+
 h1 {
   margin: 0;
   font-size: 1.35rem;
   font-weight: 600;
 }
+
 header p {
   color: #556475;
   margin: 0.35rem 0 1rem;
 }
+
 .sample-note {
   display: block;
   padding: 0.7rem 0.85rem;
@@ -34,6 +39,7 @@ header p {
   background: #fff6e6;
   font-size: 0.85rem;
 }
+
 form {
   display: flex;
   flex-wrap: wrap;
@@ -41,21 +47,25 @@ form {
   gap: 0.75rem;
   margin: 1.5rem 0 1rem;
 }
+
 .station-field {
   flex: 1 1 12rem;
 }
+
 label {
   display: block;
   margin-bottom: 0.35rem;
   font-size: 0.85rem;
   font-weight: 600;
 }
+
 select,
 button {
   min-height: 2.75rem;
   border-radius: 4px;
   font: inherit;
 }
+
 select {
   width: 100%;
   border: 1px solid #8190a3;
@@ -63,6 +73,7 @@ select {
   color: inherit;
   background: white;
 }
+
 button {
   padding: 0.5rem 1rem;
   border: 1px solid #2f5b9a;
@@ -70,29 +81,35 @@ button {
   background: #2f5b9a;
   cursor: pointer;
 }
+
 :focus-visible {
   outline: 3px solid #bd7800;
   outline-offset: 3px;
 }
+
 #status {
   font-size: 0.85rem;
   color: #556475;
   margin: 0 0 0.75rem;
 }
+
 #observations {
   overflow-x: auto;
 }
+
 table {
   width: 100%;
   border-collapse: collapse;
   background: white;
 }
+
 caption {
   text-align: left;
   color: #556475;
   font-size: 0.8rem;
   padding-bottom: 0.5rem;
 }
+
 th,
 td {
   padding: 0.7rem 0.8rem;
@@ -100,24 +117,29 @@ td {
   border-bottom: 1px solid #cbd3df;
   font-size: 0.9rem;
 }
+
 thead th {
   background: #e7edf5;
   font-size: 0.8rem;
   font-weight: 600;
 }
+
 tbody th {
   font-weight: 500;
 }
+
 .numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
 time {
   display: block;
   font-size: 0.8rem;
   white-space: nowrap;
 }
+
 nav {
   display: flex;
   flex-wrap: wrap;
@@ -125,6 +147,7 @@ nav {
   margin-top: 1.25rem;
   font-size: 0.85rem;
 }
+
 a {
   color: #24538e;
   text-underline-offset: 0.18em;
@@ -138,9 +161,11 @@ a {
   td {
     display: block;
   }
+
   caption {
     display: block;
   }
+
   thead {
     position: absolute;
     width: 1px;
@@ -148,9 +173,11 @@ a {
     overflow: hidden;
     clip-path: inset(50%);
   }
+
   table {
     background: transparent;
   }
+
   tr {
     margin-bottom: 0.75rem;
     border: 1px solid #cbd3df;
@@ -158,9 +185,11 @@ a {
     border-radius: 4px;
     overflow: hidden;
   }
+
   tbody th {
     background: #e7edf5;
   }
+
   td {
     display: flex;
     align-items: baseline;
@@ -168,6 +197,7 @@ a {
     gap: 1rem;
     border: 0;
   }
+
   td::before {
     content: attr(data-label);
     font-size: 0.8rem;
