@@ -213,6 +213,8 @@ func roundTripQuads(t *testing.T, document []byte) string {
 	return canonicalQuads(t, quads)
 }
 
+// canonicalQuads normalizes a nonempty RDF graph so triple ordering and blank-node
+// identifiers cannot hide a change in its meaning.
 func canonicalQuads(t *testing.T, quads string) string {
 	t.Helper()
 	options := ld.NewJsonLdOptions("")
