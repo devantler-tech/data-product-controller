@@ -43,10 +43,6 @@ button,
 input,
 select {
   font: inherit;
-}
-button,
-input,
-select {
   min-height: 2.75rem;
   border-radius: 4px;
 }
