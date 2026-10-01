@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/devantler-tech/data-product-controller/internal/uibundle"
 )
 
 //go:embed ui/*
@@ -37,6 +39,36 @@ var observations = []observation{
 
 // NewHandler returns the example product's API, contract, and decentralized UI.
 func NewHandler(hostOrigins ...string) http.Handler {
+	bundle, bundleErr := uibundle.Load(
+		uiFiles,
+		"ui/index.html",
+		uibundle.Source{
+			FS:          uiFiles,
+			Path:        "ui/product.css",
+			ContentType: "text/css; charset=utf-8",
+		},
+		uibundle.Source{
+			FS:          uiFiles,
+			Path:        "ui/product.js",
+			ContentType: "text/javascript; charset=utf-8",
+		},
+	)
+	serveUI := func(response http.ResponseWriter, request *http.Request) {
+		if request.Method != http.MethodGet {
+			response.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if bundleErr != nil {
+			http.Error(response, "product interface unavailable", http.StatusInternalServerError)
+			return
+		}
+		setUISecurityHeaders(response)
+		if request.URL.Path == "/ui" {
+			bundle.ServeHTML(response)
+			return
+		}
+		bundle.ServeAsset(response, request, request.PathValue("asset"))
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /ui-contract-config", func(response http.ResponseWriter, _ *http.Request) {
 		response.Header().Set("Content-Type", "application/json")
@@ -48,12 +80,8 @@ func NewHandler(hostOrigins ...string) http.Handler {
 	})
 	mux.HandleFunc("/api/observations", observationsHandler)
 	mux.HandleFunc("/openapi.json", openAPIHandler)
-	mux.HandleFunc("/ui", uiHandler)
-	mux.HandleFunc("/assets/product.css", assetHandler("product.css", "text/css; charset=utf-8"))
-	mux.HandleFunc(
-		"/assets/product.js",
-		assetHandler("product.js", "text/javascript; charset=utf-8"),
-	)
+	mux.HandleFunc("/ui", serveUI)
+	mux.HandleFunc("/assets/{asset}", serveUI)
 	mux.HandleFunc("/healthz", func(response http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodGet {
 			response.WriteHeader(http.StatusMethodNotAllowed)
@@ -107,44 +135,13 @@ func openAPIHandler(response http.ResponseWriter, request *http.Request) {
 	_, _ = response.Write([]byte(openAPIDocument))
 }
 
-func uiHandler(response http.ResponseWriter, request *http.Request) {
-	if request.Method != http.MethodGet {
-		response.WriteHeader(http.StatusMethodNotAllowed)
-
-		return
-	}
-
-	serveUIFile(response, "index.html", "text/html; charset=utf-8")
-}
-
-func assetHandler(name, contentType string) http.HandlerFunc {
-	return func(response http.ResponseWriter, request *http.Request) {
-		if request.Method != http.MethodGet {
-			response.WriteHeader(http.StatusMethodNotAllowed)
-
-			return
-		}
-
-		serveUIFile(response, name, contentType)
-	}
-}
-
-func serveUIFile(response http.ResponseWriter, name, contentType string) {
-	content, err := uiFiles.ReadFile("ui/" + name)
-	if err != nil {
-		http.Error(response, "product interface unavailable", http.StatusInternalServerError)
-
-		return
-	}
-
-	response.Header().Set("Content-Type", contentType)
+func setUISecurityHeaders(response http.ResponseWriter) {
 	response.Header().Set(
 		"Content-Security-Policy",
 		"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors https:; object-src 'none'; base-uri 'none'",
 	)
 	response.Header().Set("Referrer-Policy", "no-referrer")
 	response.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = response.Write(content)
 }
 
 const openAPIDocument = `{"openapi":"3.1.0","info":{"title":"Harbour observations","version":"1.0.0"},"paths":{"/api/observations":{"get":{"summary":"Query harbour observations","parameters":[{"name":"station","in":"query","schema":{"type":"string"}}],"responses":{"200":{"description":"Matching observations","content":{"application/json":{"schema":{"type":"object","required":["items"],"properties":{"items":{"type":"array","items":{"type":"object","required":["station","temperatureCelsius","salinityPsu","observedAt"],"properties":{"station":{"type":"string"},"temperatureCelsius":{"type":"number"},"salinityPsu":{"type":"number"},"observedAt":{"type":"string","format":"date-time"}}}}}}}}}}}}}}`

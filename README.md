@@ -130,6 +130,9 @@ The latest requested station owns the result, even if an earlier request finishe
 When embedded, use the workspace's **Open API** and **View contract** links. The sample's
 data-access footer appears only on its standalone page.
 
+The registry and Harbour pages use content-addressed scripts and styles. Their HTML is not
+cached, so upgrades load the matching assets even when a browser or CDN retains an older release.
+
 The reference registry preserves these boundaries:
 
 - loads only absolute HTTPS URLs supplied by the product descriptor;

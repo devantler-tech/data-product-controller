@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -139,13 +140,51 @@ func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
 				"<title>Data products</title>",
 				`id="data-product-grid"`,
 				`sandbox="allow-forms allow-scripts"`,
-				`src="/assets/registry.js"`,
+				`src="/assets/registry-`,
 			} {
 				if !strings.Contains(body, required) {
 					t.Fatalf("UI body does not contain %q", required)
 				}
 			}
 		})
+	}
+}
+
+func TestRegistryAssetFingerprintsRespectTheUIFlag(t *testing.T) {
+	t.Parallel()
+	scheme := runtime.NewScheme()
+	if err := datav1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	reader := fake.NewClientBuilder().WithScheme(scheme).Build()
+	enabled := NewHandler(reader, func(context.Context) bool { return true })
+	disabled := NewHandler(reader, func(context.Context) bool { return false })
+	document := httptest.NewRecorder()
+	enabled.ServeHTTP(
+		document,
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil),
+	)
+	urls := regexp.MustCompile(`/assets/[a-z-]+-[a-f0-9]{64}\.(js|css)`).
+		FindAllString(document.Body.String(), -1)
+	if len(urls) != 3 {
+		t.Fatalf("document references %d fingerprinted assets, want 3", len(urls))
+	}
+	for _, url := range urls {
+		response := httptest.NewRecorder()
+		request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
+		enabled.ServeHTTP(response, request)
+		if response.Code != http.StatusOK || response.Body.Len() == 0 ||
+			response.Header().Get("Cache-Control") != "public, max-age=31536000, immutable" {
+			t.Fatalf(
+				"fingerprinted asset %s is unavailable or cacheable under the wrong policy",
+				url,
+			)
+		}
+		response = httptest.NewRecorder()
+		disabled.ServeHTTP(response, request)
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("disabled registry exposed %s", url)
+		}
 	}
 }
 
