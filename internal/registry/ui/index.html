@@ -4,79 +4,112 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light" />
-    <meta name="description" content="Discover and open independently published, composable data products." />
-    <title>Data product constellation</title>
+    <meta
+      name="description"
+      content="Find data products, inspect their interfaces, and query their data."
+    />
+    <title>Data products</title>
     <link rel="stylesheet" href="/assets/registry.css" />
   </head>
   <body>
     <a class="skip-link" href="#products">Skip to products</a>
     <header class="masthead">
-      <div class="wordmark" aria-label="Data product controller">
-        <span class="mark" aria-hidden="true">⬡</span>
-        <span>data products</span>
-      </div>
-      <p class="environment"><span aria-hidden="true"></span> live registry</p>
+      <h1>Data products</h1>
+      <button id="refresh-products" type="button">Refresh products</button>
     </header>
-
-    <main>
-      <section class="intro" aria-labelledby="page-title">
-        <p class="eyebrow">Composable by contract</p>
-        <h1 id="page-title">A constellation of data you can actually use.</h1>
-        <p class="lede">
-          Each product owns its source, interfaces, and interaction surface. This registry only
-          discovers the contract and gives you a safe place to open it.
+    <main class="workspace" id="products">
+      <section class="catalog-panel" aria-labelledby="products-title">
+        <div class="section-heading">
+          <h2 id="products-title">Products</h2>
+          <p id="product-count" aria-live="polite">Loading…</p>
+        </div>
+        <div class="filters">
+          <label for="product-search">Search products</label>
+          <input
+            id="product-search"
+            type="search"
+            placeholder="Name, owner or keyword"
+            autocomplete="off"
+          />
+          <label for="readiness-filter">Readiness</label>
+          <select id="readiness-filter">
+            <option value="all">All products</option>
+            <option value="ready">Ready</option>
+            <option value="unready">Not ready</option>
+          </select>
+        </div>
+        <p id="registry-status" class="status" role="status">
+          Loading products…
         </p>
-        <div class="lineage-signal" aria-hidden="true">
-          <span>•</span><span>•</span><span>•</span><span>•</span>
-        </div>
+        <button id="clear-filters" class="text-button" type="button" hidden>
+          Clear filters
+        </button>
+        <div id="data-product-grid" class="product-grid"></div>
+        <noscript
+          >Enable JavaScript to browse products. The product list is also
+          available at
+          <a href="/api/v1/products">the registry API</a>.</noscript
+        >
       </section>
-
-      <section class="workspace" id="products" aria-labelledby="products-title">
-        <div class="catalog-panel">
-          <div class="section-heading">
+      <section class="interaction-panel" aria-labelledby="interaction-title">
+        <div class="interaction-copy">
+          <h2 id="interaction-title" tabindex="-1">Select a product</h2>
+          <p id="interaction-description">
+            Choose a product to view its details and data.
+          </p>
+          <dl id="product-metadata" hidden>
             <div>
-              <p class="eyebrow">Available now</p>
-              <h2 id="products-title">Data products</h2>
+              <dt>Owner</dt>
+              <dd id="product-owner"></dd>
             </div>
-            <p id="product-count" class="count" aria-live="polite">Loading…</p>
-          </div>
-          <div id="registry-status" class="status" role="status">Reading product contracts…</div>
-          <div id="data-product-grid" class="product-grid" aria-live="polite"></div>
-        </div>
-
-        <aside class="interaction-panel" aria-labelledby="interaction-title">
-          <div class="interaction-copy">
-            <p class="eyebrow">Independent surface</p>
-            <h2 id="interaction-title">Choose a product to work with its data.</h2>
-            <p id="interaction-description">
-              Product interfaces open here from their own published URL. The registry does not ship
-              or import their code.
-            </p>
-            <section id="composition-detail" aria-labelledby="composition-title" hidden>
-              <h3 id="composition-title">Inputs and lineage</h3>
-              <p id="composition-status" role="status"></p>
-              <ul id="product-lineage"></ul>
-            </section>
-            <p id="ui-contract-status" role="status" aria-live="polite" hidden></p>
-          </div>
-          <iframe
-            id="product-surface"
-            title="Selected data product"
-            sandbox="allow-forms allow-scripts"
-            referrerpolicy="no-referrer"
+            <div>
+              <dt>Version</dt>
+              <dd id="product-version"></dd>
+            </div>
+            <div>
+              <dt>Namespace</dt>
+              <dd id="product-namespace"></dd>
+            </div>
+            <div>
+              <dt>Readiness</dt>
+              <dd id="product-readiness"></dd>
+            </div>
+          </dl>
+          <p id="readiness-detail" hidden></p>
+          <section
+            id="interfaces-detail"
+            aria-labelledby="interfaces-title"
             hidden
-          ></iframe>
-          <div id="surface-empty" class="surface-empty">
-            <span aria-hidden="true">↗</span>
-            <p>The next surface comes from the product, not this registry.</p>
-          </div>
-        </aside>
+          >
+            <h3 id="interfaces-title">Data interfaces</h3>
+            <ul id="product-interfaces"></ul>
+          </section>
+          <section
+            id="composition-detail"
+            aria-labelledby="composition-title"
+            hidden
+          >
+            <h3 id="composition-title">Inputs and lineage</h3>
+            <p id="composition-status" role="status"></p>
+            <ul id="product-lineage"></ul>
+          </section>
+          <p
+            id="ui-contract-status"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></p>
+        </div>
+        <iframe
+          id="product-surface"
+          title="Selected data product"
+          sandbox="allow-forms allow-scripts"
+          referrerpolicy="no-referrer"
+          hidden
+        ></iframe>
+        <div id="surface-empty" class="surface-empty" hidden><p></p></div>
       </section>
     </main>
-
-    <footer>
-      <p>One contract. Many producers. No central release train.</p>
-    </footer>
     <script src="/assets/ui-contract.js" defer></script>
     <script src="/assets/registry.js" defer></script>
   </body>

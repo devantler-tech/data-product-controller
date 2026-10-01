@@ -3,29 +3,44 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Explore queryable observations from Copenhagen harbour." />
+    <meta
+      name="description"
+      content="Temperature and salinity observations from Copenhagen harbour."
+    />
     <title>Harbour observations</title>
     <link rel="stylesheet" href="assets/product.css" />
   </head>
   <body>
     <main>
-      <p class="eyebrow">Independent data product · Copenhagen</p>
-      <h1>Explore harbour observations</h1>
-      <p class="lede">Query a small, self-contained marine dataset through the same interface any compatible catalogue can embed.</p>
-
+      <header>
+        <h1>Harbour observations</h1>
+        <p>Temperature and salinity at two Copenhagen stations.</p>
+      </header>
+      <p class="sample-note">
+        Synthetic sample data. These values are fixed examples, not live
+        measurements.
+      </p>
       <form id="query-form">
-        <label for="station">Station</label>
-        <select id="station" name="station">
-          <option value="">All stations</option>
-          <option value="nordhavn">Nordhavn</option>
-          <option value="refshaleoen">Refshaleoen</option>
-        </select>
-        <button type="submit">Query product</button>
+        <div class="station-field">
+          <label for="station">Station</label>
+          <select id="station" name="station">
+            <option value="">All stations</option>
+            <option value="nordhavn">Nordhavn</option>
+            <option value="refshaleoen">Refshaleoen</option>
+          </select>
+        </div>
+        <button type="submit">Load observations</button>
       </form>
-
       <p id="status" role="status" aria-live="polite">Loading observations…</p>
-      <section id="observations" class="observations" aria-label="Query results"></section>
-      <a class="contract" href="openapi.json" target="_blank" rel="noreferrer">Read the OpenAPI contract ↗</a>
+      <section id="observations" aria-label="Query results"></section>
+      <nav aria-label="Data access">
+        <a href="api/observations" target="_blank" rel="noopener noreferrer"
+          >Open JSON data</a
+        >
+        <a href="openapi.json" target="_blank" rel="noopener noreferrer"
+          >View API contract</a
+        >
+      </nav>
     </main>
     <script src="assets/product.js" defer></script>
   </body>

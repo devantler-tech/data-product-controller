@@ -136,7 +136,7 @@ func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
 			}
 			body := response.Body.String()
 			for _, required := range []string{
-				"<title>Data product constellation</title>",
+				"<title>Data products</title>",
 				`id="data-product-grid"`,
 				`sandbox="allow-forms allow-scripts"`,
 				`src="/assets/registry.js"`,
