@@ -1,4 +1,10 @@
 {{- if .Values.demoProduct.enabled }}
+{{- if and .Values.uiContract.enabled .Values.uiAppearance.enabled }}
+{{- if not .Values.route.enabled }}
+{{- fail "uiAppearance requires route.enabled for publisher-approved sample host origins" }}
+{{- end }}
+{{- $_ := required "uiAppearance requires route.host for publisher-approved sample host origins" .Values.route.host }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -39,6 +45,8 @@ spec:
           env:
             - name: UI_CONTRACT_ENABLED
               value: {{ .Values.uiContract.enabled | quote }}
+            - name: UI_APPEARANCE_ENABLED
+              value: {{ .Values.uiAppearance.enabled | quote }}
             {{- if and .Values.uiContract.enabled .Values.route.enabled }}
             - name: UI_HOST_ORIGINS
               value: {{ printf "https://%s" .Values.route.host | quote }}

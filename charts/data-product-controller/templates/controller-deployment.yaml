@@ -45,6 +45,8 @@ spec:
               value: {{ .Values.dcatCatalog.id | quote }}
             - name: UI_CONTRACT_ENABLED
               value: {{ .Values.uiContract.enabled | quote }}
+            - name: UI_APPEARANCE_ENABLED
+              value: {{ .Values.uiAppearance.enabled | quote }}
             - name: PROVISIONED_SOURCES_ENABLED
               value: {{ .Values.provisionedSources.enabled | quote }}
             - name: ENGINE_PROVIDERS_ENABLED

@@ -147,6 +147,15 @@ registry or Kubernetes. See the [publisher guide](docs/ui-contract.md) for the
 manifest, complete message contract, independent host, and accessibility checks.
 Authentication and credential transfer remain outside this protocol.
 
+The workspace offers System, Light and Dark appearance with an orange accent.
+An explicit choice stays in browser storage when available; denied storage does
+not prevent discovery or queries. Legacy product UIs follow their own system
+appearance. Products requesting `data-product-ui/v2` and `appearance` can follow
+workspace changes without reloading or losing their current query. This requires
+both `uiContract.enabled` and the separately default-off `uiAppearance.enabled`
+in the host and sample, plus publisher-approved host origins. The new gate is a
+long-lived operator choice over a cosmetic grant, not permission to query data.
+
 ## Install
 
 Install the chart with the registry UI explicitly enabled and an existing Gateway API listener.

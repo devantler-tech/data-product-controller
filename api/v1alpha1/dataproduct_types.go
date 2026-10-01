@@ -146,9 +146,10 @@ type ProductUI struct {
 }
 
 // UIContract declares public host constraints; capabilities remain subject to host policy.
+// +kubebuilder:validation:XValidation:rule="self.apiVersion != 'data-product-ui/v1' || !self.capabilities.exists(c, c == 'appearance')",message="Appearance requires data-product-ui/v2"
 type UIContract struct {
 	// APIVersion identifies the manifest and postMessage protocol version.
-	// +kubebuilder:validation:Enum=data-product-ui/v1
+	// +kubebuilder:validation:Enum=data-product-ui/v1;data-product-ui/v2
 	APIVersion string `json:"apiVersion"`
 	// HostOrigins lists exact HTTPS origins without paths, wildcards or credentials.
 	// +kubebuilder:validation:MinItems=1
@@ -156,7 +157,7 @@ type UIContract struct {
 	// +listType=set
 	HostOrigins []UIHostOrigin `json:"hostOrigins"`
 	// Capabilities requests presentation hints; no credential or data access is granted.
-	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:MaxItems=3
 	// +listType=set
 	Capabilities []UICapability `json:"capabilities"`
 }
@@ -167,7 +168,7 @@ type UIContract struct {
 type UIHostOrigin string
 
 // UICapability is a bounded presentation hint, never a data or authentication permission.
-// +kubebuilder:validation:Enum=status;resize
+// +kubebuilder:validation:Enum=status;resize;appearance
 type UICapability string
 
 // ProvisionedResourceReference identifies a custom resource in the product's namespace.

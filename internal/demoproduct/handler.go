@@ -4,11 +4,15 @@ package demoproduct
 import (
 	"embed"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/devantler-tech/data-product-controller/internal/config"
 	"github.com/devantler-tech/data-product-controller/internal/uibundle"
 )
 
@@ -37,8 +41,59 @@ var observations = []observation{
 	},
 }
 
+// HandlerOptions binds public endpoints and optional presentation to publisher-owned configuration.
+type HandlerOptions struct {
+	PublicBaseURL     string
+	HostOrigins       []string
+	AppearanceEnabled bool
+}
+
 // NewHandler returns the example product's API, contract, and decentralized UI.
 func NewHandler(hostOrigins ...string) http.Handler {
+	return newHandler(HandlerOptions{HostOrigins: hostOrigins})
+}
+
+// NewHandlerWithPublicURL restricts sandboxed reads to the sample's configured public endpoints.
+func NewHandlerWithPublicURL(baseURL string, hostOrigins ...string) (http.Handler, error) {
+	return NewHandlerWithOptions(HandlerOptions{PublicBaseURL: baseURL, HostOrigins: hostOrigins})
+}
+
+// NewHandlerWithOptions validates independent publication and default-off presentation settings.
+func NewHandlerWithOptions(options HandlerOptions) (http.Handler, error) {
+	baseURL := options.PublicBaseURL
+	if baseURL != "" {
+		parsed, err := url.Parse(baseURL)
+		if err != nil || len(baseURL) > 1024 {
+			return nil, fmt.Errorf(
+				"PUBLIC_BASE_URL requires an exact HTTPS URL with an optional path prefix",
+			)
+		}
+		origin := "https://" + parsed.Host
+		if _, err = config.UIHostOrigins(
+			origin,
+		); err != nil || parsed.Scheme != "https" || parsed.User != nil ||
+			baseURL != origin+parsed.Path ||
+			!publicPath.MatchString(parsed.Path) {
+			return nil, fmt.Errorf(
+				"PUBLIC_BASE_URL requires an exact HTTPS URL with an optional path prefix",
+			)
+		}
+	}
+	if options.AppearanceEnabled {
+		if _, err := config.UIHostOrigins(
+			strings.Join(options.HostOrigins, ","),
+		); err != nil ||
+			len(options.HostOrigins) == 0 {
+			return nil, fmt.Errorf("appearance requires publisher-approved HTTPS host origins")
+		}
+	}
+	return newHandler(options), nil
+}
+
+var publicPath = regexp.MustCompile(`^(/[A-Za-z0-9_-]+)*$`)
+
+// newHandler serves independently published data and its matching, credential-free UI bundle.
+func newHandler(options HandlerOptions) http.Handler {
 	bundle, bundleErr := uibundle.Load(
 		uiFiles,
 		"ui/index.html",
@@ -63,6 +118,12 @@ func NewHandler(hostOrigins ...string) http.Handler {
 			return
 		}
 		setUISecurityHeaders(response)
+		if options.PublicBaseURL != "" {
+			response.Header().
+				Set("Content-Security-Policy", strings.Replace(response.Header().Get("Content-Security-Policy"),
+					"connect-src 'self'", "connect-src "+options.PublicBaseURL+"/api/observations "+options.PublicBaseURL+"/ui-contract-config", 1),
+				)
+		}
 		if request.URL.Path == "/ui" {
 			bundle.ServeHTML(response)
 			return
@@ -75,8 +136,9 @@ func NewHandler(hostOrigins ...string) http.Handler {
 		response.Header().Set("Cache-Control", "no-store")
 		response.Header().Set("Access-Control-Allow-Origin", "*")
 		_ = json.NewEncoder(response).Encode(struct {
-			HostOrigins []string `json:"hostOrigins"`
-		}{HostOrigins: hostOrigins})
+			HostOrigins       []string `json:"hostOrigins"`
+			AppearanceEnabled bool     `json:"appearanceEnabled"`
+		}{HostOrigins: options.HostOrigins, AppearanceEnabled: options.AppearanceEnabled})
 	})
 	mux.HandleFunc("/api/observations", observationsHandler)
 	mux.HandleFunc("/openapi.json", openAPIHandler)

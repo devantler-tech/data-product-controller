@@ -31,9 +31,15 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	appearanceEnabled, err := config.UIAppearanceEnabled(os.Getenv("UI_APPEARANCE_ENABLED"))
+	if err != nil {
+		return err
+	}
 	flagClient, err := featureflag.NewClient(
 		"demo-product",
-		featureflag.NewProvider(map[string]bool{"ui-contract": enabled}),
+		featureflag.NewProvider(
+			map[string]bool{"ui-contract": enabled, "ui-appearance": appearanceEnabled},
+		),
 	)
 	if err != nil {
 		return fmt.Errorf("configure UI flag: %w", err)
@@ -46,9 +52,17 @@ func run() error {
 		}
 	}
 
+	handler, err := demoproduct.NewHandlerWithOptions(demoproduct.HandlerOptions{
+		PublicBaseURL: os.Getenv("PUBLIC_BASE_URL"), HostOrigins: origins,
+		AppearanceEnabled: featureflag.Enabled(context.Background(), flagClient, "ui-contract") &&
+			featureflag.Enabled(context.Background(), flagClient, "ui-appearance"),
+	})
+	if err != nil {
+		return err
+	}
 	server := &http.Server{
 		Addr:              *address,
-		Handler:           demoproduct.NewHandler(origins...),
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,

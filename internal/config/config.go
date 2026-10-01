@@ -45,6 +45,11 @@ func UIContractEnabled(value string) (bool, error) {
 	return featureEnabled("UI_CONTRACT_ENABLED", value)
 }
 
+// UIAppearanceEnabled parses the default-off v2 presentation grant gate.
+func UIAppearanceEnabled(value string) (bool, error) {
+	return featureEnabled("UI_APPEARANCE_ENABLED", value)
+}
+
 // UIHostOrigins validates publisher-owned HTTPS origins without accepting wildcards or URL components.
 func UIHostOrigins(value string) ([]string, error) {
 	if value == "" {

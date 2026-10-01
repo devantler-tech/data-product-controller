@@ -40,6 +40,7 @@ func TestUIContractSchema(t *testing.T) {
 	}{
 		{"valid", "data-product-ui/v1", "https://catalog.example", "status", true},
 		{"port", "data-product-ui/v1", "https://catalog.example:8443", "resize", true},
+		{"appearance", "data-product-ui/v2", "https://catalog.example", "appearance", true},
 		{"version", "v2", "https://catalog.example", "status", false},
 		{"wildcard", "data-product-ui/v1", "*", "status", false},
 		{"path", "data-product-ui/v1", "https://catalog.example/path", "status", false},

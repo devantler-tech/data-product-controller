@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
       content="Find data products, inspect their interfaces, and query their data."
@@ -15,7 +15,17 @@
     <a class="skip-link" href="#products">Skip to products</a>
     <header class="masthead">
       <h1>Data products</h1>
-      <button id="refresh-products" type="button">Refresh products</button>
+      <div class="workspace-actions">
+        <div class="appearance">
+          <label for="appearance">Theme</label>
+          <select id="appearance" aria-label="Theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+        <button id="refresh-products" type="button">Refresh products</button>
+      </div>
     </header>
     <main class="workspace" id="products">
       <section class="catalog-panel" aria-labelledby="products-title">

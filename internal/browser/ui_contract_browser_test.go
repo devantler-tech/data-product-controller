@@ -353,13 +353,17 @@ func TestUIManifestValidation(t *testing.T) {
 		const valid = {url:'https://product.example/ui',title:'Explore',contract:{apiVersion:'data-product-ui/v1',hostOrigins:[location.origin],capabilities:['status','resize']}};
 		const accepted = DataProductUI.validate(valid, location.origin);
 		if (accepted.url !== valid.url) return 'valid entrypoint changed';
+		const themed = structuredClone(valid);
+		themed.contract.apiVersion = 'data-product-ui/v2';
+		themed.contract.capabilities.push('appearance');
+		try { DataProductUI.validate(themed, location.origin); } catch { return 'bounded v2 appearance unsupported'; }
 		const invalid = [
 			v => v.url = 'javascript:alert(1)',
 			v => v.url = 'https://user:password@product.example/ui',
 			v => v.url = 'https://product.example/ui#token',
 			v => v.title = '',
 			v => v.title = 'x'.repeat(201),
-			v => v.contract.apiVersion = 'data-product-ui/v2',
+			v => v.contract.apiVersion = 'data-product-ui/v3',
 			v => v.contract.hostOrigins = ['*'],
 			v => v.contract.hostOrigins.push('https://*.example'),
 			v => v.contract.hostOrigins.push('https://-invalid.example'),
@@ -367,6 +371,7 @@ func TestUIManifestValidation(t *testing.T) {
 			v => v.contract.hostOrigins = [location.origin + '/'],
 			v => v.contract.hostOrigins = ['https://other.example'],
 			v => v.contract.capabilities = ['credentials'],
+			v => v.contract.capabilities = ['appearance'],
 			v => v.contract.capabilities = ['status','status'],
 			v => v.contract.unexpected = true,
 			v => v.extra = 'x'.repeat(17000),

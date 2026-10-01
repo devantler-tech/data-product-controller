@@ -1,3 +1,32 @@
+const appearance = document.querySelector("#appearance");
+const systemAppearance = matchMedia("(prefers-color-scheme: dark)");
+
+/** Resolve System locally; the embedded product receives only a cosmetic enum. */
+function resolvedAppearance() {
+  return appearance.value === "system"
+    ? systemAppearance.matches
+      ? "dark"
+      : "light"
+    : appearance.value;
+}
+
+/** Keep an explicit browser preference optional; denied storage must not prevent queries. */
+function applyAppearance() {
+  if (appearance.value === "system") {
+    delete document.documentElement.dataset.appearance;
+  } else {
+    document.documentElement.dataset.appearance = appearance.value;
+  }
+  disposeSurface.setAppearance?.(resolvedAppearance());
+}
+
+try {
+  const saved = localStorage.getItem("data-products.appearance");
+  if (saved === "light" || saved === "dark") appearance.value = saved;
+} catch {
+  // Browser policy may deny storage. System appearance remains available.
+}
+
 const grid = document.querySelector("#data-product-grid");
 const status = document.querySelector("#registry-status");
 const count = document.querySelector("#product-count");
@@ -17,6 +46,16 @@ let inventoryLoaded = false;
 let selectedKey = "";
 let disposeSurface = () => {};
 let selection = 0;
+applyAppearance();
+systemAppearance.addEventListener("change", applyAppearance);
+appearance.addEventListener("change", () => {
+  applyAppearance();
+  try {
+    localStorage.setItem("data-products.appearance", appearance.value);
+  } catch {
+    // The current choice still works when it cannot be retained.
+  }
+});
 
 /** Links are publisher metadata: expose only absolute, credential-free HTTPS destinations. */
 function publicURL(value) {
@@ -169,7 +208,12 @@ async function selectProduct(product, button) {
       disposeSurface = DataProductUI.mount({
         frame,
         manifest: product.ui,
-        grants: ["status", "resize"],
+        grants:
+          configuration.uiAppearanceEnabled === true
+            ? ["status", "resize", "appearance"]
+            : ["status", "resize"],
+        appearanceEnabled: configuration.uiAppearanceEnabled === true,
+        appearance: resolvedAppearance(),
         onState: surfaceState,
       });
     } catch (error) {

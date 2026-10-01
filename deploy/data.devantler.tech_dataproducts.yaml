@@ -398,6 +398,7 @@ spec:
                           protocol version.
                         enum:
                         - data-product-ui/v1
+                        - data-product-ui/v2
                         type: string
                       capabilities:
                         description: Capabilities requests presentation hints; no
@@ -408,8 +409,9 @@ spec:
                           enum:
                           - status
                           - resize
+                          - appearance
                           type: string
-                        maxItems: 2
+                        maxItems: 3
                         type: array
                         x-kubernetes-list-type: set
                       hostOrigins:
@@ -430,6 +432,10 @@ spec:
                     - capabilities
                     - hostOrigins
                     type: object
+                    x-kubernetes-validations:
+                    - message: Appearance requires data-product-ui/v2
+                      rule: self.apiVersion != 'data-product-ui/v1' || !self.capabilities.exists(c,
+                        c == 'appearance')
                   title:
                     description: Title is the accessible label hosts present for the
                       embedded surface.

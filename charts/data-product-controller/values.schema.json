@@ -33,6 +33,11 @@
       "additionalProperties": false,
       "properties": { "enabled": { "type": "boolean" } }
     },
+    "uiAppearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "enabled": { "type": "boolean" } }
+    },
     "composition": {
       "type": "object",
       "additionalProperties": false,
