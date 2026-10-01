@@ -55,6 +55,11 @@ explicitly and rejects a cluster that also installed Kind's default CNI.
 
 ## Observed behavior
 
+The controller runs with two replicas and leader election enabled. The allowed
+consumer addresses every ready controller Pod directly and reads its descriptor
+API. This checks the non-leader endpoint as well as the leader; one successful
+Service request cannot hide a replica that does not serve the registry.
+
 The suite checks the workload-absent HTTP default and both connector-observation
 flag states before granting exactly one named Deployment GET. It follows source
 outage, recovery, revoked Kubernetes permissions, and projected bearer-token

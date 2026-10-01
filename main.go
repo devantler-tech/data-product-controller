@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"net/http"
 	"os"
@@ -19,7 +18,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
@@ -233,35 +231,7 @@ func main() {
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	if err := controllerManager.Add(manager.RunnableFunc(func(ctx context.Context) error {
-		go func() {
-			<-ctx.Done()
-
-			shutdownContext, cancel := context.WithTimeout(
-				context.WithoutCancel(ctx),
-				10*time.Second,
-			)
-			defer cancel()
-
-			if err := registryServer.Shutdown(shutdownContext); err != nil {
-				setupLog.Error(err, "shut down registry server")
-			}
-		}()
-
-		setupLog.Info(
-			"starting descriptor registry",
-			"address",
-			registryAddress,
-			"uiEnabled",
-			uiEnabled,
-		)
-		if err := registryServer.ListenAndServe(); err != nil &&
-			!errors.Is(err, http.ErrServerClosed) {
-			return err
-		}
-
-		return nil
-	})); err != nil {
+	if err := controllerManager.Add(newRegistryServer(registryServer)); err != nil {
 		setupLog.Error(err, "register descriptor registry")
 		os.Exit(1)
 	}
