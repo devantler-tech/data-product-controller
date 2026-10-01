@@ -115,7 +115,20 @@ The custom resource is control-plane metadata. Product data and credentials do n
 
 ## Decentralized UI contract
 
-The `spec.ui.url` page belongs to the data product, not the registry. A compatible catalogue may render it in a sandboxed iframe or link to it directly. The reference registry:
+The `spec.ui.url` page belongs to the data product, not the registry. A compatible catalogue may render it in a sandboxed iframe or link to it directly.
+
+Search products by name, description, owner or namespace, and filter by controller-reported
+readiness. Select a product to inspect its owner, version, published data interfaces and input
+lineage. **Open API** and **View contract** open the publisher's HTTPS endpoints in a separate
+tab. A readiness indication describes the controller's observation; it does not grant data access
+or promise that an endpoint is reachable. **Refresh products** reloads the inventory and closes
+the selected view until a product is selected again.
+
+The Harbour example labels its fixed synthetic records and displays station, observation time in
+UTC, temperature and salinity. Choose a station and use **Load observations** to filter the data.
+The latest requested station owns the result, even if an earlier request finishes later.
+
+The reference registry preserves these boundaries:
 
 - loads only absolute HTTPS URLs supplied by the product descriptor;
 - uses `sandbox="allow-forms allow-scripts"` without `allow-same-origin`;

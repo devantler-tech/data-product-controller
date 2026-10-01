@@ -29,7 +29,7 @@ func TestHandlerPublishesPortableContractAndProductUI(t *testing.T) {
 			name:        "decentralized product UI",
 			path:        "/ui",
 			contentType: "text/html; charset=utf-8",
-			contains:    "Explore harbour observations",
+			contains:    "<title>Harbour observations</title>",
 		},
 	}
 
