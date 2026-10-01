@@ -1,10 +1,32 @@
 :root {
-  color-scheme: light;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  color: #213247;
-  background: #f7f9fc;
+  color-scheme: light dark;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: var(--text);
+  background: var(--canvas);
   font-size: 15px;
   line-height: 1.5;
+
+  --canvas: light-dark(#fff, #000);
+  --surface: light-dark(#f6f6f6, #151515);
+  --text: light-dark(#181818, #f4f4f4);
+  --muted: light-dark(#616161, #b5b5b5);
+  --line: light-dark(#858585, #767676);
+  --accent: light-dark(#b7430b, #ff8b3d);
+  --selection: color-mix(in srgb, var(--accent) 7%, var(--canvas));
+}
+
+:root[data-appearance="light"] {
+  color-scheme: light;
+}
+
+:root[data-appearance="dark"] {
+  color-scheme: dark;
 }
 
 * {
@@ -18,7 +40,7 @@ body {
 main {
   max-width: 70rem;
   margin: auto;
-  padding: clamp(1rem, 4vw, 2rem);
+  padding: clamp(1rem, 3vw, 1.5rem);
 }
 
 h1 {
@@ -28,15 +50,15 @@ h1 {
 }
 
 header p {
-  color: #556475;
+  color: var(--muted);
   margin: 0.35rem 0 1rem;
 }
 
 .sample-note {
   display: block;
   padding: 0.7rem 0.85rem;
-  border-left: 3px solid #bd7800;
-  background: #fff6e6;
+  border-left: 3px solid var(--accent);
+  background: var(--selection);
   font-size: 0.85rem;
 }
 
@@ -45,7 +67,7 @@ form {
   flex-wrap: wrap;
   align-items: end;
   gap: 0.75rem;
-  margin: 1.5rem 0 1rem;
+  margin: 1rem 0;
 }
 
 .station-field {
@@ -68,28 +90,28 @@ button {
 
 select {
   width: 100%;
-  border: 1px solid #8190a3;
+  border: 1px solid var(--line);
   padding: 0.5rem 0.65rem;
   color: inherit;
-  background: white;
+  background: var(--canvas);
 }
 
 button {
   padding: 0.5rem 1rem;
-  border: 1px solid #2f5b9a;
-  color: white;
-  background: #2f5b9a;
+  border: 1px solid var(--accent);
+  color: var(--canvas);
+  background: var(--accent);
   cursor: pointer;
 }
 
 :focus-visible {
-  outline: 3px solid #bd7800;
+  outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
 
 #status {
   font-size: 0.85rem;
-  color: #556475;
+  color: var(--muted);
   margin: 0 0 0.75rem;
 }
 
@@ -100,12 +122,12 @@ button {
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--canvas);
 }
 
 caption {
   text-align: left;
-  color: #556475;
+  color: var(--muted);
   font-size: 0.8rem;
   padding-bottom: 0.5rem;
 }
@@ -114,12 +136,12 @@ th,
 td {
   padding: 0.7rem 0.8rem;
   text-align: left;
-  border-bottom: 1px solid #cbd3df;
+  border-bottom: 1px solid var(--line);
   font-size: 0.9rem;
 }
 
 thead th {
-  background: #e7edf5;
+  background: var(--selection);
   font-size: 0.8rem;
   font-weight: 600;
 }
@@ -149,7 +171,7 @@ nav {
 }
 
 a {
-  color: #24538e;
+  color: var(--accent);
   text-underline-offset: 0.18em;
 }
 
@@ -180,14 +202,14 @@ a {
 
   tr {
     margin-bottom: 0.75rem;
-    border: 1px solid #cbd3df;
-    background: white;
+    border: 1px solid var(--line);
+    background: var(--canvas);
     border-radius: 4px;
     overflow: hidden;
   }
 
   tbody th {
-    background: #e7edf5;
+    background: var(--selection);
   }
 
   td {
@@ -201,6 +223,6 @@ a {
   td::before {
     content: attr(data-label);
     font-size: 0.8rem;
-    color: #556475;
+    color: var(--muted);
   }
 }

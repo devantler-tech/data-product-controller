@@ -230,6 +230,7 @@ install_chart --set httpSource.enabled=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 kube --request-timeout=0 rollout status deployment/dpc-http-source --timeout=240s
 kube --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=condition=Established --timeout=60s
+source "$repo_root/tests/source/ui-appearance.sh"
 yq '.spec.connector.resourceRef.name = "dpc-http-source"' "$repo_root/docs/examples/http-source-product.yaml" | kube apply -f -
 wait_for 'observation disabled in conditions and registry' 180 readiness False false ConnectorFeatureDisabled
 wait_for 'both leader-elected controller replicas serve the descriptor API' 120 registry_replicas_ready

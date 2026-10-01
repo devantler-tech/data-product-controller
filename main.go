@@ -34,8 +34,9 @@ const contractReadinessFlag = "contract-readiness"
 const compositionFlag = "composition"
 
 const (
-	dcatCatalogFlag = "dcat-catalog"
-	uiContractFlag  = "ui-contract"
+	dcatCatalogFlag  = "dcat-catalog"
+	uiContractFlag   = "ui-contract"
+	uiAppearanceFlag = "ui-appearance"
 )
 
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
@@ -128,6 +129,11 @@ func main() {
 		setupLog.Error(err, "invalid UI contract configuration")
 		os.Exit(1)
 	}
+	uiAppearanceEnabled, err := config.UIAppearanceEnabled(os.Getenv("UI_APPEARANCE_ENABLED"))
+	if err != nil {
+		setupLog.Error(err, "invalid UI appearance configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			registryUIFlag:         uiEnabled,
@@ -138,6 +144,7 @@ func main() {
 			compositionFlag:        compositionEnabled,
 			dcatCatalogFlag:        dcatCatalogEnabled,
 			uiContractFlag:         uiContractEnabled,
+			uiAppearanceFlag:       uiAppearanceEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -201,13 +208,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	registryHandler := registry.NewHandler(
+	registryHandler := registry.NewHandlerWithOptions(
 		controllerManager.GetAPIReader(),
-		func(ctx context.Context) bool {
-			return featureflag.Enabled(ctx, flagClient, registryUIFlag)
-		},
-		func(ctx context.Context) bool {
-			return featureflag.Enabled(ctx, flagClient, uiContractFlag)
+		registry.HandlerOptions{
+			UIEnabled: func(ctx context.Context) bool {
+				return featureflag.Enabled(ctx, flagClient, registryUIFlag)
+			},
+			ContractEnabled: func(ctx context.Context) bool {
+				return featureflag.Enabled(ctx, flagClient, uiContractFlag)
+			},
+			AppearanceEnabled: func(ctx context.Context) bool {
+				return featureflag.Enabled(ctx, flagClient, uiAppearanceFlag)
+			},
 		},
 	)
 	catalogHandler, err := catalog.NewHandler(controllerManager.GetAPIReader(), catalog.Options{

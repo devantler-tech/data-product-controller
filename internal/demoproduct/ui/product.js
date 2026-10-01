@@ -21,7 +21,7 @@ const hostConfiguration = fetch("ui-contract-config", {
 function reportState() {
   if (!connection) return;
   const envelope = {
-    apiVersion: "data-product-ui/v1",
+    apiVersion: connection.apiVersion,
     session: connection.session,
   };
   if (connection.capabilities.includes("status")) {
@@ -48,18 +48,46 @@ function reportState() {
 /** The product uses its own origin policy, never a host-provided allowlist or user context. */
 window.addEventListener("message", async (event) => {
   const data = event.data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) return;
+  if (
+    connection &&
+    connection.apiVersion === "data-product-ui/v2" &&
+    connection.capabilities.includes("appearance") &&
+    event.source === parent &&
+    event.origin === connection.origin &&
+    data.apiVersion === connection.apiVersion &&
+    data.type === "appearance" &&
+    data.session === connection.session &&
+    Object.keys(data).sort().join(",") ===
+      "apiVersion,appearance,session,type" &&
+    ["light", "dark"].includes(data.appearance)
+  ) {
+    if (++connection.appearanceUpdates > 256) {
+      connection = undefined;
+      return;
+    }
+    document.documentElement.dataset.appearance = data.appearance;
+    return;
+  }
   if (
     event.source !== parent ||
     parent === window ||
-    !data ||
-    data.apiVersion !== "data-product-ui/v1" ||
+    !["data-product-ui/v1", "data-product-ui/v2"].includes(data.apiVersion) ||
     data.type !== "init" ||
     typeof data.session !== "string" ||
     !/^[a-f0-9-]{36}$/.test(data.session) ||
     !Array.isArray(data.capabilities) ||
     new Set(data.capabilities).size !== data.capabilities.length ||
-    data.capabilities.length > 2 ||
-    data.capabilities.some((value) => !["status", "resize"].includes(value)) ||
+    data.capabilities.length >
+      (data.apiVersion === "data-product-ui/v2" ? 3 : 2) ||
+    data.capabilities.some(
+      (value) =>
+        !(
+          data.apiVersion === "data-product-ui/v2"
+            ? ["status", "resize", "appearance"]
+            : ["status", "resize"]
+        ).includes(value),
+    ) ||
     Object.keys(data).sort().join(",") !==
       "apiVersion,capabilities,session,type"
   )
@@ -67,17 +95,22 @@ window.addEventListener("message", async (event) => {
   const config = await hostConfiguration;
   if (
     !Array.isArray(config.hostOrigins) ||
-    !config.hostOrigins.includes(event.origin)
+    !config.hostOrigins.includes(event.origin) ||
+    (data.apiVersion === "data-product-ui/v2" &&
+      config.appearanceEnabled !== true)
   )
     return;
   connection = {
     session: data.session,
+    apiVersion: data.apiVersion,
     origin: event.origin,
     capabilities: data.capabilities,
+    appearanceUpdates: 0,
   };
+  delete document.documentElement.dataset.appearance;
   parent.postMessage(
     {
-      apiVersion: "data-product-ui/v1",
+      apiVersion: connection.apiVersion,
       type: "ready",
       session: connection.session,
     },

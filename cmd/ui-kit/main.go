@@ -41,17 +41,24 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	appearanceEnabled, err := config.UIAppearanceEnabled(os.Getenv("UI_APPEARANCE_ENABLED"))
+	if err != nil {
+		return err
+	}
 	client, err := featureflag.NewClient(
 		"ui-kit",
-		featureflag.NewProvider(map[string]bool{"ui-contract": enabled}),
+		featureflag.NewProvider(
+			map[string]bool{"ui-contract": enabled, "ui-appearance": appearanceEnabled},
+		),
 	)
 	if err != nil {
 		return fmt.Errorf("configure UI flag: %w", err)
 	}
 	server := &http.Server{
 		Addr: *address,
-		Handler: web.KitHandler(
+		Handler: web.KitHandlerWithAppearance(
 			func() bool { return featureflag.Enabled(context.Background(), client, "ui-contract") },
+			func() bool { return featureflag.Enabled(context.Background(), client, "ui-appearance") },
 		),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,

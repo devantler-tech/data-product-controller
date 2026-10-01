@@ -30,8 +30,8 @@ spec:
     url: https://{{ .Values.route.host }}/products/harbour/ui
     {{- if .Values.uiContract.enabled }}
     contract:
-      apiVersion: data-product-ui/v1
+      apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
       hostOrigins: [{{ printf "https://%s" .Values.route.host | quote }}]
-      capabilities: [status, resize]
+      capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
     {{- end }}
 {{- end }}

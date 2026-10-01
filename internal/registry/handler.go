@@ -18,12 +18,28 @@ import (
 //go:embed ui/*
 var uiFiles embed.FS
 
+// HandlerOptions separates registry availability from independently controlled presentation grants.
+type HandlerOptions struct {
+	UIEnabled         func(context.Context) bool
+	ContractEnabled   func(context.Context) bool
+	AppearanceEnabled func(context.Context) bool
+}
+
 // NewHandler builds the registry API and optional UI handler.
 func NewHandler(
 	reader client.Reader,
 	uiEnabled func(context.Context) bool,
 	contractEnabled ...func(context.Context) bool,
 ) http.Handler {
+	options := HandlerOptions{UIEnabled: uiEnabled}
+	if len(contractEnabled) == 1 {
+		options.ContractEnabled = contractEnabled[0]
+	}
+	return NewHandlerWithOptions(reader, options)
+}
+
+// NewHandlerWithOptions builds the registry with default-off, independently evaluated release gates.
+func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Handler {
 	bundle, bundleErr := uibundle.Load(
 		uiFiles,
 		"ui/index.html",
@@ -43,9 +59,9 @@ func NewHandler(
 			ContentType: "text/javascript; charset=utf-8",
 		},
 	)
-	server := &server{reader: reader, uiEnabled: uiEnabled, bundle: bundle, bundleErr: bundleErr}
-	if len(contractEnabled) == 1 {
-		server.contractEnabled = contractEnabled[0]
+	server := &server{
+		reader: reader, uiEnabled: options.UIEnabled, contractEnabled: options.ContractEnabled,
+		appearanceEnabled: options.AppearanceEnabled, bundle: bundle, bundleErr: bundleErr,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/products", server.listProducts)
@@ -64,10 +80,14 @@ func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 	}
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Header().Set("Cache-Control", "no-store")
+	contractEnabled := s.contractEnabled != nil && s.contractEnabled(request.Context())
 	_ = json.NewEncoder(writer).Encode(struct {
-		UIContractEnabled bool `json:"uiContractEnabled"`
+		UIContractEnabled   bool `json:"uiContractEnabled"`
+		UIAppearanceEnabled bool `json:"uiAppearanceEnabled"`
 	}{
-		UIContractEnabled: s.contractEnabled != nil && s.contractEnabled(request.Context()),
+		UIContractEnabled: contractEnabled,
+		UIAppearanceEnabled: contractEnabled &&
+			s.appearanceEnabled != nil && s.appearanceEnabled(request.Context()),
 	})
 }
 
@@ -116,11 +136,12 @@ func setUISecurityHeaders(writer http.ResponseWriter) {
 }
 
 type server struct {
-	bundle          *uibundle.Bundle
-	bundleErr       error
-	reader          client.Reader
-	uiEnabled       func(context.Context) bool
-	contractEnabled func(context.Context) bool
+	bundle            *uibundle.Bundle
+	bundleErr         error
+	reader            client.Reader
+	uiEnabled         func(context.Context) bool
+	contractEnabled   func(context.Context) bool
+	appearanceEnabled func(context.Context) bool
 }
 
 type productCollection struct {

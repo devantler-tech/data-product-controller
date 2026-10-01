@@ -1,8 +1,10 @@
-/* Portable data-product-ui/v1 host. No registry or framework dependency. */
+/* Portable data-product-ui/v1 and v2 host. No registry or framework dependency. */
 (() => {
   "use strict";
-  const version = "data-product-ui/v1";
-  const supported = ["status", "resize"];
+  const capabilities = {
+    "data-product-ui/v1": ["status", "resize"],
+    "data-product-ui/v2": ["status", "resize", "appearance"],
+  };
 
   /** Require a closed object shape before acting on untrusted metadata or messages. */
   function shape(value, keys) {
@@ -62,9 +64,10 @@
     const contract = manifest.contract;
     if (
       !shape(contract, ["apiVersion", "hostOrigins", "capabilities"]) ||
-      contract.apiVersion !== version
+      typeof contract.apiVersion !== "string" ||
+      !Object.hasOwn(capabilities, contract.apiVersion)
     ) {
-      throw new Error("This host supports data-product-ui/v1 only.");
+      throw new Error("This host supports data-product-ui/v1 and v2 only.");
     }
     if (
       !Array.isArray(contract.hostOrigins) ||
@@ -95,24 +98,37 @@
     ) {
       throw new Error("The publisher has not allowed this host origin.");
     }
+    const supported = capabilities[contract.apiVersion];
     if (
       !Array.isArray(contract.capabilities) ||
-      contract.capabilities.length > 2 ||
+      contract.capabilities.length > supported.length ||
       new Set(contract.capabilities).size !== contract.capabilities.length ||
       contract.capabilities.some(
         (capability) => !supported.includes(capability),
       )
     ) {
       throw new Error(
-        "Only distinct status and resize capabilities are supported.",
+        "Use distinct presentation capabilities supported by this protocol version.",
       );
     }
     return structuredClone(manifest);
   }
 
   /** Mount an untrusted surface with per-load session binding and explicit presentation grants. */
-  function mount({ frame, manifest, grants = [], onState = () => {} }) {
+  function mount({
+    frame,
+    manifest,
+    grants = [],
+    appearanceEnabled = false,
+    appearance = "light",
+    onState = () => {},
+  }) {
     const checked = validate(manifest, location.origin);
+    const version = checked.contract.apiVersion;
+    if (version === "data-product-ui/v2" && appearanceEnabled !== true) {
+      throw new Error("Appearance contracts are disabled on this host.");
+    }
+    const supported = capabilities[version];
     const allowed = supported.filter(
       (capability) =>
         grants.includes(capability) &&
@@ -123,6 +139,35 @@
     let connected = false;
     let timer;
     let received = 0;
+    let currentAppearance;
+    let lastAppearance = "";
+    let appearanceUpdates = 0;
+
+    /** Send only an explicitly granted light/dark hint to the active opaque frame. */
+    function setAppearance(value) {
+      if (!["light", "dark"].includes(value)) {
+        throw new Error("Appearance must be light or dark.");
+      }
+      currentAppearance = value;
+      if (
+        disposed ||
+        !connected ||
+        !allowed.includes("appearance") ||
+        value === lastAppearance
+      )
+        return;
+      if (++appearanceUpdates > 256) {
+        dispose();
+        onState("error");
+        return;
+      }
+      lastAppearance = value;
+      frame.contentWindow.postMessage(
+        { apiVersion: version, type: "appearance", session, appearance: value },
+        "*",
+      );
+    }
+    setAppearance(appearance);
 
     /** Remove listeners, pending deadlines and navigation when selection is withdrawn. */
     function dispose() {
@@ -151,6 +196,8 @@
       session = crypto.randomUUID();
       connected = false;
       received = 0;
+      lastAppearance = "";
+      appearanceUpdates = 0;
       onState("loading");
       deadline();
       // The sandbox has an opaque origin, so exact-origin targeting is unavailable.
@@ -187,6 +234,7 @@
         connected = true;
         clearTimeout(timer);
         onState("ready");
+        setAppearance(currentAppearance);
       } else if (
         connected &&
         data.type === "status" &&
@@ -218,6 +266,7 @@
     deadline();
     frame.src = checked.url;
     frame.hidden = false;
+    dispose.setAppearance = setAppearance;
     return dispose;
   }
 

@@ -30,3 +30,36 @@ func TestKitReleaseGate(t *testing.T) {
 		}
 	}
 }
+
+// TestKitAppearanceGate requires operator opt-in and does not broaden the host's network policy.
+func TestKitAppearanceGate(t *testing.T) {
+	t.Parallel()
+	for _, contract := range []bool{false, true} {
+		for _, appearance := range []bool{false, true} {
+			response := httptest.NewRecorder()
+			KitHandlerWithAppearance(
+				func() bool { return contract },
+				func() bool { return appearance },
+			).ServeHTTP(response,
+				httptest.NewRequestWithContext(t.Context(), "GET", "/", nil))
+			if !contract {
+				if response.Code != 404 {
+					t.Fatal("disabled kit is available")
+				}
+				continue
+			}
+			if strings.Contains(
+				response.Body.String(),
+				`data-appearance-enabled="true"`,
+			) != appearance {
+				t.Fatal("kit appearance grant does not reflect its explicit gate")
+			}
+			if !strings.Contains(
+				response.Header().Get("Content-Security-Policy"),
+				"connect-src 'none'",
+			) {
+				t.Fatal("appearance broadened kit connections")
+			}
+		}
+	}
+}

@@ -2,6 +2,12 @@ const manifest = document.querySelector("#manifest");
 const status = document.querySelector("#kit-status");
 const frame = document.querySelector("#product-surface");
 let dispose = () => {};
+const appearanceEnabled = document.body.dataset.appearanceEnabled === "true";
+const appearance = document.querySelector("#appearance");
+document.querySelector("#appearance-policy").hidden = !appearanceEnabled;
+appearance.addEventListener("change", () =>
+  dispose.setAppearance?.(appearance.value),
+);
 
 /** Display protocol evidence with host-owned wording and an accessible status region. */
 function showState(state) {
@@ -27,10 +33,17 @@ document.querySelector("#manifest-form").addEventListener("submit", (event) => {
     const grants = ["status", "resize"].filter(
       (name) => document.querySelector(`#grant-${name}`).checked,
     );
+    if (
+      appearanceEnabled &&
+      document.querySelector("#grant-appearance").checked
+    )
+      grants.push("appearance");
     dispose = DataProductUI.mount({
       frame,
       manifest: JSON.parse(manifest.value),
       grants,
+      appearanceEnabled,
+      appearance: appearance.value,
       onState: showState,
     });
   } catch (error) {

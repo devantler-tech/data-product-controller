@@ -61,7 +61,7 @@ CRD's structural schema and refuses noncanonical declarations before navigation.
 The manifest allowlist is one side of the agreement. Configure the **product's
 own deployment** with its approved hosts too. The demo reads `UI_HOST_ORIGINS`, a
 comma-separated list with no spaces, only when its release flag is on. Its public
-`/ui-contract-config` response contains only that list. Do not accept an allowlist
+`/ui-contract-config` response contains that list and the boolean appearance gate. Do not accept an allowlist
 supplied in the host's initialization message. No user identity, Kubernetes
 identity, access token, cookie, or dataset passes over this protocol.
 
@@ -118,6 +118,59 @@ can make, or authenticate a redirected destination. Loaded code remains untruste
 Hosts need their own publication policy, TLS, CSP, and product access controls.
 The kit checks interoperability, not publisher security or universal accessibility.
 
+## Workspace appearance (v2)
+
+`data-product-ui/v1` remains limited to `status` and `resize`. The v2 manifest uses
+the same closed fields and HTTPS origin constraints, with at most three distinct
+capabilities: `status`, `resize`, and optionally `appearance`. Admission rejects
+an appearance capability under v1. A v2 host additionally requires the default-off
+OpenFeature `ui-appearance` gate; it refuses a v2 frame before navigation when
+disabled. Set `UI_APPEARANCE_ENABLED=true` alongside `UI_CONTRACT_ENABLED=true`,
+or both chart values `uiAppearance.enabled` and `uiContract.enabled`, explicitly.
+The reference sample requires the same two gates and its own approved host origins.
+When the chart's sample is enabled, v2 also requires a configured chart route to
+declare the publisher-approved catalogue origin. A registry-only installation may
+enable v2 for independently configured external products without a chart route.
+
+Init, ready, status and resize keep their existing exact shapes, carrying the
+negotiated v1 or v2 version. After the current v2 ready handshake, the host may send:
+
+```json
+{
+  "apiVersion": "data-product-ui/v2",
+  "type": "appearance",
+  "session": "<current UUID>",
+  "appearance": "light"
+}
+```
+
+The only values are `light` and `dark`. The workspace resolves System locally,
+using its media query, and sends a changed enum when the system preference changes.
+It sends nothing without both a publisher request and the host's explicit appearance
+grant. A product accepts the hint only from its approved parent origin and exact
+window, under the current v2 session and negotiated grant. Unknown keys, stale
+sessions, other versions and arbitrary CSS or URLs are ignored. Both sides bound
+appearance updates to 256 per session; the host suppresses duplicate values.
+Navigation revokes the previous session and reapplies the current theme only
+after the next ready handshake. No frame reload, query, credential, storage command
+or sandbox permission is part of an appearance update.
+
+The registry's selector offers System, Light and Dark, retaining an explicit
+choice where browser storage is available. Storage denial does not block queries.
+Legacy UIs and products without an appearance grant retain their own theme. The
+gate is a long-lived operator choice controlling optional presentation grants.
+Platform owns its production activation and readback in
+[issue 146](https://github.com/devantler-tech/data-product-controller/issues/146).
+[ADR 0011](adr/0011-bounded-workspace-appearance.md) records the rationale.
+
+Another host opts in with `appearanceEnabled: true`, an `appearance` grant and
+`appearance: "light"` or `"dark"` when calling `mount`. Its returned disposer has
+`setAppearance(value)` for later changes; dispose before another mount. The kit
+reveals its v2 checkbox and Light/Dark selector only with the additional gate,
+and grants appearance only when the operator checks that box. A static kit host
+opts in by setting `data-appearance-enabled="true"` on its body; this is an
+explicit deployment choice, just as serving the static kit itself is.
+
 ## Run the independent compatibility kit
 
 Use a TLS certificate trusted by your browser for the chosen host. The Go command
@@ -150,7 +203,9 @@ const dispose = DataProductUI.mount({
   frame: document.querySelector("iframe"),
   manifest,
   grants: ["status"],
-  onState: (state) => { /* Render your own accessible loading/ready/error/timeout text. */ }
+  onState: (state) => {
+    /* Render your own accessible loading/ready/error/timeout text. */
+  },
 });
 // Before selecting another product or closing this one:
 dispose();
