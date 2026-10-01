@@ -46,9 +46,13 @@ func run() error {
 		}
 	}
 
+	handler, err := demoproduct.NewHandlerWithPublicURL(os.Getenv("PUBLIC_BASE_URL"), origins...)
+	if err != nil {
+		return err
+	}
 	server := &http.Server{
 		Addr:              *address,
-		Handler:           demoproduct.NewHandler(origins...),
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,
