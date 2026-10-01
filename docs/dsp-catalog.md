@@ -116,8 +116,13 @@ different exporter or wait for a separately reviewed profile extension.
 
 Offline tests validate exports against the unmodified official schemas and use
 an independent JSON-LD processor with pinned contexts to check RDF relationships.
-The producer-to-exporter integration test uses the actual DCAT handler. None of
-these checks establishes a provider's runtime interoperability or enforcement.
+The producer-to-exporter integration tests use the actual DCAT handler. A
+reference product with multiple outputs and an unselected dataset is exported
+through explicit provider bindings, reconstructed from RDF, and compared with
+a hand-written complete graph. This checks identity, metadata, selected service
+relationships, every supported rule category and string-valued constraints;
+negative controls detect lost policies and operand coercion. None of these
+checks establishes a provider's runtime interoperability or enforcement.
 
 The hosted Kubernetes integration job also runs `tests/source/dsp-catalog.sh`
 against the exact image it builds, with networking disabled. This checks the
