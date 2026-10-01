@@ -9,6 +9,7 @@ import (
 	"sort"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/uibundle"
 	"github.com/devantler-tech/data-product-controller/web"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,7 +24,26 @@ func NewHandler(
 	uiEnabled func(context.Context) bool,
 	contractEnabled ...func(context.Context) bool,
 ) http.Handler {
-	server := &server{reader: reader, uiEnabled: uiEnabled}
+	bundle, bundleErr := uibundle.Load(
+		uiFiles,
+		"ui/index.html",
+		uibundle.Source{
+			FS:          uiFiles,
+			Path:        "ui/registry.css",
+			ContentType: "text/css; charset=utf-8",
+		},
+		uibundle.Source{
+			FS:          uiFiles,
+			Path:        "ui/registry.js",
+			ContentType: "text/javascript; charset=utf-8",
+		},
+		uibundle.Source{
+			FS:          web.Assets,
+			Path:        "ui-contract.js",
+			ContentType: "text/javascript; charset=utf-8",
+		},
+	)
+	server := &server{reader: reader, uiEnabled: uiEnabled, bundle: bundle, bundleErr: bundleErr}
 	if len(contractEnabled) == 1 {
 		server.contractEnabled = contractEnabled[0]
 	}
@@ -51,6 +71,7 @@ func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 	})
 }
 
+// registryUI serves the current document only while the registry surface is enabled.
 func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
 	if !s.uiEnabled(request.Context()) {
 		http.NotFound(writer, request)
@@ -58,18 +79,17 @@ func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	contents, err := uiFiles.ReadFile("ui/index.html")
-	if err != nil {
+	if s.bundleErr != nil {
 		http.Error(writer, "Unable to load the registry UI.", http.StatusInternalServerError)
 
 		return
 	}
 
 	setUISecurityHeaders(writer)
-	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = writer.Write(contents)
+	s.bundle.ServeHTML(writer)
 }
 
+// registryAsset applies the UI gate before resolving an exact compiled asset name.
 func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request) {
 	if !s.uiEnabled(request.Context()) {
 		http.NotFound(writer, request)
@@ -77,41 +97,12 @@ func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	asset := request.PathValue("asset")
-	if asset == "ui-contract.js" {
-		contents, err := web.Assets.ReadFile("ui-contract.js")
-		if err != nil {
-			http.NotFound(writer, request)
-			return
-		}
-		setUISecurityHeaders(writer)
-		writer.Header().Set("Content-Type", "text/javascript; charset=utf-8")
-		_, _ = writer.Write(contents)
+	if s.bundleErr != nil {
+		http.Error(writer, "Unable to load the registry UI.", http.StatusInternalServerError)
 		return
 	}
-	contentType := map[string]string{
-		"registry.css": "text/css; charset=utf-8",
-		"registry.js":  "text/javascript; charset=utf-8",
-	}[asset]
-	if contentType == "" {
-		http.NotFound(writer, request)
-
-		return
-	}
-
-	contents, err := uiFiles.ReadFile("ui/" + asset)
-	if err != nil {
-		http.NotFound(writer, request)
-
-		return
-	}
-
 	setUISecurityHeaders(writer)
-	writer.Header().Set("Content-Type", contentType)
-	// contents are read from the compile-time embedded UI bundle, never from
-	// the request path or another untrusted source.
-	//nolint:gosec
-	_, _ = writer.Write(contents)
+	s.bundle.ServeAsset(writer, request, request.PathValue("asset"))
 }
 
 func setUISecurityHeaders(writer http.ResponseWriter) {
@@ -125,6 +116,8 @@ func setUISecurityHeaders(writer http.ResponseWriter) {
 }
 
 type server struct {
+	bundle          *uibundle.Bundle
+	bundleErr       error
 	reader          client.Reader
 	uiEnabled       func(context.Context) bool
 	contractEnabled func(context.Context) bool
