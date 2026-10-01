@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Sourced by the real-cluster integration test after the generated CRD is installed.
+: "${repo_root:?run through tests/source/run.sh}"
+: "${test_dir:?integration scratch directory is required}"
 
 yq -o=json '.' "$repo_root/docs/examples/http-source-product.yaml" |
 	jq '.metadata.name="ui-admission-fixture" | .spec.ui={url:"https://product.example/ui",title:"Synthetic interface",

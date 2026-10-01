@@ -24,6 +24,7 @@
 :root[data-appearance="light"] {
   color-scheme: light;
 }
+
 :root[data-appearance="dark"] {
   color-scheme: dark;
 }

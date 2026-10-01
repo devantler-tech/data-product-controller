@@ -158,6 +158,11 @@ select {
   font-size: 0.85rem;
 }
 
+.appearance label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
 .filters {
   display: grid;
   gap: 0.4rem;
@@ -426,11 +431,6 @@ dd {
 
 .workspace-actions {
   flex-wrap: wrap;
-}
-
-.appearance label {
-  font-size: 0.85rem;
-  color: var(--muted);
 }
 
 .appearance select {

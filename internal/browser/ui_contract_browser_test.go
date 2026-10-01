@@ -357,6 +357,17 @@ func TestUIManifestValidation(t *testing.T) {
 		themed.contract.apiVersion = 'data-product-ui/v2';
 		themed.contract.capabilities.push('appearance');
 		try { DataProductUI.validate(themed, location.origin); } catch { return 'bounded v2 appearance unsupported'; }
+		for (const version of ['data-product-ui/v1','data-product-ui/v2']) {
+			const malformed = structuredClone(valid);
+			malformed.url = location.origin + '/invalid-product';
+			malformed.contract.apiVersion = [version];
+			try { DataProductUI.validate(malformed, location.origin); return 'accepted array protocol version'; } catch { /* Expected refusal. */ }
+			const frame = document.createElement('iframe'); document.body.append(frame);
+			let refused = false;
+			try { DataProductUI.mount({frame,manifest:malformed,appearanceEnabled:false}); } catch { refused = true; }
+			const navigated = frame.hasAttribute('src'); frame.remove();
+			if (!refused || navigated) return 'malformed version bypassed the disabled host gate';
+		}
 		const invalid = [
 			v => v.url = 'javascript:alert(1)',
 			v => v.url = 'https://user:password@product.example/ui',

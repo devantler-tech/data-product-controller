@@ -1,4 +1,4 @@
-/* Portable data-product-ui/v1 host. No registry or framework dependency. */
+/* Portable data-product-ui/v1 and v2 host. No registry or framework dependency. */
 (() => {
   "use strict";
   const capabilities = {
@@ -64,6 +64,7 @@
     const contract = manifest.contract;
     if (
       !shape(contract, ["apiVersion", "hostOrigins", "capabilities"]) ||
+      typeof contract.apiVersion !== "string" ||
       !Object.hasOwn(capabilities, contract.apiVersion)
     ) {
       throw new Error("This host supports data-product-ui/v1 and v2 only.");
