@@ -2,6 +2,10 @@ const form = document.querySelector("#query-form");
 const station = document.querySelector("#station");
 const status = document.querySelector("#status");
 const results = document.querySelector("#observations");
+// Embedded navigation belongs to the workspace; its sandbox blocks popup links.
+if (parent !== window) {
+  document.querySelector("nav[aria-label='Data access']")?.remove();
+}
 let connection;
 let queryState = "ready";
 let requestNumber = 0;
