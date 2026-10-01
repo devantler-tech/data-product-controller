@@ -194,7 +194,7 @@ async function selectProduct(product, button) {
     try {
       const response = await fetch("/api/v1/ui-config", {
         cache: "no-store",
-        credentials: "omit",
+        credentials: "same-origin",
         signal: AbortSignal.timeout(5000),
       });
       if (!response.ok)
