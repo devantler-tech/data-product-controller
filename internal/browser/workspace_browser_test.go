@@ -143,10 +143,10 @@ func TestHarbourTable(t *testing.T) {
 	page := contractBrowser(t).MustPage().MustNavigate(server.URL + "/ui").MustWaitLoad()
 	page.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
 	if !page.MustEval(`async () => {
-        const link = [...document.querySelectorAll('a')].find(a => a.textContent === 'Open JSON data');
-        const response = await fetch(link.href);
-        return response.ok && (await response.json()).items.length === 2;
-    }`).Bool() {
+		const link = [...document.querySelectorAll('a')].find(a => a.textContent === 'Open JSON data');
+		const response = await fetch(link.href);
+		return response.ok && (await response.json()).items.length === 2;
+	}`).Bool() {
 		t.Fatal("direct JSON data link does not reach the observation API")
 	}
 	if !page.MustEval(`() => !!document.querySelector('#observations table')`).Bool() {
