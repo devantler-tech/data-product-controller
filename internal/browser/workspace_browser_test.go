@@ -60,6 +60,18 @@ func TestRegistryWorkspace(t *testing.T) {
 		*got != productServer.URL+"/openapi.json" {
 		t.Fatalf("contract link = %v", got)
 	}
+	frame := page.MustElement("#product-surface").MustFrame()
+	frame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
+	if frame.MustEval(`() => !!document.querySelector('nav[aria-label="Data access"]')`).Bool() {
+		t.Fatal("embedded sample exposes duplicate links its sandbox cannot open")
+	}
+	openContract := page.MustWaitOpen()
+	page.MustElement("#product-interfaces a[data-kind=contract]").MustClick()
+	contractPage := openContract().MustWaitLoad()
+	if !strings.Contains(contractPage.MustElement("body").MustText(), `"openapi"`) {
+		t.Fatal("workspace contract link did not open its real API contract")
+	}
+	contractPage.MustClose()
 	page.MustElement("#product-search").MustSelectAllText().MustInput("not present")
 	page.MustElement("#registry-status").
 		MustWait(`() => this.textContent.includes('No products match')`)
@@ -141,6 +153,7 @@ func TestHarbourTable(t *testing.T) {
 		}
 	})
 	page := contractBrowser(t).MustPage().MustNavigate(server.URL + "/ui").MustWaitLoad()
+	page.MustElement(`nav[aria-label="Data access"]`).MustWaitVisible()
 	page.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
 	if !page.MustEval(`async () => {
 		const link = [...document.querySelectorAll('a')].find(a => a.textContent === 'Open JSON data');

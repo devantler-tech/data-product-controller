@@ -127,6 +127,8 @@ the selected view until a product is selected again.
 The Harbour example labels its fixed synthetic records and displays station, observation time in
 UTC, temperature and salinity. Choose a station and use **Load observations** to filter the data.
 The latest requested station owns the result, even if an earlier request finishes later.
+When embedded, use the workspace's **Open API** and **View contract** links. The sample's
+data-access footer appears only on its standalone page.
 
 The reference registry preserves these boundaries:
 
