@@ -62,6 +62,17 @@ wait_for() {
 kube() { kubectl --request-timeout=15s -n products "$@"; }
 probe() { kube exec consumer -- /fixture probe --timeout 10s "$@"; }
 registry_ready() { probe --url http://dpc/api/v1/products --contains "\"ready\":$1"; }
+# Probe every endpoint directly: a successful Service request can hide a non-serving follower.
+registry_replicas_ready() {
+	local addresses address
+	addresses=$(kube get pods -l app.kubernetes.io/component=controller -o json |
+		jq -er '[.items[] | select(.metadata.deletionTimestamp == null) |
+      select(any(.status.conditions[]?; .type == "Ready" and .status == "True")) |
+      .status.podIP // empty] | if length == 2 then .[] else error("expected two ready registry endpoints") end') || return 1
+	while IFS= read -r address; do
+		probe --url "http://$address:8082/api/v1/products" --contains '"products":' || return 1
+	done <<<"$addresses"
+}
 conditions() {
 	local status=$1 reason=${2:-}
 	kube get dataproduct existing-export -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -205,6 +216,7 @@ kube --request-timeout=0 wait pod/consumer pod/outsider --for=condition=Ready --
 source_secret fixture-token-a
 jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
   image:{repository:"localhost:5055/data-product-controller",digest:$digest,pullPolicy:"IfNotPresent"},
+  controller:{replicas:2},
   demoProduct:{enabled:false},
   connectorReadiness:{enabled:false},
   httpSource:{enabled:false,secretName:"existing-export",sourceCIDR:$cidr,
@@ -220,6 +232,7 @@ kube --request-timeout=0 rollout status deployment/dpc-http-source --timeout=240
 kube --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=condition=Established --timeout=60s
 yq '.spec.connector.resourceRef.name = "dpc-http-source"' "$repo_root/docs/examples/http-source-product.yaml" | kube apply -f -
 wait_for 'observation disabled in conditions and registry' 180 readiness False false ConnectorFeatureDisabled
+wait_for 'both leader-elected controller replicas serve the descriptor API' 120 registry_replicas_ready
 
 install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
