@@ -24,6 +24,7 @@ func main() {
 	}
 }
 
+// run validates publication settings before starting the sample's independent API and UI.
 func run() error {
 	address := flag.String("listen-address", ":8080", "Address for the example data product.")
 	flag.Parse()
