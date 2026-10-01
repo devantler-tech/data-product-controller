@@ -55,7 +55,7 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product).Build()
 	registryServer := httptest.NewTLSServer(
-		registry.NewHandler(reader, func(context.Context) bool { return true }),
+		registry.NewHandler(reader),
 	)
 	t.Cleanup(registryServer.Close)
 

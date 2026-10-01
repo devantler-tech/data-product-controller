@@ -3,7 +3,6 @@
 package browser_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -37,7 +36,7 @@ func TestRegistryWorkspace(t *testing.T) {
 	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product, other).Build()
 	server := httptest.NewTLSServer(
-		registry.NewHandler(reader, func(context.Context) bool { return true }),
+		registry.NewHandler(reader),
 	)
 	t.Cleanup(server.Close)
 	page := contractBrowser(t).MustPage().MustNavigate(server.URL).MustWaitLoad()
@@ -104,7 +103,7 @@ func TestRegistryRetry(t *testing.T) {
 		WithScheme(scheme).
 		WithObjects(workspaceProduct("https://example.com")).
 		Build()
-	handler := registry.NewHandler(reader, func(context.Context) bool { return true })
+	handler := registry.NewHandler(reader)
 	var fail atomic.Bool
 	fail.Store(true)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

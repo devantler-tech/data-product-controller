@@ -5,9 +5,6 @@ image:
   digest: ""
   pullPolicy: Always
 
-registryUI:
-  enabled: false
-
 dcatCatalog:
   enabled: false
   # Stable absolute HTTPS or URN identity; required when the catalog is enabled.

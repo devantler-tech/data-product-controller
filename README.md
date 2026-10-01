@@ -20,7 +20,7 @@ The current foundation provides:
 - a portable JSON descriptor registry at `/api/v1/products`;
 - a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
 - a default-off [offline DSP catalog exporter](docs/dsp-catalog.md) that combines DCAT snapshots with explicit provider services, transfer formats and offers;
-- a default-off `registry-ui` feature that renders product descriptors and embeds product UIs in a restricted sandbox;
+- a registry workspace that renders product descriptors and embeds product UIs in a restricted sandbox;
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
 - an opt-in, Secret-backed HTTPS JSON export connector with a read-only API, OpenAPI contract, probes, and metrics;
@@ -166,7 +166,7 @@ long-lived operator choice over a cosmetic grant, not permission to query data.
 
 ## Install
 
-Install the chart with the registry UI explicitly enabled and an existing Gateway API listener.
+Install the chart with an existing Gateway API listener.
 Replace `<version>` and `<verified-image-digest>` with the release's chart version and the controller
 image digest verified against the trusted publisher:
 
@@ -177,7 +177,6 @@ helm upgrade --install data-product-controller \
   --namespace data-product-system \
   --create-namespace \
   --set-string image.digest='sha256:<verified-image-digest>' \
-  --set registryUI.enabled=true \
   --set route.enabled=true \
   --set route.host=data-products.example.com
 ```
@@ -198,7 +197,8 @@ helm show crds oci://ghcr.io/devantler-tech/charts/data-product-controller --ver
 
 `v1alpha1` is deliberately small and expected to change, so plan for this on schema-changing releases.
 
-The UI remains off when `registryUI.enabled` is omitted. For repository development:
+The registry workspace is available by default on the registry listener. Public routing remains
+opt-in; the platform owns authentication and access policy. For repository development:
 
 ```bash
 go test ./...

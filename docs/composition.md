@@ -41,8 +41,8 @@ An unversioned input still requires an existing named output on a Ready product.
 Apply the release's generated CRD before upgrading an existing installation; Helm
 does not upgrade CRDs in `crds/`. Set `composition.enabled=true` in the chart, or
 `COMPOSITION_ENABLED=true` for the manager process, to enable the default-off
-OpenFeature `composition` flag. The registry UI has its separate
-`registryUI.enabled` flag. Invalid flag values stop startup.
+OpenFeature `composition` flag. The registry workspace is available by default.
+Invalid flag values stop startup.
 
 A versioned input fails with `CompositionFeatureDisabled` while observation is
 off. Unversioned inputs retain ordinary dependency readiness. Turning observation
@@ -91,7 +91,7 @@ observations, coastal weather and a coastal summary consuming both. Its
 `example.com` endpoints are illustrative metadata; applying it does not deploy
 those services or prove their network reachability.
 
-In a disposable cluster with composition and registry UI enabled:
+In a disposable cluster with composition enabled:
 
 ```bash
 kubectl create namespace products

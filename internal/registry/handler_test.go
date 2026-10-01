@@ -1,7 +1,6 @@
 package registry
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +34,7 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 		},
 	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product).Build()
-	handler := NewHandler(reader, func(context.Context) bool { return false })
+	handler := NewHandler(reader)
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/products", nil)
 	response := httptest.NewRecorder()
 
@@ -97,72 +96,52 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	}
 }
 
-// TestRegistryUIFeatureFlagControlsTheUserSurface checks the document gate and iframe restrictions.
-func TestRegistryUIFeatureFlagControlsTheUserSurface(t *testing.T) {
+// TestRegistryUIAvailableByDefault preserves security headers and the product sandbox.
+func TestRegistryUIAvailableByDefault(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name       string
-		enabled    bool
-		wantStatus int
-	}{
-		{name: "disabled", enabled: false, wantStatus: http.StatusNotFound},
-		{name: "enabled", enabled: true, wantStatus: http.StatusOK},
+	scheme := runtime.NewScheme()
+	if err := datav1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatalf("register data-product API: %v", err)
 	}
+	reader := fake.NewClientBuilder().WithScheme(scheme).Build()
+	handler := NewHandler(reader)
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
+	response := httptest.NewRecorder()
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			t.Parallel()
+	handler.ServeHTTP(response, request)
 
-			scheme := runtime.NewScheme()
-			if err := datav1alpha1.AddToScheme(scheme); err != nil {
-				t.Fatalf("register data-product API: %v", err)
-			}
-			reader := fake.NewClientBuilder().WithScheme(scheme).Build()
-			handler := NewHandler(reader, func(context.Context) bool { return test.enabled })
-			request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
-			response := httptest.NewRecorder()
-
-			handler.ServeHTTP(response, request)
-
-			if response.Code != test.wantStatus {
-				t.Fatalf("status = %d, want %d", response.Code, test.wantStatus)
-			}
-			if !test.enabled {
-				return
-			}
-
-			if got := response.Header().
-				Get("Content-Security-Policy"); got != "default-src 'self'; connect-src 'self'; frame-src https:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" {
-				t.Fatalf("Content-Security-Policy = %q", got)
-			}
-			body := response.Body.String()
-			for _, required := range []string{
-				"<title>Data products</title>",
-				`id="data-product-grid"`,
-				`sandbox="allow-forms allow-scripts"`,
-				`src="/assets/registry-`,
-			} {
-				if !strings.Contains(body, required) {
-					t.Fatalf("UI body does not contain %q", required)
-				}
-			}
-		})
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+	if got := response.Header().
+		Get("Content-Security-Policy"); got != "default-src 'self'; connect-src 'self'; frame-src https:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" {
+		t.Fatalf("Content-Security-Policy = %q", got)
+	}
+	body := response.Body.String()
+	for _, required := range []string{
+		"<title>Data products</title>",
+		`id="data-product-grid"`,
+		`sandbox="allow-forms allow-scripts"`,
+		`src="/assets/registry-`,
+	} {
+		if !strings.Contains(body, required) {
+			t.Fatalf("UI body does not contain %q", required)
+		}
 	}
 }
 
-// TestRegistryAssetFingerprintsRespectTheUIFlag rejects immutable asset URLs when the UI is disabled.
-func TestRegistryAssetFingerprintsRespectTheUIFlag(t *testing.T) {
+// TestRegistryAssetFingerprints rejects stale fingerprints and serves current assets by default.
+func TestRegistryAssetFingerprints(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()
 	if err := datav1alpha1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).Build()
-	enabled := NewHandler(reader, func(context.Context) bool { return true })
-	disabled := NewHandler(reader, func(context.Context) bool { return false })
+	handler := NewHandler(reader)
 	document := httptest.NewRecorder()
-	enabled.ServeHTTP(
+	handler.ServeHTTP(
 		document,
 		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil),
 	)
@@ -174,7 +153,7 @@ func TestRegistryAssetFingerprintsRespectTheUIFlag(t *testing.T) {
 	for _, url := range urls {
 		response := httptest.NewRecorder()
 		request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, url, nil)
-		enabled.ServeHTTP(response, request)
+		handler.ServeHTTP(response, request)
 		if response.Code != http.StatusOK || response.Body.Len() == 0 ||
 			response.Header().Get("Cache-Control") != "public, max-age=31536000, immutable" {
 			t.Fatalf(
@@ -183,9 +162,14 @@ func TestRegistryAssetFingerprintsRespectTheUIFlag(t *testing.T) {
 			)
 		}
 		response = httptest.NewRecorder()
-		disabled.ServeHTTP(response, request)
+		staleURL := regexp.MustCompile(`[a-f0-9]{64}`).
+			ReplaceAllString(url, strings.Repeat("0", 64))
+		handler.ServeHTTP(
+			response,
+			httptest.NewRequestWithContext(t.Context(), http.MethodGet, staleURL, nil),
+		)
 		if response.Code != http.StatusNotFound {
-			t.Fatalf("disabled registry exposed %s", url)
+			t.Fatalf("registry accepted stale fingerprint %s", staleURL)
 		}
 	}
 }

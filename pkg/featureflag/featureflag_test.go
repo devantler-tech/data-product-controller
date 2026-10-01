@@ -10,7 +10,7 @@ import (
 func TestEnabled(t *testing.T) {
 	t.Parallel()
 
-	const flag = "registry-ui"
+	const flag = "provisioned-sources"
 
 	testCases := []struct {
 		name  string
