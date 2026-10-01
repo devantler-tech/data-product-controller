@@ -43,6 +43,7 @@ assert_contains "$chart_crds" 'kind: CustomResourceDefinition'
 assert_contains "$chart_crds" 'name: dataproducts.data.devantler.tech'
 cmp "$generated_crd" "$chart_crd" || fail "generated CRD copies differ"
 assert_contains "$default_render" 'value: "false"'
+assert_not_contains "$default_render" 'REGISTRY_UI_ENABLED'
 source_flag=$(printf '%s' "$default_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "PROVISIONED_SOURCES_ENABLED") | .value' -)
 [ "$source_flag" = 'false' ] || fail 'provisioned sources must default off'
 source_render=$(helm template data-product-controller "$chart" --namespace data-product-system --set provisionedSources.enabled=true)
@@ -103,10 +104,9 @@ wrong_namespace_count=$(
 [ "$wrong_namespace_count" = '0' ] || fail 'namespaced chart resources must use the release namespace'
 
 hosted_render=$(helm template data-product-controller "$chart" \
-	--set registryUI.enabled=true \
 	--set route.enabled=true \
 	--set route.host=data-products.example.test)
-assert_contains "$hosted_render" 'value: "true"'
+assert_not_contains "$hosted_render" 'REGISTRY_UI_ENABLED'
 assert_contains "$hosted_render" 'kind: HTTPRoute'
 assert_contains "$hosted_render" 'name: harbour-observations'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/ui'

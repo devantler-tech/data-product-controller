@@ -3,7 +3,6 @@
 package browser_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +29,7 @@ func TestUIUpgrade(t *testing.T) {
 		scripts           []string
 		handler           http.Handler
 	}{
-		{"registry", "/", "registry.css", []string{"registry.js", "ui-contract.js"}, registry.NewHandler(reader, func(_ context.Context) bool { return true })},
+		{"registry", "/", "registry.css", []string{"registry.js", "ui-contract.js"}, registry.NewHandler(reader)},
 		{"sample", "/ui", "product.css", []string{"product.js"}, demoproduct.NewHandler()},
 	} {
 		t.Run(test.name, func(t *testing.T) {

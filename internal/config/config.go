@@ -10,11 +10,6 @@ import (
 	"strings"
 )
 
-// RegistryUIEnabled parses the registry UI release flag.
-func RegistryUIEnabled(value string) (bool, error) {
-	return featureEnabled("REGISTRY_UI_ENABLED", value)
-}
-
 // ProvisionedSourcesEnabled parses the provisioner observation release flag.
 func ProvisionedSourcesEnabled(value string) (bool, error) {
 	return featureEnabled("PROVISIONED_SOURCES_ENABLED", value)

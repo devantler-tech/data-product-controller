@@ -341,7 +341,6 @@ func themeWorkspace(
 	}
 	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(published).Build()
 	registryHandler = registry.NewHandlerWithOptions(reader, registry.HandlerOptions{
-		UIEnabled:         func(context.Context) bool { return true },
 		ContractEnabled:   func(context.Context) bool { return contractEnabled },
 		AppearanceEnabled: func(context.Context) bool { return appearanceEnabled },
 	})

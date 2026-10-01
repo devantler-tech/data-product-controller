@@ -175,7 +175,7 @@ func TestConnectorRecoveryAndRemoval(t *testing.T) {
 		}
 		reconcileConnector(t, reconciler, store, product)
 		response := httptest.NewRecorder()
-		registry.NewHandler(store, func(context.Context) bool { return false }).
+		registry.NewHandler(store).
 			ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/products", nil))
 		var result struct {
 			Products []struct {

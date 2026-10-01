@@ -21,8 +21,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 )
 
-const registryUIFlag = "registry-ui"
-
 const provisionedSourcesFlag = "provisioned-sources"
 
 const engineProvidersFlag = "engine-providers"
@@ -80,12 +78,6 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&zapOptions)))
 	setupLog := ctrl.Log.WithName("setup")
 
-	uiEnabled, err := config.RegistryUIEnabled(os.Getenv("REGISTRY_UI_ENABLED"))
-	if err != nil {
-		setupLog.Error(err, "invalid registry UI configuration")
-		os.Exit(1)
-	}
-
 	sourcesEnabled, err := config.ProvisionedSourcesEnabled(
 		os.Getenv("PROVISIONED_SOURCES_ENABLED"),
 	)
@@ -136,7 +128,6 @@ func main() {
 	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
-			registryUIFlag:         uiEnabled,
 			provisionedSourcesFlag: sourcesEnabled,
 			engineProvidersFlag:    engineProvidersEnabled,
 			connectorReadinessFlag: connectorsEnabled,
@@ -211,9 +202,6 @@ func main() {
 	registryHandler := registry.NewHandlerWithOptions(
 		controllerManager.GetAPIReader(),
 		registry.HandlerOptions{
-			UIEnabled: func(ctx context.Context) bool {
-				return featureflag.Enabled(ctx, flagClient, registryUIFlag)
-			},
 			ContractEnabled: func(ctx context.Context) bool {
 				return featureflag.Enabled(ctx, flagClient, uiContractFlag)
 			},

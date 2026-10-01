@@ -71,6 +71,8 @@ registry_replicas_ready() {
       .status.podIP // empty] | if length == 2 then .[] else error("expected two ready registry endpoints") end') || return 1
 	while IFS= read -r address; do
 		probe --url "http://$address:8082/api/v1/products" --contains '"products":' || return 1
+		probe --url "http://$address:8082/" --contains '<title>Data products</title>' || return 1
+		probe --url "http://$address:8082/api/v1/ui-config" --contains '"uiContractEnabled":false,"uiAppearanceEnabled":false' || return 1
 	done <<<"$addresses"
 }
 conditions() {
@@ -233,7 +235,7 @@ kube --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=conditi
 source "$repo_root/tests/source/ui-appearance.sh"
 yq '.spec.connector.resourceRef.name = "dpc-http-source"' "$repo_root/docs/examples/http-source-product.yaml" | kube apply -f -
 wait_for 'observation disabled in conditions and registry' 180 readiness False false ConnectorFeatureDisabled
-wait_for 'both leader-elected controller replicas serve the descriptor API' 120 registry_replicas_ready
+wait_for 'both leader-elected replicas serve the default workspace, descriptors and disabled optional grants' 120 registry_replicas_ready
 
 install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s

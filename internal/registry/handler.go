@@ -1,4 +1,4 @@
-// Package registry exposes portable product descriptors and the optional registry UI.
+// Package registry exposes portable product descriptors and the reference registry UI.
 package registry
 
 import (
@@ -18,27 +18,18 @@ import (
 //go:embed ui/*
 var uiFiles embed.FS
 
-// HandlerOptions separates registry availability from independently controlled presentation grants.
+// HandlerOptions controls the optional portable UI presentation grants.
 type HandlerOptions struct {
-	UIEnabled         func(context.Context) bool
 	ContractEnabled   func(context.Context) bool
 	AppearanceEnabled func(context.Context) bool
 }
 
-// NewHandler builds the registry API and optional UI handler.
-func NewHandler(
-	reader client.Reader,
-	uiEnabled func(context.Context) bool,
-	contractEnabled ...func(context.Context) bool,
-) http.Handler {
-	options := HandlerOptions{UIEnabled: uiEnabled}
-	if len(contractEnabled) == 1 {
-		options.ContractEnabled = contractEnabled[0]
-	}
-	return NewHandlerWithOptions(reader, options)
+// NewHandler builds the registry API and UI with optional presentation grants disabled.
+func NewHandler(reader client.Reader) http.Handler {
+	return NewHandlerWithOptions(reader, HandlerOptions{})
 }
 
-// NewHandlerWithOptions builds the registry with default-off, independently evaluated release gates.
+// NewHandlerWithOptions builds the registry with independently evaluated presentation gates.
 func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Handler {
 	bundle, bundleErr := uibundle.Load(
 		uiFiles,
@@ -60,7 +51,7 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 		},
 	)
 	server := &server{
-		reader: reader, uiEnabled: options.UIEnabled, contractEnabled: options.ContractEnabled,
+		reader: reader, contractEnabled: options.ContractEnabled,
 		appearanceEnabled: options.AppearanceEnabled, bundle: bundle, bundleErr: bundleErr,
 	}
 	mux := http.NewServeMux()
@@ -74,10 +65,6 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 
 // uiConfig advertises only current release capability, never user or credential context.
 func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
-	if !s.uiEnabled(request.Context()) {
-		http.NotFound(writer, request)
-		return
-	}
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Header().Set("Cache-Control", "no-store")
 	contractEnabled := s.contractEnabled != nil && s.contractEnabled(request.Context())
@@ -91,14 +78,8 @@ func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 	})
 }
 
-// registryUI serves the current document only while the registry surface is enabled.
+// registryUI serves the current workspace document.
 func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
-	if !s.uiEnabled(request.Context()) {
-		http.NotFound(writer, request)
-
-		return
-	}
-
 	if s.bundleErr != nil {
 		http.Error(writer, "Unable to load the registry UI.", http.StatusInternalServerError)
 
@@ -109,14 +90,8 @@ func (s *server) registryUI(writer http.ResponseWriter, request *http.Request) {
 	s.bundle.ServeHTML(writer)
 }
 
-// registryAsset applies the UI gate before resolving an exact compiled asset name.
+// registryAsset resolves only an exact compiled asset name.
 func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request) {
-	if !s.uiEnabled(request.Context()) {
-		http.NotFound(writer, request)
-
-		return
-	}
-
 	if s.bundleErr != nil {
 		http.Error(writer, "Unable to load the registry UI.", http.StatusInternalServerError)
 		return
@@ -139,7 +114,6 @@ type server struct {
 	bundle            *uibundle.Bundle
 	bundleErr         error
 	reader            client.Reader
-	uiEnabled         func(context.Context) bool
 	contractEnabled   func(context.Context) bool
 	appearanceEnabled func(context.Context) bool
 }
