@@ -60,6 +60,32 @@ func TestHandlerPublishesPortableContractAndProductUI(t *testing.T) {
 	}
 }
 
+func TestHandlerPublishesValidOpenAPIJSON(t *testing.T) {
+	t.Parallel()
+
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/openapi.json", nil)
+	response := httptest.NewRecorder()
+	demoproduct.NewHandler().ServeHTTP(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
+	}
+
+	var document struct {
+		OpenAPI string                     `json:"openapi"`
+		Paths   map[string]json.RawMessage `json:"paths"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &document); err != nil {
+		t.Fatalf("decode published OpenAPI document: %v", err)
+	}
+	if document.OpenAPI != "3.1.0" {
+		t.Errorf("OpenAPI version = %q, want 3.1.0", document.OpenAPI)
+	}
+	if _, exists := document.Paths["/api/observations"]; !exists {
+		t.Error("published contract does not describe the observation query")
+	}
+}
+
 func TestHandlerQueriesProductData(t *testing.T) {
 	t.Parallel()
 
