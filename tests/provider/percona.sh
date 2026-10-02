@@ -62,13 +62,27 @@ trap 'exit 143' TERM
 
 kube() { kubectl --request-timeout=15s -n products "$@"; }
 query() { kube exec document-consumer -- /fixture probe "$@"; }
+registry_forward_ready() {
+	local line
+	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
+	while IFS= read -r line; do
+		if [[ $line =~ ^Forwarding\ from\ 127\.0\.0\.1:([0-9]+)\ -\>\ 80$ ]]; then
+			registry_port=${BASH_REMATCH[1]}
+			[[ $registry_port -ge 1 && $registry_port -le 65535 ]] || return 1
+			return 0
+		fi
+	done <"$test_dir/forward.log"
+	return 1
+}
 forward_registry() {
 	if [[ -n ${registry_forward_pid:-} ]]; then
 		kill "$registry_forward_pid" 2>/dev/null || true
 		wait "$registry_forward_pid" 2>/dev/null || true
 	fi
-	kubectl --request-timeout=0 -n products port-forward service/dpc "$registry_port:80" >"$test_dir/forward.log" 2>&1 &
+	registry_port=''
+	kubectl --request-timeout=0 -n products port-forward --address=127.0.0.1 service/dpc :80 >"$test_dir/forward.log" 2>&1 &
 	registry_forward_pid=$!
+	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready
 }
 install_controller() {
 	helm template dpc "$repo_root/charts/data-product-controller" --include-crds --namespace products \
@@ -93,10 +107,16 @@ product_ready() {
 			'any(.status.conditions[]?; .type == "SourceReady" and .reason == $reason)' "$test_dir/product.json" >/dev/null || return 1
 	fi
 	# Registry readback uses a runner port-forward; it never receives database credentials.
+	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
 	curl --fail --silent --max-time 5 "http://127.0.0.1:$registry_port/api/v1/products" >"$test_dir/registry.json" || return 1
 	cat "$test_dir/registry.json" >>"$test_dir/registry-seen.jsonl"
 	jq -e --argjson ready "$(if [[ $status == True ]]; then echo true; else echo false; fi)" \
-		'.products | length == 1 and .[0].ready == $ready' "$test_dir/registry.json" >/dev/null
+		'.products | length == 1 and .[0].id == "urn:example:documents" and .[0].ready == $ready' "$test_dir/registry.json" >/dev/null
+}
+registry_empty() {
+	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
+	curl --fail --silent --max-time 5 "http://127.0.0.1:$registry_port/api/v1/products" >"$test_dir/registry.json" || return 1
+	jq -e '.products | type == "array" and length == 0' "$test_dir/registry.json" >/dev/null
 }
 bind_publication() {
 	local uid=$1
@@ -264,7 +284,6 @@ kube label pod document-consumer app=document-consumer --overwrite >/dev/null
 wait_for 'authorized consumer regains the same query path' query
 
 phase 'released and current controller publication' 240
-registry_port=18082
 install_controller ghcr.io/devantler-tech/data-product-controller 1.14.0 "${released_image##*@}"
 yq 'with(select(.kind == "RoleBinding"); .subjects[0].name="dpc" | .subjects[0].namespace="products")' \
 	"$repo_root/docs/examples/document-provider-observer-rbac.yaml" | kube apply -f - >/dev/null
@@ -332,16 +351,18 @@ for gate in PROVISIONED_SOURCES_ENABLED ENGINE_PROVIDERS_ENABLED; do
 	query
 	kube set env deployment/dpc "$gate=true" >/dev/null
 	bounded kubectl --request-timeout=0 -n products rollout status deployment/dpc --timeout="$(remaining)s"
+	forward_registry
+	wait_for 'restored gate republishes the current source' product_ready True SourceReady
 done
 before_delete=$(retained_identities)
 kube delete dataproduct document-product --wait=false >/dev/null
+wait_for 'deleted descriptor is removed from the registry' registry_empty
 wait_for 'deleting only the descriptor retains queryable independent data' query
 [[ $before_delete == "$(retained_identities)" ]]
 echo 'PASS: source, publication and PVC identities survive DataProduct deletion'
 
 # Fixed synthetic values must not enter either control-plane projection or controller logs.
 kube logs deployment/dpc >"$test_dir/controller.log"
-kube get dataproducts -o json >"$test_dir/products.json"
 for marker in synthetic-reader-original synthetic-reader-replacement synthetic-writer-password persistent-document; do
 	if grep -Fq "$marker" "$test_dir/controller.log" "$test_dir/products-seen.jsonl" "$test_dir/registry-seen.jsonl"; then
 		echo 'control-plane output contains data-plane fixture content' >&2

@@ -197,8 +197,11 @@ publication ownership. Credential rotation at the same Secret name does not requ
 change or copy values into status. Removing the source declaration or deleting the DataProduct
 leaves the source and Secret independently owned; the controller adds no finalizers or owner references.
 
-The hosted Kubernetes acceptance suite exercises admission, scoped permissions, both gates,
+The hosted source-observation suite exercises admission, scoped permissions, both gates,
 readiness loss/recovery, publication ownership and retention using synthetic SQL, Document and Graph status fixtures.
-It does not install database operators or prove database availability. Real operator acceptance remains
+It does not install database operators or prove database availability. The separate required
+[real Document acceptance](real-document-acceptance.md) installs Percona and exercises authenticated queries,
+effective privileges, rotation, outage recovery and retained data. Its current-head run must pass;
+synthetic observer results cannot replace that evidence. The remaining real provider matrix is tracked
 in [#38](https://github.com/devantler-tech/data-product-controller/issues/38), and released deployment
 acceptance is required before retiring the gate in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).

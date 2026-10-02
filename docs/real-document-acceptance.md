@@ -5,7 +5,7 @@ controller in a disposable KSail Kubernetes 1.34.0 cluster. It is separate from 
 observer regressions in `tests/source/`: no operator status is fabricated.
 
 Run `bash tests/provider/percona.sh` on an amd64 Linux host with Docker, KSail 7.182.6, kubectl,
-Helm, jq, yq, OpenSSL and GNU timeout. The hosted job installs the checksum-verified KSail build.
+Helm, jq, yq, OpenSSL, Cosign and GNU timeout. The hosted job installs the checksum-verified KSail build.
 It checks the CPU features required by Percona's UBI10 images and installs checksum-pinned
 operator/CRD charts with immutable operator, database and Kubernetes image digests. It records
 the actual installed image identities, source UID, Kubernetes version, storage policy and elapsed
