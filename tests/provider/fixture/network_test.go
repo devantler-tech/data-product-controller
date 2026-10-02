@@ -39,7 +39,9 @@ func TestNetworkDenialRejectsHTTPResponseTimeout(t *testing.T) {
 		<-request.Context().Done()
 	}))
 	t.Cleanup(server.Close)
-	client := &http.Client{Timeout: 20 * time.Millisecond}
+	transport := probeTransport(nil)
+	t.Cleanup(transport.CloseIdleConnections)
+	client := &http.Client{Transport: transport, Timeout: 20 * time.Millisecond}
 	response, err := client.Get(server.URL)
 	if response != nil {
 		_ = response.Body.Close()

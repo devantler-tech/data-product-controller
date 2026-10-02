@@ -149,7 +149,7 @@ func probe() error {
 	if err != nil {
 		return err
 	}
-	transport := &http.Transport{TLSClientConfig: config, Proxy: nil}
+	transport := probeTransport(config)
 	defer transport.CloseIdleConnections()
 	client := &http.Client{
 		Transport:     transport,
