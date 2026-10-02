@@ -203,6 +203,8 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 		member.ImageID != image.ImageID ||
 		string(member.ArangoVersion) != "3.12.12" ||
 		!arangoConditions(member.Conditions, arangov1.ConditionTypeReady) ||
+		member.Conditions.IsTrue(arangov1.ConditionTypeUpdateFailed) ||
+		member.Conditions.IsTrue(arangov1.ConditionTypeUpgradeFailed) ||
 		member.Conditions.IsTrue(arangov1.ConditionTypePendingUpdate) ||
 		member.Conditions.IsTrue(arangov1.ConditionTypeUpdating) ||
 		member.Conditions.IsTrue(arangov1.ConditionTypeRestart) ||

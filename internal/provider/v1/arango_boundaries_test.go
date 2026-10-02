@@ -56,8 +56,10 @@ func TestArangoBoundaries(t *testing.T) {
 		{name: "secret changes", reason: "SourceFailed", mutate: arangoCondition("SecretsChanged", "True")},
 		{name: "update in progress", reason: "SourceNotReady", mutate: arangoCondition("UpdateInProgress", "True")},
 		{name: "upgrade in progress", reason: "SourceNotReady", mutate: arangoCondition("UpgradeInProgress", "True")},
-		{name: "pending member update", reason: "SourceNotReady", mutate: arangoMemberCondition("PendingUpdate", "True")},
-		{name: "member updating", reason: "SourceNotReady", mutate: arangoMemberCondition("Updating", "True")},
+		{name: "pending member update", reason: "SourceNotReady", mutate: arangoMemberCondition("PendingUpdate")},
+		{name: "member updating", reason: "SourceNotReady", mutate: arangoMemberCondition("Updating")},
+		{name: "member update failed despite Ready", reason: "SourceNotReady", mutate: arangoMemberCondition("UpdateFailed")},
+		{name: "member upgrade failed despite Ready", reason: "SourceNotReady", mutate: arangoMemberCondition("UpgradeFailed")},
 		{name: "stale pod image", reason: "SourceNotReady", mutate: arangoMemberField("sha256:old-image", "image-id")},
 		{name: "stale pod version", reason: "SourceNotReady", mutate: arangoMemberField("3.11.0", "arango-version")},
 		{name: "nonroot bootstrap mapping", reason: "SourceInvalid", mutate: arangoField("other-secret", "status", "accepted-spec", "bootstrap", "passwordSecretNames", "catalog-reader")},
@@ -252,12 +254,12 @@ func arangoMemberField(
 
 // arangoMemberCondition combines Ready with a competing member state to test readiness withdrawal.
 func arangoMemberCondition(
-	kind, status string,
+	kind string,
 ) func(*unstructured.Unstructured, *metav1.PartialObjectMetadata) {
 	return arangoMemberField(
 		[]any{
 			map[string]any{"type": "Ready", "status": "True"},
-			map[string]any{"type": kind, "status": status},
+			map[string]any{"type": kind, "status": "True"},
 		},
 		"conditions",
 	)
