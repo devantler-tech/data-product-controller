@@ -12,14 +12,15 @@ have a bounded observation contract and a dedicated application credential publi
 
 `engine-provider/v1` Document/native selects `percona-mongodb/v1` and a same-namespace
 `psmdb.percona.com/v1` `PerconaServerMongoDB`. Its declared `spec.crVersion` is `1.23.0`.
-The initial profile supports one managed, unsharded replica set without arbiters, external or non-voting
-members. Readiness requires `status.state=ready` and both reported counts equal the positive
+The initial profile supports one managed, unsharded replica set without arbiters, external, hidden
+or non-voting members. Readiness requires `status.state=ready` and both reported counts equal the positive
 requested replica count. An explicit observed generation must be current; its absence cannot
 prove status freshness.
 
 The product references a password Secret explicitly bound to exactly one custom application
 user. Every declared role must be built-in `read` on a non-system database. System accounts,
-generated passwords and shared user bindings are outside this profile. An independent publisher
+operator-managed passwords and connection-string Secrets, generated passwords and shared user bindings
+are outside this profile. An independent publisher
 must give the Secret an owner reference matching the current source's API, name and UID.
 Percona's documentation does not establish that it adds this owner reference automatically.
 

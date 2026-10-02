@@ -21,6 +21,7 @@ func TestPerconaObservation(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name, reason           string
+		publication            string
 		mutate                 func(*unstructured.Unstructured, *metav1.PartialObjectMetadata)
 		sourceCode, secretCode int
 	}{
@@ -73,6 +74,18 @@ func TestPerconaObservation(t *testing.T) {
 		{name: "external authentication", reason: "ConnectionPublicationUnsupported", mutate: perconaUserField("$external", "db")},
 		{name: "system account", reason: "ConnectionPublicationUnsupported", mutate: perconaUserField("databaseAdmin", "name")},
 		{name: "configured system password", reason: "ConnectionPublicationUnsupported", mutate: perconaField("documents-reader", "spec", "secrets", "users")},
+		{name: "internal system password", reason: "ConnectionPublicationUnsupported", publication: "internal-documents-users"},
+		{name: "administrator connection string", reason: "ConnectionPublicationUnsupported", publication: "documents-databaseadmin-conn-str"},
+		{name: "generated application password binding", reason: "ConnectionPublicationUnsupported", publication: "documents-custom-user-secret"},
+		{name: "generated application connection string", reason: "ConnectionPublicationUnsupported", publication: "documents-custom-user-secret-conn-str"},
+		{name: "another user connection string", reason: "ConnectionPublicationUnsupported", publication: "documents-reader-conn-str", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			users, _, _ := unstructured.NestedSlice(c.Object, "spec", "users")
+			other := map[string]any{"name": "catalog-writer", "db": "admin", "passwordSecretRef": map[string]any{"name": "documents-reader"}, "roles": []any{map[string]any{"name": "readWrite", "db": "catalog"}}}
+			_ = unstructured.SetNestedSlice(c.Object, append(users, other), "spec", "users")
+		}},
+		{name: "manual password with connection-like suffix", reason: "SourceReady", publication: "documents-reader-conn-str"},
+		{name: "application name near internal publication", reason: "SourceReady", publication: "internal-documents-reader"},
+		{name: "application name near admin publication", reason: "SourceReady", publication: "documents-databaseadmin-conn-str-reader"},
 		{name: "ambiguous user binding", reason: "ConnectionPublicationUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			users, _, _ := unstructured.NestedSlice(c.Object, "spec", "users")
 			_ = unstructured.SetNestedSlice(c.Object, append(users, users[0]), "spec", "users")
@@ -113,6 +126,12 @@ func TestPerconaObservation(t *testing.T) {
 			if tc.mutate != nil {
 				tc.mutate(cluster, secret)
 			}
+			source := perconaSource()
+			if tc.publication != "" {
+				source.ConnectionSecretRef.Name = tc.publication
+				secret.SetName(tc.publication)
+				perconaUserField(tc.publication, "passwordSecretRef", "name")(cluster, secret)
+			}
 			var mu sync.Mutex
 			var paths []string
 			server := httptest.NewServer(
@@ -132,7 +151,7 @@ func TestPerconaObservation(t *testing.T) {
 					case "/apis/psmdb.percona.com/v1/namespaces/products/perconaservermongodbs/documents":
 						value = cluster
 						code = tc.sourceCode
-					case "/api/v1/namespaces/products/secrets/documents-reader":
+					case "/api/v1/namespaces/products/secrets/" + secret.GetName():
 						if !strings.Contains(r.Header.Get("Accept"), "as=PartialObjectMetadata") {
 							t.Error("Secret values requested")
 							w.WriteHeader(406)
@@ -167,7 +186,7 @@ func TestPerconaObservation(t *testing.T) {
 				t.Fatal(err)
 			}
 			for range 2 {
-				got := (&Registry{Reader: reader}).Observe(t.Context(), "products", perconaSource())
+				got := (&Registry{Reader: reader}).Observe(t.Context(), "products", source)
 				encoded, err := json.Marshal(got)
 				if err != nil {
 					t.Fatal(err)

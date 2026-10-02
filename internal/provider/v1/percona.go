@@ -196,7 +196,7 @@ func perconaFalse(object map[string]any, fields ...string) bool {
 func perconaInvalid() provisionerv1.Observation {
 	return unavailable(
 		"SourceInvalid",
-		"Use one managed, unsharded replica set with positive size and no arbiter, non-voting or external members.",
+		"Use one managed, unsharded replica set with positive size and no arbiter, non-voting, hidden or external members.",
 	)
 }
 
@@ -211,6 +211,13 @@ func perconaNotReady() provisionerv1.Observation {
 func perconaApplicationPassword(cluster *unstructured.Unstructured, secretName string) bool {
 	systemSecret, _, err := unstructured.NestedString(cluster.Object, "spec", "secrets", "users")
 	if err != nil || secretName == systemSecret || secretName == perconaSystemPublication {
+		return false
+	}
+	clusterName := cluster.GetName()
+	if secretName == "internal-"+clusterName+"-users" ||
+		secretName == clusterName+"-databaseadmin-conn-str" ||
+		secretName == clusterName+"-custom-user-secret" ||
+		secretName == clusterName+"-custom-user-secret-conn-str" {
 		return false
 	}
 	users, found, err := unstructured.NestedSlice(cluster.Object, "spec", "users")
@@ -234,6 +241,10 @@ func perconaApplicationPassword(cluster *unstructured.Unstructured, secretName s
 		names[name] = struct{}{}
 		password, _, err := unstructured.NestedString(user, "passwordSecretRef", "name")
 		if err != nil {
+			return false
+		}
+		// A password cannot reuse any user's operator-managed connection-string publication.
+		if password != "" && secretName == password+"-conn-str" {
 			return false
 		}
 		if password != secretName {
