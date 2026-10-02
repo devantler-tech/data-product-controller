@@ -26,6 +26,10 @@ remaining() {
 bounded() {
 	local left
 	left=$(remaining) || return 1
+	if [[ $# == 0 || $(type -t "$1") != file ]]; then
+		echo 'bounded requires an external executable' >&2
+		return 1
+	fi
 	timeout --signal=TERM --kill-after=5s "${left}s" "$@"
 }
 

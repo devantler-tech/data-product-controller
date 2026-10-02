@@ -86,11 +86,20 @@ forward_registry() {
 	registry_forward_pid=$!
 	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready
 }
+capture_controller_logs() {
+	# Selector-based logs otherwise default to only ten lines. Collect every
+	# current replica before replacement; failed collection is incomplete evidence.
+	kube logs -l app.kubernetes.io/instance=dpc --all-containers=true --prefix=true --tail=-1 >>"$test_dir/controller.log"
+}
 install_controller() {
+	if [[ ${controller_installed:-false} == true ]]; then
+		capture_controller_logs
+	fi
 	helm template dpc "$repo_root/charts/data-product-controller" --include-crds --namespace products \
 		--set "image.repository=$1" --set "image.tag=$2" --set "image.digest=$3" --set image.pullPolicy=Never \
 		--set demoProduct.enabled=false --set provisionedSources.enabled=true --set engineProviders.enabled=true | kube apply -f - >/dev/null
 	bounded kubectl --request-timeout=0 -n products rollout status deployment/dpc --timeout="$(remaining)s"
+	controller_installed=true
 	forward_registry
 }
 database_ready() {
@@ -182,14 +191,19 @@ export DPC_TEST_AUDIT_DIR="$test_dir/audit"
 yq -i '.nodes = [.nodes[0]] |
   .nodes[].image = "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a" |
   .nodes[0].extraMounts += [{"hostPath":strenv(DPC_TEST_AUDIT_DIR),"containerPath":"/audit"}] |
-  .nodes[0].kubeadmConfigPatches += ["kind: ClusterConfiguration\napiServer:\n  extraArgs:\n    audit-policy-file: /audit/policy.yaml\n    audit-log-path: /audit/log.json\n  extraVolumes:\n    - name: audit\n      hostPath: /audit\n      mountPath: /audit\n      readOnly: false\n      pathType: Directory"]' "$test_dir/cluster/kind.yaml"
+  .nodes[0].kubeadmConfigPatches += ["apiVersion: kubeadm.k8s.io/v1beta4\nkind: ClusterConfiguration\napiServer:\n  extraArgs:\n    - name: audit-policy-file\n      value: /audit/policy.yaml\n    - name: audit-log-path\n      value: /audit/log.json\n  extraVolumes:\n    - name: audit\n      hostPath: /audit\n      mountPath: /audit\n      readOnly: false\n      pathType: Directory"]' "$test_dir/cluster/kind.yaml"
 cluster_started=true
-bounded ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml"
+# Zero CLI node-count overrides preserve Kind's declared image, mounts and
+# kubeadm patches instead of replacing the nodes with KSail's default profile.
+bounded ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml" --control-planes 0 --workers 0
 control_node=$(docker ps --filter "label=io.x-k8s.kind.cluster=$cluster_name" --filter label=io.x-k8s.kind.role=control-plane --format '{{.Names}}')
 [[ -n $control_node && $control_node != *$'\n'* ]] || {
 	echo 'expected one owned control-plane node' >&2
 	exit 1
 }
+[[ $(docker inspect "$control_node" --format '{{.Config.Image}}') == kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a ]]
+kubectl --request-timeout=15s version -o json | jq -e '.serverVersion.gitVersion == "v1.34.0"' >/dev/null
+echo 'PASS: running node image and Kubernetes API match the pinned 1.34.0 profile'
 kubectl --request-timeout=15s create namespace products >/dev/null
 # Only this run's Kind node resolves the disposable registry through its Docker network.
 registry_dir=/etc/containerd/certs.d/localhost:5055
@@ -311,10 +325,10 @@ yq 'with(select(.kind == "Deployment"); .spec.template.spec.containers[0].image=
 	"$repo_root/tests/provider/workloads.yaml" | kube apply -f - >/dev/null
 bounded kubectl --request-timeout=0 -n products rollout status deployment/document-query --timeout="$(remaining)s"
 bounded kubectl --request-timeout=0 -n products wait pod/document-writer pod/document-consumer --for=condition=Ready --timeout="$(remaining)s"
-bounded kube exec document-writer -- /fixture seed
+bounded kubectl --request-timeout=0 -n products exec document-writer -- /fixture seed
 wait_for 'reader returns the seeded record through verified HTTPS' query
 query contract
-bounded kube exec deployment/document-query -- /fixture privileges
+bounded kubectl --request-timeout=0 -n products exec deployment/document-query -- /fixture privileges
 echo 'PASS: real reader cannot insert, update, delete or manage privileges'
 # The same consumer must lose and regain query access when its policy identity changes.
 kube label pod document-consumer app=unapproved --overwrite >/dev/null
@@ -376,18 +390,20 @@ bind_publication "$new_uid"
 wait_for 'new publication UID restores readiness' product_ready True SourceReady
 wait_for 'recreated source still returns the same retained record' query
 after_recreation=$(retained_identities)
-[[ $(jq -c 'map(select(.kind != "PerconaServerMongoDB"))' <<<"$before_recreation") == $(jq -c 'map(select(.kind != "PerconaServerMongoDB"))' <<<"$after_recreation") ]]
+[[ "$(jq -c 'map(select(.kind != "PerconaServerMongoDB"))' <<<"$before_recreation")" == "$(jq -c 'map(select(.kind != "PerconaServerMongoDB"))' <<<"$after_recreation")" ]]
 
 phase 'disabled gates and independent retention' 240
 for gate in PROVISIONED_SOURCES_ENABLED ENGINE_PROVIDERS_ENABLED; do
 	reason=SourceFeatureDisabled
 	[[ $gate != ENGINE_PROVIDERS_ENABLED ]] || reason=EngineProviderFeatureDisabled
+	capture_controller_logs
 	kube set env deployment/dpc "$gate=false" >/dev/null
 	bounded kubectl --request-timeout=0 -n products rollout status deployment/dpc --timeout="$(remaining)s"
 	forward_registry
 	wait_for 'disabled gate appears in current conditions and registry' product_ready False "$reason"
 	disabled_without_reads "$reason"
 	query
+	capture_controller_logs
 	kube set env deployment/dpc "$gate=true" >/dev/null
 	bounded kubectl --request-timeout=0 -n products rollout status deployment/dpc --timeout="$(remaining)s"
 	forward_registry
@@ -401,7 +417,7 @@ wait_for 'deleting only the descriptor retains queryable independent data' query
 echo 'PASS: source, publication and PVC identities survive DataProduct deletion'
 
 # Fixed synthetic values must not enter either control-plane projection or controller logs.
-kube logs deployment/dpc >"$test_dir/controller.log"
+capture_controller_logs
 for marker in synthetic-reader-original synthetic-reader-replacement synthetic-writer-password persistent-document; do
 	if grep -Fq "$marker" "$test_dir/controller.log" "$test_dir/products-seen.jsonl" "$test_dir/registry-seen.jsonl"; then
 		echo 'control-plane output contains data-plane fixture content' >&2
