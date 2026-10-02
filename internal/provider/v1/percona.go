@@ -188,11 +188,13 @@ func perconaReadiness(cluster *unstructured.Unstructured) provisionerv1.Observat
 	return provisionerv1.Observation{Ready: true}
 }
 
+// perconaFalse accepts omitted or disabled options and rejects malformed declarations.
 func perconaFalse(object map[string]any, fields ...string) bool {
 	value, _, err := unstructured.NestedBool(object, fields...)
 	return err == nil && !value
 }
 
+// perconaInvalid reports the supported topology without exposing provider-specific details.
 func perconaInvalid() provisionerv1.Observation {
 	return unavailable(
 		"SourceInvalid",
@@ -200,6 +202,7 @@ func perconaInvalid() provisionerv1.Observation {
 	)
 }
 
+// perconaNotReady keeps transient operator state separate from invalid source declarations.
 func perconaNotReady() provisionerv1.Observation {
 	return unavailable(
 		"SourceNotReady",
@@ -258,6 +261,7 @@ func perconaApplicationPassword(cluster *unstructured.Unstructured, secretName s
 	return matches == 1
 }
 
+// perconaReadOnlyUser admits only explicit built-in read roles on application databases.
 func perconaReadOnlyUser(user map[string]any) bool {
 	name, _, err := unstructured.NestedString(user, "name")
 	if err != nil || name == "" {

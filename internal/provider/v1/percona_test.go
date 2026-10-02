@@ -293,6 +293,7 @@ func TestPerconaDeadlineSharesBothReads(t *testing.T) {
 	}
 }
 
+// perconaSource supplies the valid selection that individual regressions mutate.
 func perconaSource() datav1alpha1.ProvisionedSource {
 	return datav1alpha1.ProvisionedSource{
 		Adapter: "percona-mongodb/v1",
@@ -339,6 +340,7 @@ func perconaFixture(t *testing.T) (*unstructured.Unstructured, *metav1.PartialOb
 	return cluster, secret
 }
 
+// perconaField changes one source field while preserving the rest of the valid profile.
 func perconaField(
 	value any,
 	fields ...string,
@@ -348,6 +350,7 @@ func perconaField(
 	}
 }
 
+// perconaReplicaField isolates malformed or unsupported replica-set declarations.
 func perconaReplicaField(
 	value any,
 	fields ...string,
@@ -363,6 +366,7 @@ func perconaReplicaField(
 	}
 }
 
+// perconaUserField isolates password-binding, authentication and role regressions.
 func perconaUserField(
 	value any,
 	fields ...string,

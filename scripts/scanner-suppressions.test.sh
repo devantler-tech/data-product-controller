@@ -89,6 +89,7 @@ expected_trivy_allowlist=$(
 
 # RBAC cannot restrict Secret gets to metadata. Every suppressed example must stay namespaced
 # and contain only its two exact-name GET rules; extra or wildcard rules must also fail.
+# check_observer_grants bounds each scanner exception to its approved exact-name GETs.
 check_observer_grants() {
 	observer_rbac="$repo_root/docs/examples/$1-provider-observer-rbac.yaml"
 	expected_grants=$2

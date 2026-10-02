@@ -10,6 +10,7 @@ document_started_at=$SECONDS
 engine_product_file="$test_dir/document-product.json"
 document_source_file="$test_dir/document-source.yaml"
 
+# document_ready checks current product conditions and the actual registry projection together.
 document_ready() {
 	local status=$1 reason=$2
 	kube get dataproduct document-product -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -20,6 +21,7 @@ document_ready() {
 		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
 }
 
+# document_publish creates synthetic fixture credentials and independently binds source ownership.
 document_publish() {
 	jq -n --arg uid "$1" '{apiVersion:"v1",kind:"Secret",
     metadata:{name:"documents-reader",namespace:"products",ownerReferences:[
@@ -27,11 +29,13 @@ document_publish() {
     stringData:{password:"synthetic-document-password"}}' | kube apply -f - >/dev/null
 }
 
+# document_healthy supplies synthetic operator status; no database runs in this fixture.
 document_healthy() {
 	kube patch perconaservermongodb documents --subresource=status --type=merge \
 		-p '{"status":{"state":"ready","size":3,"ready":3}}' >/dev/null
 }
 
+# document_retained records external identities and rejects deletion or product adoption.
 document_retained() {
 	kube get perconaservermongodb/documents secret/documents-reader -o json | jq -ceS --arg product_uid "$1" '
     if (.items | length) == 2 and all(.items[];

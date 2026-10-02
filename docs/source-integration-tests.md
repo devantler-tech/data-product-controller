@@ -23,7 +23,7 @@ deletes the source container, that cluster, and its storage on normal exit or
 handled termination. Allow several gigabytes of free disk space for Kubernetes and image
 builds. CI runs the same command on a disposable hosted runner, verifies the KSail
 download checksum, grants only repository read access, and limits the job to
-30 minutes.
+40 minutes.
 
 The harness does not use KSail's `--ttl`: that mode keeps the create command in the
 foreground until automatic destruction, which would prevent the assertions from
