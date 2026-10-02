@@ -75,7 +75,8 @@ names and namespaces explicit. No list, watch or mutation grant is needed for ex
 The [Document product](examples/document-provider-product.yaml) selects the `percona-mongodb/v1`
 adapter. Install Percona Operator for MongoDB 1.23.0 independently and use `spec.crVersion: 1.23.0`.
 That declaration does not verify the installed operator image. The initial supported profile is
-one managed, unpaused, unsharded replica set, with positive size and no arbiter, non-voting or external members.
+one managed, unpaused, unsharded replica set, with positive size and no arbiter, non-voting, hidden
+or external members.
 `status.state` must be `ready`, and `status.size` and `status.ready` must equal the requested size.
 An explicit `status.observedGeneration` must be current. Percona's published status contract may
 omit it; in that case the observer cannot establish that status reflects the latest spec.

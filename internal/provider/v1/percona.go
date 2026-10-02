@@ -145,7 +145,8 @@ func perconaReadiness(cluster *unstructured.Unstructured) provisionerv1.Observat
 	}
 	replica, ok := replicas[0].(map[string]any)
 	if !ok || !perconaFalse(replica, "arbiter", "enabled") ||
-		!perconaFalse(replica, "nonVoting", "enabled") {
+		!perconaFalse(replica, "nonvoting", "enabled") ||
+		!perconaFalse(replica, "hidden", "enabled") {
 		return perconaInvalid()
 	}
 	external, _, err := unstructured.NestedSlice(replica, "externalNodes")
