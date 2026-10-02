@@ -41,6 +41,11 @@ cleanup() {
 	fi
 	if [[ $cluster_started == true ]]; then
 		if [[ $result != 0 ]]; then
+			# Setup can fail before the product namespace or CRDs exist. Include
+			# network-plugin readiness so a cluster timeout has a concrete cause.
+			kubectl --request-timeout=10s -n kube-system get pods -o wide || true
+			kubectl --request-timeout=10s -n kube-system get events --sort-by=.metadata.creationTimestamp || true
+			kubectl --request-timeout=10s -n kube-system logs -l k8s-app=cilium --all-containers=true --tail=100 || true
 			kubectl --request-timeout=10s -n products get pods,pvc -o wide || true
 			kubectl --request-timeout=10s -n products get perconaservermongodbs -o wide || true
 			kubectl --request-timeout=10s -n products get dataproducts -o wide || true
