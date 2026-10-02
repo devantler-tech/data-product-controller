@@ -76,6 +76,7 @@ expected_trivy_allowlist=$(
 	printf '%s\n' \
 		'DS-0026 Dockerfile' \
 		'KSV-0013 deploy/deployment.yaml' \
+		'KSV-0113 docs/examples/document-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/sql-provider-observer-rbac.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/controller-deployment.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/demo-deployment.yaml' \
@@ -86,12 +87,20 @@ expected_trivy_allowlist=$(
 [ "$actual_trivy_allowlist" = "$expected_trivy_allowlist" ] ||
 	fail 'Trivy suppressions must match the approved artifact allowlist'
 
-# RBAC cannot restrict Secret gets to metadata. This optional example grants one publication only.
-observer_rbac="$repo_root/docs/examples/sql-provider-observer-rbac.yaml"
-secret_rules=$(yq ea -N '[select(.kind == "Role") | .rules[] | select(.resources[] == "secrets")]' "$observer_rbac")
-[ "$(printf '%s' "$secret_rules" | yq 'length')" = '1' ] || fail 'the observer must have one Secret rule'
-secret_grant=$(printf '%s' "$secret_rules" | yq -o=json -I=0 '.[0] | [.apiGroups, .resources, .resourceNames, .verbs]')
-[ "$secret_grant" = '[[""],["secrets"],["warehouse-app"],["get"]]' ] ||
-	fail 'the optional observer grant must stay limited to getting the named application Secret'
+# RBAC cannot restrict Secret gets to metadata. Every suppressed example must stay namespaced
+# and contain only its two exact-name GET rules; extra or wildcard rules must also fail.
+# check_observer_grants bounds each scanner exception to its approved exact-name GETs.
+check_observer_grants() {
+	observer_rbac="$repo_root/docs/examples/$1-provider-observer-rbac.yaml"
+	expected_grants=$2
+	resource_kinds=$(yq ea -N '[.kind] | sort' "$observer_rbac" | yq -o=json -I=0 '.')
+	[ "$resource_kinds" = '["Role","RoleBinding"]' ] || fail 'observer examples must contain only one Role and RoleBinding'
+	namespaces=$(yq ea -N '[.metadata.namespace] | unique' "$observer_rbac" | yq -o=json -I=0 '.')
+	[ "$namespaces" = '["products"]' ] || fail 'observer grants must stay in the product namespace'
+	grants=$(yq ea -N -o=json -I=0 'select(.kind == "Role") | [.rules[] | [.apiGroups, .resources, .resourceNames, .verbs]]' "$observer_rbac")
+	[ "$grants" = "$expected_grants" ] || fail 'observer grants must stay limited to getting their named source and application Secret'
+}
+check_observer_grants sql '[[["postgresql.cnpg.io"],["clusters"],["warehouse"],["get"]],[[""],["secrets"],["warehouse-app"],["get"]]]'
+check_observer_grants document '[[["psmdb.percona.com"],["perconaservermongodbs"],["documents"],["get"]],[[""],["secrets"],["documents-reader"],["get"]]]'
 
 printf '%s\n' 'scanner suppression tests passed'

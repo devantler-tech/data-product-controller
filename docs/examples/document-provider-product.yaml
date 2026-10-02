@@ -1,0 +1,29 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: document-product
+  namespace: products
+spec:
+  id: urn:example:documents
+  name: Document catalog
+  description: Read-only catalog queries backed by an independently operated MongoDB replica set.
+  version: v1.0.0
+  owner:
+    name: catalog-team
+  source:
+    adapter: percona-mongodb/v1
+    engine:
+      apiVersion: engine-provider/v1
+      type: document
+      provider: native
+    resourceRef:
+      apiVersion: psmdb.percona.com/v1
+      kind: PerconaServerMongoDB
+      name: documents
+    connectionSecretRef:
+      name: documents-reader
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://catalog.example.com/query
+      contractUrl: https://catalog.example.com/openapi.json

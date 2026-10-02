@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: documents-observer
+  namespace: products
+rules:
+  - apiGroups: [psmdb.percona.com]
+    resources: [perconaservermongodbs]
+    resourceNames: [documents]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [documents-reader]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: documents-observer
+  namespace: products
+subjects:
+  - kind: ServiceAccount
+    name: data-product-controller
+    namespace: data-product-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: documents-observer

@@ -11,7 +11,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `api/v1alpha1/` — versioned Kubernetes API types and generated deep-copy code.
 - `internal/controller/` — dependency-aware `DataProduct` reconciliation.
 - `internal/provisioner/v1/` — versioned, read-only provisioner observation contract.
-- `internal/provider/v1/` — versioned engine dispatch and read-only CloudNativePG observation.
+- `internal/provider/v1/` — versioned engine dispatch and read-only CloudNativePG and Percona MongoDB observation.
 - `internal/connector/v1/` — versioned Deployment observation with bounded, uncached, exact-name reads.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
@@ -27,7 +27,8 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `docs/adr/` — architectural decisions.
 - `main.go` — controller manager and registry process.
 
-`CLAUDE.md` and `GEMINI.md` are one-line `@AGENTS.md` shims. Do not copy instructions into them.
+`CLAUDE.md` and `GEMINI.md` each contain a Markdown heading and a single `@AGENTS.md` include.
+Do not copy instructions into them.
 
 ## Architecture boundaries
 
@@ -43,7 +44,11 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - Engine selection uses `engine-provider/v1` and the default-off `engine-providers` gate alongside
   `provisioned-sources`. Keep admission and runtime dispatch aligned. SQL/native uses `cnpg/v1` with
   a same-namespace Cluster and its generated application Secret owned by the current UID; custom
-  bootstrap credentials and unsupported engine combinations are rejected. Preserve exact-name
+  bootstrap credentials and unsupported engine combinations are rejected. Document/native uses
+  `percona-mongodb/v1`, the declared Percona 1.23.0 single managed unsharded replica-set profile,
+  and an explicitly referenced custom-user password Secret with only declared read roles and current
+  source ownership. The password publisher is independent; never assume automatic operator ownership.
+  Preserve exact-name
   uncached reads, metadata-only Secret negotiation, the five-second observation bound, 30-second
   polling and independent `SourceReady`. See `docs/engine-providers.md`.
 - The HTTP source connector is a separate data-plane workload. It reads its own projected Secret, exposes only a fixed GET export, and never gives the controller source credentials or data. Preserve TLS verification, redirect/proxy rejection, bounded reads, and the explicit consumer/egress policy. It does not register products or report Kubernetes conditions; see `docs/http-source.md`.

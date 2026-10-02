@@ -39,13 +39,25 @@ func NewEngineReader(config *rest.Config) (client.Reader, error) {
 		return nil, fmt.Errorf("engine provider Kubernetes configuration is required")
 	}
 	mapper := meta.NewDefaultRESTMapper(
-		[]schema.GroupVersion{{Group: "postgresql.cnpg.io", Version: "v1"}, {Version: "v1"}},
+		[]schema.GroupVersion{
+			{Group: "postgresql.cnpg.io", Version: "v1"},
+			{Group: "psmdb.percona.com", Version: "v1"},
+			{Version: "v1"},
+		},
 	)
 	mapper.Add(
 		schema.GroupVersionKind{Group: "postgresql.cnpg.io", Version: "v1", Kind: "Cluster"},
 		meta.RESTScopeNamespace,
 	)
 	mapper.Add(schema.GroupVersionKind{Version: "v1", Kind: "Secret"}, meta.RESTScopeNamespace)
+	mapper.Add(
+		schema.GroupVersionKind{
+			Group:   "psmdb.percona.com",
+			Version: "v1",
+			Kind:    "PerconaServerMongoDB",
+		},
+		meta.RESTScopeNamespace,
+	)
 	bounded := rest.CopyConfig(config)
 	bounded.Timeout = 5 * time.Second
 	reader, err := client.New(bounded, client.Options{Scheme: runtime.NewScheme(), Mapper: mapper})
@@ -76,6 +88,12 @@ func (r *Registry) Observe(
 		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		selected = &CloudNativePG{Reader: r.Reader}
+	case source.Engine != nil && source.Engine.APIVersion == "engine-provider/v1" &&
+		source.Engine.Type == "document" && source.Engine.Provider == "native" && source.Adapter == "percona-mongodb/v1":
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		selected = &PerconaMongoDB{Reader: r.Reader}
 	default:
 		return unavailable(
 			"EngineProviderUnsupported",
