@@ -132,7 +132,9 @@ The engine modules exercise SQL/native and Document/native admission and observa
 external CRDs. Document acceptance uses the documented Percona 1.23.0 fields, exact-name RBAC,
 both default-off gates, missing source/publication, replica loss/recovery, privileged-user rejection,
 permission revocation, source recreation, independent password rebinding/rotation and retention
-after product deletion. Each engine module has a shared eight-minute deadline. These tests run the
+after product deletion. Each engine module has a shared eight-minute deadline. The hosted job has a
+40-minute ceiling: the preceding source, composition, catalog and SQL checks take about 24 minutes,
+and the Document module retains its independent eight-minute budget. These tests run the
 real controller and Kubernetes API; they do not install CloudNativePG or Percona, run databases,
 verify actual credentials or prove operator-owned lifecycle. That acceptance remains in
 [#38](https://github.com/devantler-tech/data-product-controller/issues/38); engine gate rollout and

@@ -15,10 +15,10 @@ Apply the release's CRD before upgrading an existing chart installation, as desc
 `spec.source.engine` uses the `engine-provider/v1` contract. Admission binds each supported selection
 to one adapter and resource API. The runtime resolver repeats that check before any reads.
 
-| Selection        | Adapter         | Referenced resource               | Connection publication                                                      |
-|------------------|-----------------|-----------------------------------|-----------------------------------------------------------------------------|
-| Engine omitted   | `crossplane/v1` | Namespaced custom resource        | Matching `writeConnectionSecretToRef`, owned by that resource               |
-| `sql` / `native` | `cnpg/v1`       | `postgresql.cnpg.io/v1` `Cluster` | Operator-generated `<cluster>-app` Secret, owned by the current Cluster UID |
+| Selection             | Adapter              | Referenced resource                           | Connection publication                                                      |
+|-----------------------|----------------------|-----------------------------------------------|-----------------------------------------------------------------------------|
+| Engine omitted        | `crossplane/v1`      | Namespaced custom resource                    | Matching `writeConnectionSecretToRef`, owned by that resource               |
+| `sql` / `native`      | `cnpg/v1`            | `postgresql.cnpg.io/v1` `Cluster`             | Operator-generated `<cluster>-app` Secret, owned by the current Cluster UID |
 | `document` / `native` | `percona-mongodb/v1` | `psmdb.percona.com/v1` `PerconaServerMongoDB` | Explicit custom-user password Secret, published with the current source UID |
 
 Graph and `cnpg-hybrid` selections are rejected until their adapters and admission rules are delivered.
