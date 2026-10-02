@@ -74,3 +74,16 @@ registry_forward_ready() {
 	done <"$test_dir/forward.log"
 	return 1
 }
+
+# Start the independently selected current registry pod's owned forwarding process.
+start_registry_forward() {
+	registry_port=''
+	# Clear stale evidence in the parent before the asynchronous process can run.
+	: >"$test_dir/forward.log"
+	kubectl --request-timeout=0 -n products port-forward --address=127.0.0.1 "pod/$registry_pod" ":$registry_target_port" >>"$test_dir/forward.log" 2>&1 &
+	registry_forward_pid=$!
+	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready || {
+		cat "$test_dir/forward.log" >&2
+		return 1
+	}
+}

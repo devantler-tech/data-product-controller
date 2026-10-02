@@ -46,3 +46,39 @@ func TestRegistryForwardUsesResolvedPodPort(t *testing.T) {
 		})
 	}
 }
+
+// TestRegistryForwardDiscardsPreviousListener forces asynchronous startup to overlap a stale listener log.
+func TestRegistryForwardDiscardsPreviousListener(t *testing.T) {
+	helper, err := filepath.Abs("../budget.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err = os.WriteFile(filepath.Join(dir, "forward.log"), []byte("Forwarding from 127.0.0.1:43127 -> 8082\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	stub := `#!/usr/bin/env bash
+set -euo pipefail
+sleep 0.15
+printf '%s\n' 'Forwarding from 127.0.0.1:45209 -> 8082'
+sleep 10
+`
+	if err = os.WriteFile(filepath.Join(dir, "kubectl"), []byte(stub), 0700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "bash", "-c", `set -euo pipefail
+test_dir=$1; started_at=$SECONDS; work_deadline=$((SECONDS+4)); phase_deadline=$work_deadline
+PATH="$test_dir:$PATH"; export PATH
+source "$2"
+trap 'kill "$registry_forward_pid" 2>/dev/null || true; wait "$registry_forward_pid" 2>/dev/null || true' EXIT
+registry_pod=current-pod; registry_target_port=8082
+start_registry_forward
+test "$registry_port" = 45209
+`, "forward-race-test", dir, helper)
+	output, err := command.CombinedOutput()
+	if err != nil || ctx.Err() != nil {
+		t.Fatalf("fresh registry listener was not selected: %v: %s", err, output)
+	}
+}

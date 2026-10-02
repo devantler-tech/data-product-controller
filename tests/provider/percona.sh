@@ -79,12 +79,7 @@ forward_registry() {
 	fi
 	registry_port=''
 	wait_for 'current controller revision has one Ready registry pod' registry_target_ready
-	kubectl --request-timeout=0 -n products port-forward --address=127.0.0.1 "pod/$registry_pod" ":$registry_target_port" >"$test_dir/forward.log" 2>&1 &
-	registry_forward_pid=$!
-	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready || {
-		cat "$test_dir/forward.log" >&2
-		return 1
-	}
+	start_registry_forward
 }
 capture_controller_logs() {
 	# Selector-based logs otherwise default to only ten lines. Collect every
@@ -120,7 +115,7 @@ product_ready() {
 	fi
 	# Registry readback uses a runner port-forward; it never receives database credentials.
 	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
-	curl --fail --silent --max-time 5 "http://127.0.0.1:$registry_port/api/v1/products" >"$test_dir/registry.json" || return 1
+	curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:$registry_port/api/v1/products" >"$test_dir/registry.json" || return 1
 	cat "$test_dir/registry.json" >>"$test_dir/registry-seen.jsonl"
 	jq -e --argjson ready "$(if [[ $status == True ]]; then echo true; else echo false; fi)" \
 		'.products | length == 1 and .[0].id == "urn:example:documents" and .[0].ready == $ready' "$test_dir/registry.json" >/dev/null
