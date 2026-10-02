@@ -106,10 +106,11 @@ This fragment shows the observation fields, not a complete database installation
 publisher must bind `documents-reader` to the current `PerconaServerMongoDB` through an owner
 reference with API `psmdb.percona.com/v1`, kind, name and UID. This is a controller publication
 requirement; Percona documentation does not promise that ownership automatically. Do not modify
-operator-managed system or connection-string Secrets to satisfy it. The configured `spec.secrets.users`,
-default and internal system Secrets, operator-generated passwords and connection-string Secrets,
-system accounts, duplicate usernames, multiple users sharing the password Secret, custom roles
-and privileged roles report `ConnectionPublicationUnsupported`. Reserved publication names follow
+operator-managed system or connection-string Secrets to satisfy it. Admission rejects the default
+system Secret. Initial runtime validation also rejects it as `SourceInvalid`, before any reads.
+The configured `spec.secrets.users`, internal system Secrets, operator-generated passwords,
+connection-string Secrets, system accounts, duplicate usernames, multiple users sharing the password
+Secret, custom roles and privileged roles report `ConnectionPublicationUnsupported`. Reserved publication names follow
 Percona's [connection-Secret naming contract](https://docs.percona.com/percona-operator-for-mongodb/1.23.0/connection-secrets.html#secret-names);
 a manual password binding cannot reuse another declared user's generated connection-Secret name.
 
