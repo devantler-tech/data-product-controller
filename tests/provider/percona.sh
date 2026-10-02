@@ -202,8 +202,12 @@ bounded docker pull "$released_image"
 [[ $(docker image inspect "$released_image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == a199b4c2e8ac4dde2f34c0a8faeeae6940a592d8 ]]
 # Import only this run's built images into its own node; no release credentials or public push.
 bounded docker save "dpc-percona:$cluster_name" "provider-fixture:$cluster_name" >"$test_dir/images.tar"
-bounded docker cp "$test_dir/images.tar" "$control_node:/tmp/provider-images.tar"
-bounded docker exec "$control_node" ctr --namespace k8s.io images import /tmp/provider-images.tar
+# Kind's containerd may have a private /tmp mount. Stream the archive into the
+# runtime's stdin instead of assuming a copied node path exists in that namespace.
+bounded docker exec -i "$control_node" ctr --namespace k8s.io images import - <"$test_dir/images.tar"
+for image in "dpc-percona:$cluster_name" "provider-fixture:$cluster_name"; do
+	bounded docker exec "$control_node" crictl inspecti "$image" >/dev/null
+done
 bounded docker exec "$control_node" crictl pull "$released_image"
 controller_image="dpc-percona:$cluster_name"
 fixture_image="provider-fixture:$cluster_name"
