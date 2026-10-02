@@ -43,7 +43,7 @@ func connect(passwordPath string) (*mongo.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	certificate, err := tls.LoadX509KeyPair("/database-tls/tls.crt", "/database-tls/tls.key")
+	certificate, err := tls.LoadX509KeyPair("/database-client-tls/tls.crt", "/database-client-tls/tls.key")
 	if err != nil {
 		return nil, errors.New("client certificate unavailable")
 	}

@@ -228,7 +228,7 @@ docker image inspect "$controller_image" "$fixture_image" --format '{{.Id}}'
 # Integrity-checked packages install their real CRDs; no fabricated status is written.
 for chart in psmdb-operator psmdb-operator-crds; do
 	bounded curl --fail --location --retry 3 --max-time 120 --output "$test_dir/$chart.tgz" \
-		"https://percona.github.io/percona-helm-charts/$chart-1.23.0.tgz"
+		"https://github.com/percona/percona-helm-charts/releases/download/$chart-1.23.0/$chart-1.23.0.tgz"
 done
 printf '%s  %s\n' \
 	1b3c74e100e80a17d7333bada040116c8dfca9c7340548c3f3d6925d7574b81e "$test_dir/psmdb-operator.tgz" \
@@ -244,8 +244,8 @@ mkdir "$test_dir/tls"
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -sha256 -subj /CN=disposable-provider-ca \
 	-keyout "$test_dir/tls/ca.key" -out "$test_dir/tls/ca.crt" >/dev/null 2>&1
 make_certificate() {
-	local name=$1 san=$2
-	openssl req -newkey rsa:2048 -nodes -subj "/CN=$name/O=disposable-provider" \
+	local name=$1 san=$2 organization=${3:-disposable-provider}
+	openssl req -newkey rsa:2048 -nodes -subj "/CN=$name/O=$organization" \
 		-keyout "$test_dir/tls/$name.key" -out "$test_dir/tls/$name.csr" >/dev/null 2>&1
 	printf 'subjectAltName=%s\nextendedKeyUsage=serverAuth,clientAuth\n' "$san" >"$test_dir/tls/$name.ext"
 	openssl x509 -req -days 1 -sha256 -CA "$test_dir/tls/ca.crt" -CAkey "$test_dir/tls/ca.key" -CAcreateserial \
@@ -253,9 +253,13 @@ make_certificate() {
 }
 make_certificate documents 'DNS:documents-rs0,DNS:documents-rs0.products,DNS:documents-rs0.products.svc,DNS:documents-rs0.products.svc.cluster.local,DNS:*.documents-rs0.products.svc.cluster.local,DNS:localhost'
 make_certificate document-query 'DNS:document-query.products.svc.cluster.local'
-for secret in documents-ssl documents-ssl-internal document-query-tls; do
+make_certificate document-client 'DNS:document-query.products.svc.cluster.local' disposable-application
+for secret in documents-ssl documents-ssl-internal document-query-tls document-client-tls; do
 	certificate=documents
-	[[ $secret != document-query-tls ]] || certificate=document-query
+	case $secret in
+	document-query-tls) certificate=document-query ;;
+	document-client-tls) certificate=document-client ;;
+	esac
 	kube create secret generic "$secret" --from-file=ca.crt="$test_dir/tls/ca.crt" \
 		--from-file=tls.crt="$test_dir/tls/$certificate.crt" --from-file=tls.key="$test_dir/tls/$certificate.key" >/dev/null
 done

@@ -60,6 +60,11 @@ spec:
                 readOnly: true,
               }
             - { name: database-tls, mountPath: /database-tls, readOnly: true }
+            - {
+                name: database-client-tls,
+                mountPath: /database-client-tls,
+                readOnly: true,
+              }
             - { name: query-tls, mountPath: /query-tls, readOnly: true }
       volumes:
         - name: password
@@ -67,7 +72,11 @@ spec:
         - name: stale-password
           secret: { secretName: documents-stale-reader }
         - name: database-tls
-          secret: { secretName: documents-ssl }
+          secret:
+            secretName: documents-ssl
+            items: [{ key: ca.crt, path: ca.crt }]
+        - name: database-client-tls
+          secret: { secretName: document-client-tls }
         - name: query-tls
           secret: { secretName: document-query-tls }
 ---
@@ -119,12 +128,21 @@ spec:
       volumeMounts:
         - { name: password, mountPath: /password, readOnly: true }
         - { name: database-tls, mountPath: /database-tls, readOnly: true }
+        - {
+            name: database-client-tls,
+            mountPath: /database-client-tls,
+            readOnly: true,
+          }
         - { name: query-tls, mountPath: /query-tls, readOnly: true }
   volumes:
     - name: password
       secret: { secretName: documents-writer }
     - name: database-tls
-      secret: { secretName: documents-ssl }
+      secret:
+        secretName: documents-ssl
+        items: [{ key: ca.crt, path: ca.crt }]
+    - name: database-client-tls
+      secret: { secretName: document-client-tls }
     - name: query-tls
       secret: { secretName: document-query-tls }
 ---
