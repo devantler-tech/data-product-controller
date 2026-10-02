@@ -1,0 +1,30 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: graph-product
+  namespace: products
+spec:
+  id: urn:example:lineage
+  name: Product lineage
+  description: Query relationships between products through an independently served AQL interface.
+  owner:
+    name: data-platform
+  version: v1.0.0
+  source:
+    adapter: arangodb/v1
+    engine:
+      apiVersion: engine-provider/v1
+      type: graph
+      provider: native
+    resourceRef:
+      apiVersion: database.arangodb.com/v1
+      kind: ArangoDeployment
+      name: lineage
+    connectionSecretRef:
+      name: lineage-reader
+  outputs:
+    - name: query
+      protocol: OpenAPI
+      url: https://lineage.example.com/query
+      contractUrl: https://lineage.example.com/openapi.json
+      mediaType: application/json

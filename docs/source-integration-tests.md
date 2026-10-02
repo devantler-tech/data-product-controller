@@ -23,7 +23,7 @@ deletes the source container, that cluster, and its storage on normal exit or
 handled termination. Allow several gigabytes of free disk space for Kubernetes and image
 builds. CI runs the same command on a disposable hosted runner, verifies the KSail
 download checksum, grants only repository read access, and limits the job to
-40 minutes.
+50 minutes.
 
 The harness does not use KSail's `--ttl`: that mode keeps the create command in the
 foreground until automatic destruction, which would prevent the assertions from
@@ -128,14 +128,23 @@ The DCAT activation/retirement review is due 2026-10-30. The contract probe
 uses a real TLS endpoint on the private test network; this does not prove production
 public-route reachability. The controller never fetches its data-plane URLs.
 
-The engine modules exercise SQL/native and Document/native admission and observation with synthetic
+The engine modules exercise SQL/native, Document/native and Graph/native admission and observation with synthetic
 external CRDs. Document acceptance uses the documented Percona 1.23.0 fields, exact-name RBAC,
 both default-off gates, missing source/publication, replica loss/recovery, privileged-user rejection,
 permission revocation, source recreation, independent password rebinding/rotation and retention
-after product deletion. Each engine module has a shared eight-minute deadline. The hosted job has a
-40-minute ceiling: the preceding source, composition, catalog and SQL checks take about 24 minutes,
-and the Document module retains its independent eight-minute budget. These tests run the
-real controller and Kubernetes API; they do not install CloudNativePG or Percona, run databases,
+after product deletion. Graph acceptance uses frozen checksums derived from the pinned ArangoDB
+1.4.5 typed API. It checks both default-off gates, real API-server admission, exact-name grants,
+missing source/publication, stale status after a specification change, current-spec recovery,
+permission revocation, source recreation, independent password ownership rebinding/rotation,
+rollback and deletion retention. The versioned publication describes synthetic application
+intent; the test does not authenticate to ArangoDB.
+
+Each engine module has a shared eight-minute deadline. The hosted job has a 50-minute ceiling;
+the source, composition, catalog and SQL checks retain their assertions and the Document and
+Graph modules each retain an independent eight-minute budget. These tests run the
+real controller and Kubernetes API; they do not install CloudNativePG, Percona or ArangoDB, run databases,
 verify actual credentials or prove operator-owned lifecycle. That acceptance remains in
 [#38](https://github.com/devantler-tech/data-product-controller/issues/38); engine gate rollout and
 retirement remain in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).
+Real Graph queries and effective application grants remain in
+[#157](https://github.com/devantler-tech/data-product-controller/issues/157).

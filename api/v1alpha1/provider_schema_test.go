@@ -34,6 +34,25 @@ func TestEngineSchema(t *testing.T) {
 	if !exists {
 		t.Fatal("engine selection is pruned by the installed CRD")
 	}
+	t.Run("Graph adapter is preserved and admitted", func(t *testing.T) {
+		err := validate.AgainstSchema(&source, map[string]any{
+			"adapter": "arangodb/v1",
+			"engine": map[string]any{
+				"apiVersion": "engine-provider/v1",
+				"type":       "graph",
+				"provider":   "native",
+			},
+			"resourceRef": map[string]any{
+				"apiVersion": "database.arangodb.com/v1",
+				"kind":       "ArangoDeployment",
+				"name":       "lineage",
+			},
+			"connectionSecretRef": map[string]any{"name": "lineage-reader"},
+		}, strfmt.Default)
+		if err != nil {
+			t.Fatalf("supported Graph scalar schema rejected: %v", err)
+		}
+	})
 	for _, tc := range []struct {
 		name, version, kind, provider string
 		valid                         bool

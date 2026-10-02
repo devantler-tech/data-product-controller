@@ -207,10 +207,10 @@ type EngineSelection struct {
 }
 
 // ProvisionedSource observes a source whose creation, credentials, and deletion belong to a provisioner.
-// +kubebuilder:validation:XValidation:rule="has(self.engine) ? (self.engine.provider == 'native' && ((self.engine.type == 'sql' && self.adapter == 'cnpg/v1' && self.resourceRef.apiVersion == 'postgresql.cnpg.io/v1' && self.resourceRef.kind == 'Cluster' && self.connectionSecretRef.name == self.resourceRef.name + '-app') || (self.engine.type == 'document' && self.adapter == 'percona-mongodb/v1' && self.resourceRef.apiVersion == 'psmdb.percona.com/v1' && self.resourceRef.kind == 'PerconaServerMongoDB' && self.connectionSecretRef.name != 'percona-server-mongodb-users'))) : self.adapter == 'crossplane/v1'",message="Use an untyped crossplane/v1 source, sql/native with cnpg/v1 and its Cluster application Secret, or document/native with percona-mongodb/v1 and a dedicated application password Secret."
+// +kubebuilder:validation:XValidation:rule="has(self.engine) ? (self.engine.provider == 'native' && ((self.engine.type == 'sql' && self.adapter == 'cnpg/v1' && self.resourceRef.apiVersion == 'postgresql.cnpg.io/v1' && self.resourceRef.kind == 'Cluster' && self.connectionSecretRef.name == self.resourceRef.name + '-app') || (self.engine.type == 'document' && self.adapter == 'percona-mongodb/v1' && self.resourceRef.apiVersion == 'psmdb.percona.com/v1' && self.resourceRef.kind == 'PerconaServerMongoDB' && self.connectionSecretRef.name != 'percona-server-mongodb-users') || (self.engine.type == 'graph' && self.adapter == 'arangodb/v1' && self.resourceRef.apiVersion == 'database.arangodb.com/v1' && self.resourceRef.kind == 'ArangoDeployment'))) : self.adapter == 'crossplane/v1'",message="Use untyped crossplane/v1, sql/native with cnpg/v1, document/native with percona-mongodb/v1, or graph/native with arangodb/v1 and its supported resource and application publication."
 type ProvisionedSource struct {
 	// Adapter selects a versioned readiness contract.
-	// +kubebuilder:validation:Enum=crossplane/v1;cnpg/v1;percona-mongodb/v1
+	// +kubebuilder:validation:Enum=crossplane/v1;cnpg/v1;percona-mongodb/v1;arangodb/v1
 	Adapter string `json:"adapter"`
 	// Engine optionally selects a supported engine; omission retains the Crossplane contract.
 	Engine *EngineSelection `json:"engine,omitempty"`

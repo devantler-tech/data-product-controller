@@ -1,3 +1,11 @@
+# Verify the same source files through their raw endpoints: GitHub's file-page renderer
+# returns HTTP 503 to hosted link checks. Keep the pinned ArangoDB commit and file path;
+# the Kubernetes alias resolves to this same community/main document. Missing files fail.
+remap = [
+  '^https://git\.k8s\.io/community/(contributors/devel/sig-architecture/api-conventions\.md)(#.*)?$ https://raw.githubusercontent.com/kubernetes/community/main/$1$2',
+  '^https://github\.com/arangodb/kube-arangodb/blob/([0-9a-f]{40})/(pkg/apis/deployment/v1/[a-z_]+\.go)(#L[0-9]+)?$ https://raw.githubusercontent.com/arangodb/kube-arangodb/$1/$2$3',
+]
+
 exclude = [
   "(^|/)assets/(product|registry)\\.css$",
   "(^|/)openapi\\.json$",

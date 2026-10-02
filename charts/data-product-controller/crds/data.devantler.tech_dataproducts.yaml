@@ -304,6 +304,7 @@ spec:
                     - crossplane/v1
                     - cnpg/v1
                     - percona-mongodb/v1
+                    - arangodb/v1
                     type: string
                   connectionSecretRef:
                     description: ConnectionSecretRef names the connection contract.
@@ -378,9 +379,9 @@ spec:
                 - resourceRef
                 type: object
                 x-kubernetes-validations:
-                - message: Use an untyped crossplane/v1 source, sql/native with cnpg/v1
-                    and its Cluster application Secret, or document/native with percona-mongodb/v1
-                    and a dedicated application password Secret.
+                - message: Use untyped crossplane/v1, sql/native with cnpg/v1, document/native
+                    with percona-mongodb/v1, or graph/native with arangodb/v1 and
+                    its supported resource and application publication.
                   rule: 'has(self.engine) ? (self.engine.provider == ''native'' &&
                     ((self.engine.type == ''sql'' && self.adapter == ''cnpg/v1'' &&
                     self.resourceRef.apiVersion == ''postgresql.cnpg.io/v1'' && self.resourceRef.kind
@@ -388,7 +389,10 @@ spec:
                     + ''-app'') || (self.engine.type == ''document'' && self.adapter
                     == ''percona-mongodb/v1'' && self.resourceRef.apiVersion == ''psmdb.percona.com/v1''
                     && self.resourceRef.kind == ''PerconaServerMongoDB'' && self.connectionSecretRef.name
-                    != ''percona-server-mongodb-users''))) : self.adapter == ''crossplane/v1'''
+                    != ''percona-server-mongodb-users'') || (self.engine.type == ''graph''
+                    && self.adapter == ''arangodb/v1'' && self.resourceRef.apiVersion
+                    == ''database.arangodb.com/v1'' && self.resourceRef.kind == ''ArangoDeployment'')))
+                    : self.adapter == ''crossplane/v1'''
               ui:
                 description: UI is an optional independently deployed product interaction
                   surface.

@@ -11,7 +11,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `api/v1alpha1/` — versioned Kubernetes API types and generated deep-copy code.
 - `internal/controller/` — dependency-aware `DataProduct` reconciliation.
 - `internal/provisioner/v1/` — versioned, read-only provisioner observation contract.
-- `internal/provider/v1/` — versioned engine dispatch and read-only CloudNativePG and Percona MongoDB observation.
+- `internal/provider/v1/` — versioned engine dispatch and read-only CloudNativePG, Percona MongoDB and ArangoDB observation.
 - `internal/connector/v1/` — versioned Deployment observation with bounded, uncached, exact-name reads.
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
@@ -48,6 +48,11 @@ Do not copy instructions into them.
   `percona-mongodb/v1`, the declared Percona 1.23.0 single managed unsharded replica-set profile,
   and an explicitly referenced custom-user password Secret with only declared read roles and current
   source ownership. The password publisher is independent; never assume automatic operator ownership.
+  Graph/native uses `arangodb/v1`, the pinned operator 1.4.5 typed API and official ArangoDB
+  3.12.12 Community Single profile with explicit count one. Hash the live spec without defaults;
+  require matching accepted/applied versions, runtime readiness and successful bootstrap. Graph
+  publication is independently declared through bounded read-only application metadata and current
+  source ownership; root/JWT/operator publications are unsupported. No database client is instantiated.
   Preserve exact-name
   uncached reads, metadata-only Secret negotiation, the five-second observation bound, 30-second
   polling and independent `SourceReady`. See `docs/engine-providers.md`.

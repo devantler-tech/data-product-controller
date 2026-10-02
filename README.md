@@ -14,7 +14,7 @@ The current foundation provides:
 - composition through named output references, with dependency-aware readiness conditions;
 - default-off contract version checks, bounded cycle detection, and direct input lineage within a namespace in the API and UI;
 - a default-off `provisioned-sources` feature that observes a provisioner-owned resource and its published connection Secret metadata;
-- default-off, versioned engine selection with SQL/native CloudNativePG observation and admission rules that reject unsupported providers;
+- default-off, versioned engine selection with native CloudNativePG SQL, Percona Document and ArangoDB Graph observation, with admission rules that reject unsupported providers;
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
@@ -46,9 +46,9 @@ manifest publisher. Platform configuration owns signature enforcement and rollou
 Provisioned sources use delegated provisioning: an external controller owns infrastructure and credentials. The versioned `crossplane/v1` observer checks readiness and connection publication without creating resources or reading Secret values. See the [provisioned-source guide](docs/provisioned-sources.md) for its contract, scoped access, enablement, and limitations.
 
 The [engine-provider guide](docs/engine-providers.md) explains typed source selection, the
-CloudNativePG application-Secret contract, independent `SourceReady` status, scoped permissions and
-rollout gates. Database lifecycle remains externally owned; document, graph and hybrid adapters
-remain roadmap work.
+application publication contracts, independent `SourceReady` status, scoped permissions and
+rollout gates. Database lifecycle remains externally owned; real database acceptance and hybrid
+adapters remain roadmap work.
 
 Connector workloads remain independently owned. The `deployment/v1` observer reads one named Deployment in the product's namespace and publishes `ConnectorReady` alongside aggregate readiness. See the [connector-readiness guide](docs/connector-readiness.md) for flag enablement, narrowly scoped RBAC, an authored product example, and rollout semantics.
 

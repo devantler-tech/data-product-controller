@@ -42,6 +42,7 @@ func NewEngineReader(config *rest.Config) (client.Reader, error) {
 		[]schema.GroupVersion{
 			{Group: "postgresql.cnpg.io", Version: "v1"},
 			{Group: "psmdb.percona.com", Version: "v1"},
+			{Group: "database.arangodb.com", Version: "v1"},
 			{Version: "v1"},
 		},
 	)
@@ -55,6 +56,14 @@ func NewEngineReader(config *rest.Config) (client.Reader, error) {
 			Group:   "psmdb.percona.com",
 			Version: "v1",
 			Kind:    "PerconaServerMongoDB",
+		},
+		meta.RESTScopeNamespace,
+	)
+	mapper.Add(
+		schema.GroupVersionKind{
+			Group:   "database.arangodb.com",
+			Version: "v1",
+			Kind:    "ArangoDeployment",
 		},
 		meta.RESTScopeNamespace,
 	)
@@ -94,6 +103,12 @@ func (r *Registry) Observe(
 		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		selected = &PerconaMongoDB{Reader: r.Reader}
+	case source.Engine != nil && source.Engine.APIVersion == "engine-provider/v1" &&
+		source.Engine.Type == "graph" && source.Engine.Provider == "native" && source.Adapter == "arangodb/v1":
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		selected = &ArangoDB{Reader: r.Reader}
 	default:
 		return unavailable(
 			"EngineProviderUnsupported",

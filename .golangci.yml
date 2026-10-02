@@ -59,6 +59,9 @@ linters:
           allow:
             - $gostd
             - github.com/devantler-tech/data-product-controller
+            # Pinned API serialization supplies the ArangoDB specification checksum;
+            # no operator runtime or database client is instantiated.
+            - github.com/arangodb/kube-arangodb/pkg/apis/deployment/v1$
             # Portable runtime flag API — the feature-flag-first delivery
             # convention (see AGENTS.md ## Maintenance). Swap the provider for
             # flagd / a managed backend in a real service; call sites are stdlib.
