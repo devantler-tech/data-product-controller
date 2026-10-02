@@ -192,7 +192,14 @@ rules:
 YAML
 bounded ksail project init --name "$cluster_name" --distribution Vanilla --provider Docker \
 	--cni Cilium --gitops-engine None --policy-engine None --load-balancer Disabled \
-	--metrics-server Disabled --local-registry localhost:5055 --kubeconfig "$KUBECONFIG" --output "$test_dir/cluster" --no-devcontainer
+	--metrics-server Disabled --mirror-registry '' --local-registry localhost:5055 \
+	--kubeconfig "$KUBECONFIG" --output "$test_dir/cluster" --no-devcontainer
+# Initialization also defaults to public mirrors unless explicitly disabled.
+# Reject generated mirror mounts before booting a node with inactive endpoints.
+if [[ -d $test_dir/cluster/kind/mirrors ]]; then
+	echo 'unexpected public mirror configuration in the direct-pull acceptance profile' >&2
+	exit 1
+fi
 export DPC_TEST_AUDIT_DIR="$test_dir/audit"
 yq -i '.nodes = [.nodes[0]] |
   .nodes[].image = "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a" |
