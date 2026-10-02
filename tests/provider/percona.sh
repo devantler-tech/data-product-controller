@@ -75,9 +75,17 @@ forward_registry() {
 		wait "$registry_forward_pid" 2>/dev/null || true
 	fi
 	registry_port=''
+	registry_target_port=$(kube get deployment dpc -o json | jq -er '
+    [.spec.template.spec.containers[] | select(.name == "controller") |
+      .ports[] | select(.name == "registry") | .containerPort] |
+    if length == 1 and (.[0] | type == "number") then .[0] else error("registry target unavailable") end')
+	[[ $registry_target_port =~ ^[1-9][0-9]*$ && $registry_target_port -le 65535 ]]
 	kubectl --request-timeout=0 -n products port-forward --address=127.0.0.1 service/dpc :80 >"$test_dir/forward.log" 2>&1 &
 	registry_forward_pid=$!
-	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready
+	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready || {
+		cat "$test_dir/forward.log" >&2
+		return 1
+	}
 }
 capture_controller_logs() {
 	# Selector-based logs otherwise default to only ten lines. Collect every

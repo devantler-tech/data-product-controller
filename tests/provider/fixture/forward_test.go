@@ -19,8 +19,9 @@ func TestRegistryForwardUsesResolvedPodPort(t *testing.T) {
 		name, line, pid string
 		wantSuccess     bool
 	}{
-		{"resolved registry port", "Forwarding from 127.0.0.1:43127 -> 8080", "$$", true},
+		{"resolved registry port", "Forwarding from 127.0.0.1:43127 -> 8082", "$$", true},
 		{"service port is not the resolved target", "Forwarding from 127.0.0.1:43127 -> 80", "$$", false},
+		{"metrics port is not registry", "Forwarding from 127.0.0.1:43127 -> 8080", "$$", false},
 		{"wrong pod port", "Forwarding from 127.0.0.1:43127 -> 8081", "$$", false},
 		{"non-loopback address", "Forwarding from 0.0.0.0:43127 -> 8080", "$$", false},
 		{"zero local port", "Forwarding from 127.0.0.1:0 -> 8080", "$$", false},
@@ -36,7 +37,7 @@ func TestRegistryForwardUsesResolvedPodPort(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			command := exec.CommandContext(ctx, "bash", "-c",
-				`set -euo pipefail; work_deadline=$((SECONDS+60)); test_dir=$1; started_at=$SECONDS; source "$2"; registry_forward_pid=`+tt.pid+`; registry_forward_ready; test "$registry_port" = 43127`,
+				`set -euo pipefail; work_deadline=$((SECONDS+60)); test_dir=$1; started_at=$SECONDS; source "$2"; registry_target_port=8082; registry_forward_pid=`+tt.pid+`; registry_forward_ready; test "$registry_port" = 43127`,
 				"forward-test", dir, helper)
 			output, err := command.CombinedOutput()
 			if ctx.Err() != nil || (err == nil) != tt.wantSuccess {
