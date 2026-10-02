@@ -11,6 +11,7 @@ import (
 )
 
 // Denial proof must reject authentication/transport failures and partially classified writes.
+// TestMongoAuthorizationDenial rejects transport and authentication errors as write-denial proof.
 func TestMongoAuthorizationDenial(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -35,6 +36,7 @@ func TestMongoAuthorizationDenial(t *testing.T) {
 	}
 }
 
+// TestStalePasswordRequiresAuthenticationDenial requires the database's distinct rejection code.
 func TestStalePasswordRequiresAuthenticationDenial(t *testing.T) {
 	for _, tt := range []struct {
 		name string

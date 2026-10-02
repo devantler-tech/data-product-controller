@@ -19,6 +19,7 @@ func probeTransport(config *tls.Config) *http.Transport {
 	}
 }
 
+// networkDenial accepts only TCP establishment timeouts and excludes DNS failures.
 func networkDenial(err error) bool {
 	var failure *net.OpError
 	var dnsFailure *net.DNSError

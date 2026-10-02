@@ -10,6 +10,7 @@ import (
 	"time"
 )
 
+// TestPublishedDocumentQuery checks the fixed response and sanitized unavailable-source behavior.
 func TestPublishedDocumentQuery(t *testing.T) {
 	for _, tt := range []struct {
 		name, method, path string
@@ -52,6 +53,7 @@ func TestPublishedDocumentQuery(t *testing.T) {
 	}
 }
 
+// TestPublishedDocumentContract checks the published query schema without reading the database.
 func TestPublishedDocumentContract(t *testing.T) {
 	handler := queryHandler(func(context.Context) ([]document, error) {
 		t.Fatal("contract fetch queried the database")

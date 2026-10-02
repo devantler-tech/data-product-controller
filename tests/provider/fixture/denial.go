@@ -25,6 +25,7 @@ func unauthorized(err error) bool {
 	return true
 }
 
+// authenticationFailure accepts only MongoDB authentication rejection code 18.
 func authenticationFailure(err error) bool {
 	var command mongo.CommandError
 	if errors.As(err, &command) {

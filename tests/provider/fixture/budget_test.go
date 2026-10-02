@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// TestProviderPhaseBudget checks deadline clamping and rejects incomplete observations.
 func TestProviderPhaseBudget(t *testing.T) {
 	helper, err := filepath.Abs("../budget.sh")
 	if err != nil {
@@ -52,6 +53,7 @@ func TestProviderPhaseBudget(t *testing.T) {
 	}
 }
 
+// TestProviderBudgetRejectsShellFunctions prevents assertions from bypassing process deadlines.
 func TestProviderBudgetRejectsShellFunctions(t *testing.T) {
 	helper, err := filepath.Abs("../budget.sh")
 	if err != nil {

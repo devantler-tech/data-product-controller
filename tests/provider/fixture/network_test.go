@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// TestNetworkDenialRequiresTimeout distinguishes TCP isolation from unrelated request failures.
 func TestNetworkDenialRequiresTimeout(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -34,6 +35,7 @@ func TestNetworkDenialRequiresTimeout(t *testing.T) {
 	}
 }
 
+// TestNetworkDenialRejectsHTTPResponseTimeout exercises an established connection that stalls.
 func TestNetworkDenialRejectsHTTPResponseTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
 		<-request.Context().Done()

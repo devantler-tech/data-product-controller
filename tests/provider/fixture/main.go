@@ -22,6 +22,7 @@ import (
 
 const databaseName = "catalog"
 
+// trust loads only the supplied CA bundle and preserves certificate verification.
 func trust(path string) (*tls.Config, error) {
 	pem, err := os.ReadFile(path)
 	if err != nil {
@@ -34,6 +35,7 @@ func trust(path string) (*tls.Config, error) {
 	return &tls.Config{RootCAs: roots, MinVersion: tls.VersionTLS12}, nil
 }
 
+// connect reads current projected credentials for the fixed TLS replica set.
 func connect(passwordPath string) (*mongo.Client, error) {
 	password, err := os.ReadFile(passwordPath)
 	if err != nil || len(password) == 0 {
@@ -56,12 +58,14 @@ func connect(passwordPath string) (*mongo.Client, error) {
 		SetMaxPoolSize(2).SetRetryWrites(false))
 }
 
+// closeClient bounds disconnection so cleanup cannot outlive an assertion.
 func closeClient(client *mongo.Client) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	_ = client.Disconnect(ctx)
 }
 
+// readDocuments performs the fixed lookup with a newly projected reader password.
 func readDocuments(ctx context.Context) ([]document, error) {
 	// A new client reads the projected password for every request, including rotation.
 	client, err := connect("/password/password")
@@ -80,6 +84,7 @@ func readDocuments(ctx context.Context) ([]document, error) {
 	return []document{record}, nil
 }
 
+// databaseAssertion seeds through the writer or checks actual database denial codes.
 func databaseAssertion(mode string) error {
 	passwordPath := "/password/password"
 	if mode == "stale-password" {
@@ -144,6 +149,7 @@ func databaseAssertion(mode string) error {
 	}
 }
 
+// probe verifies the fixed HTTPS response, contract, outage or TCP isolation evidence.
 func probe() error {
 	config, err := trust("/query-tls/ca.crt")
 	if err != nil {
@@ -205,6 +211,7 @@ func probe() error {
 	return nil
 }
 
+// run selects one bounded fixture operation or serves the fixed read-only API.
 func run() error {
 	if len(os.Args) < 2 {
 		return errors.New("fixture mode required")
@@ -243,6 +250,7 @@ func run() error {
 	}
 }
 
+// main reports only a sanitized failure, keeping driver errors and records private.
 func main() {
 	if run() != nil {
 		// Never print a driver's URI, password, server error or document payload.

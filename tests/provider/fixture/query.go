@@ -12,6 +12,7 @@ type document struct {
 	Value string `bson:"value" json:"value"`
 }
 
+// queryHandler publishes a fixed read-only query and sanitizes source failures.
 func queryHandler(read func(context.Context) ([]document, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

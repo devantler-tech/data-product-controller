@@ -47,3 +47,17 @@ wait_for() {
 	remaining >/dev/null || return 1
 	printf 'PASS: %s (elapsed %ss)\n' "$description" "$((SECONDS - started_at))"
 }
+# kubectl resolves Service port 80 to the chart's named registry pod port 8080.
+# Accept only an allocated loopback listener owned by the live forwarding process.
+registry_forward_ready() {
+	local line
+	kill -0 "${registry_forward_pid:?owned registry forwarding process required}" 2>/dev/null || return 1
+	while IFS= read -r line; do
+		if [[ $line =~ ^Forwarding\ from\ 127\.0\.0\.1:([0-9]+)\ -\>\ 8080$ ]]; then
+			registry_port=${BASH_REMATCH[1]}
+			[[ $registry_port -ge 1 && $registry_port -le 65535 ]] || return 1
+			return 0
+		fi
+	done <"$test_dir/forward.log"
+	return 1
+}

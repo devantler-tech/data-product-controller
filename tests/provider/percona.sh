@@ -69,18 +69,6 @@ trap 'exit 143' TERM
 
 kube() { kubectl --request-timeout=15s -n products "$@"; }
 query() { kube exec document-consumer -- /fixture probe "$@"; }
-registry_forward_ready() {
-	local line
-	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
-	while IFS= read -r line; do
-		if [[ $line =~ ^Forwarding\ from\ 127\.0\.0\.1:([0-9]+)\ -\>\ 80$ ]]; then
-			registry_port=${BASH_REMATCH[1]}
-			[[ $registry_port -ge 1 && $registry_port -le 65535 ]] || return 1
-			return 0
-		fi
-	done <"$test_dir/forward.log"
-	return 1
-}
 forward_registry() {
 	if [[ -n ${registry_forward_pid:-} ]]; then
 		kill "$registry_forward_pid" 2>/dev/null || true

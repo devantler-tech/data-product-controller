@@ -10,6 +10,7 @@ import (
 
 // TestProviderAvoidsOpenPGP enforces the compiled-package evidence supporting
 // the single expiring module-level advisory exception. Loading failure is fatal.
+// TestProviderAvoidsOpenPGP checks compiled dependencies against the scoped scanner exception.
 func TestProviderAvoidsOpenPGP(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
