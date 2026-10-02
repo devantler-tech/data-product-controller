@@ -29,8 +29,11 @@ spec:
     enabled: false
   backup:
     enabled: false
+    # Required by the 1.23.0 CRD even while this component is disabled.
+    image: percona/percona-backup-mongodb:2.15.0@sha256:2c69ec2dbd5be02df31577869df97c72781bf6fe6456471e8087b0e03136f672
   pmm:
     enabled: false
+    image: percona/pmm-client:3.8.1@sha256:a92cfb7f912bd85d8245575c3ee5c423664ad2baedb674d159a87b113dbd4de2
   logcollector:
     enabled: false
   search:
