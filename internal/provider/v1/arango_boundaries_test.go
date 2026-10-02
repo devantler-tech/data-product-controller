@@ -42,6 +42,11 @@ func TestArangoBoundaries(t *testing.T) {
 		{name: "missing status", reason: "SourceNotReady", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) { delete(c.Object, "status") }},
 		{name: "failed deployment", reason: "SourceFailed", mutate: arangoField("Failed", "status", "phase")},
 		{name: "stale accepted checksum", reason: "SourceNotReady", mutate: arangoField("old", "status", "acceptedSpecVersion")},
+		{name: "accepted authentication disabled", reason: "SourceNotReady", mutate: arangoField("None", "status", "accepted-spec", "auth", "jwtSecretName")},
+		{name: "accepted authentication unresolved", reason: "SourceNotReady", mutate: arangoField("", "status", "accepted-spec", "auth", "jwtSecretName")},
+		{name: "accepted topology unsupported", reason: "SourceNotReady", mutate: arangoField("Cluster", "status", "accepted-spec", "mode")},
+		{name: "accepted count unsupported", reason: "SourceNotReady", mutate: arangoField(int64(2), "status", "accepted-spec", "single", "count")},
+		{name: "accepted image unsupported", reason: "SourceNotReady", mutate: arangoField("arangodb:latest", "status", "accepted-spec", "image")},
 		{name: "stale applied checksum", reason: "SourceNotReady", mutate: arangoField("old", "status", "appliedVersion")},
 		{name: "new spec with old ready status", reason: "SourceNotReady", mutate: arangoField(true, "spec", "downtimeAllowed")},
 		{name: "missing conditions", reason: "SourceNotReady", mutate: arangoField([]any{}, "status", "conditions")},
@@ -73,6 +78,10 @@ func TestArangoBoundaries(t *testing.T) {
 		{name: "enterprise outside profile", reason: "SourceNotReady", mutate: arangoField(true, "status", "current-image", "enterprise")},
 		{name: "missing publication contract", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: func(_ *unstructured.Unstructured, s *metav1.PartialObjectMetadata) { s.Annotations = nil }},
 		{name: "root publication", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-user", "root")},
+		{name: "mixed-case root publication", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-user", "Root")},
+		{name: "upper-case operator publication", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-user", "OPERATOR")},
+		{name: "mixed-case internal publication", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-user", "Internal")},
+		{name: "mixed-case backup publication", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-user", "Backup")},
 		{name: "system database", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-database", "_system")},
 		{name: "wildcard collection", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-collections", "products,*")},
 		{name: "ambiguous collections", reason: "ConnectionPublicationUnsupported", secretRead: true, mutate: arangoAnnotation("arango-collections", "products,products")},
@@ -180,6 +189,7 @@ func TestArangoCancellation(t *testing.T) {
 	}
 }
 
+// arangoField changes one fixture field without refreshing the reported specification checksums.
 func arangoField(
 	value any,
 	fields ...string,
@@ -189,6 +199,7 @@ func arangoField(
 	}
 }
 
+// arangoCondition replaces or appends an operator condition while retaining the other fixture conditions.
 func arangoCondition(
 	kind, status string,
 ) func(*unstructured.Unstructured, *metav1.PartialObjectMetadata) {
@@ -214,6 +225,7 @@ func arangoCondition(
 	}
 }
 
+// arangoAnnotation changes public application metadata without changing source ownership.
 func arangoAnnotation(
 	key, value string,
 ) func(*unstructured.Unstructured, *metav1.PartialObjectMetadata) {
@@ -222,6 +234,7 @@ func arangoAnnotation(
 	}
 }
 
+// arangoMemberField changes one running member while retaining deployment-level readiness.
 func arangoMemberField(
 	value any,
 	field string,
@@ -237,6 +250,7 @@ func arangoMemberField(
 	}
 }
 
+// arangoMemberCondition combines Ready with a competing member state to test readiness withdrawal.
 func arangoMemberCondition(
 	kind, status string,
 ) func(*unstructured.Unstructured, *metav1.PartialObjectMetadata) {

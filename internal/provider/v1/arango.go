@@ -170,8 +170,14 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 		return arangoNotReady()
 	}
 	current, err := d.IsUpToDate()
+	acceptedSpec := d.Status.AcceptedSpec
 	if err != nil || !current || d.Status.Phase != arangov1.DeploymentPhaseRunning ||
-		d.Status.AcceptedSpec == nil ||
+		acceptedSpec == nil || acceptedSpec.Mode == nil ||
+		*acceptedSpec.Mode != arangov1.DeploymentModeSingle ||
+		acceptedSpec.Single.Count == nil || *acceptedSpec.Single.Count != 1 ||
+		acceptedSpec.Image == nil || *acceptedSpec.Image != arangoImage ||
+		acceptedSpec.Authentication.GetJWTSecretName() == "" ||
+		!acceptedSpec.Authentication.IsAuthenticated() ||
 		d.Status.Conditions.IsTrue(arangov1.ConditionTypeUpdateInProgress) ||
 		d.Status.Conditions.IsTrue(arangov1.ConditionTypeUpgradeInProgress) ||
 		!arangoConditions(
@@ -207,6 +213,7 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 	return provisionerv1.Observation{Ready: true}
 }
 
+// arangoCurrentImage requires the supported Community version and a resolved image identity.
 func arangoCurrentImage(image *arangov1.ImageInfo) bool {
 	return image != nil && image.Image == arangoImage && image.ImageID != "" &&
 		string(image.ArangoDBVersion) == "3.12.12" &&
@@ -288,7 +295,7 @@ func arangoPublication(annotations map[string]string) bool {
 			return false
 		}
 	}
-	switch annotations[prefix+"arango-user"] {
+	switch strings.ToLower(annotations[prefix+"arango-user"]) {
 	case "root", "operator", "internal", "backup":
 		return false
 	}
@@ -310,6 +317,7 @@ func arangoPublication(annotations map[string]string) bool {
 	return true
 }
 
+// arangoInvalid reports unsupported source configuration without exposing operator details.
 func arangoInvalid() provisionerv1.Observation {
 	return unavailable(
 		"SourceInvalid",
@@ -317,6 +325,7 @@ func arangoInvalid() provisionerv1.Observation {
 	)
 }
 
+// arangoNotReady withdraws readiness until the operator reports a consistent current specification.
 func arangoNotReady() provisionerv1.Observation {
 	return unavailable(
 		"SourceNotReady",

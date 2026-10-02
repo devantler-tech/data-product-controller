@@ -135,7 +135,9 @@ The initial resource profile requires `spec.mode: Single`, explicit `spec.single
 
 The live typed specification checksum must match both `status.acceptedSpecVersion` and
 `status.appliedVersion`. DPC does not apply defaults before hashing: the operator hashes the raw
-spec and separately stores defaulted `status.accepted-spec`. `Ready`, `SpecAccepted`, `UpToDate`,
+spec and separately stores defaulted `status.accepted-spec`. The accepted specification must also
+retain the supported image, Single/count-one profile and a resolved authentication Secret;
+contradictory status does not establish readiness. `Ready`, `SpecAccepted`, `UpToDate`,
 `BootstrapCompleted` and upstream's misspelled `BootstrapSucceded` conditions must be True.
 Deployment phase must be Running, with exactly one Created and Ready Single member, a modern
 Pod name/UID, and matching reported desired and running image IDs and ArangoDB 3.12.12 Community versions. Update,
@@ -170,10 +172,10 @@ metadata:
 Under v1, `read-only` declares the complete grant profile above, including no other collection
 grants. Identifiers start with an ASCII letter followed by at most 63 ASCII letters, digits,
 underscores or hyphens. Collections form a comma-separated list of 1–64 unique identifiers
-without whitespace or wildcards. Root, operator, internal and backup users, system names,
-unsupported versions and writable declarations are rejected. The selected Secret must match
-the current source owner. Default/configured JWT, root-password and operator credential
-publications are unsupported. Do not relabel operator Secrets as application publications.
+without whitespace or wildcards. Root, operator, internal and backup users are rejected in any
+letter case. System names, unsupported versions and writable declarations are rejected.
+The selected Secret must match the current source owner. Default/configured JWT, root-password
+and operator credential publications are unsupported. Do not relabel operator Secrets as application publications.
 
 Apply the [Graph observer Role](examples/graph-provider-observer-rbac.yaml), adjusting its
 ServiceAccount binding. It permits only exact-name GETs on `lineage` and `lineage-reader` in

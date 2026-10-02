@@ -56,6 +56,7 @@ func TestArangoObservation(t *testing.T) {
 	}
 }
 
+// arangoSource selects the same namespaced source and publication as the synthetic fixture.
 func arangoSource() datav1alpha1.ProvisionedSource {
 	return datav1alpha1.ProvisionedSource{
 		Adapter: "arangodb/v1",
