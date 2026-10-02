@@ -1,0 +1,74 @@
+apiVersion: psmdb.percona.com/v1
+kind: PerconaServerMongoDB
+metadata:
+  name: documents
+  namespace: products
+  # No PVC-deletion finalizer: this fixture explicitly tests retained storage.
+  finalizers:
+    - percona.com/delete-psmdb-pods-in-order
+spec:
+  crVersion: 1.23.0
+  image: percona/percona-server-mongodb:8.0.26-11@sha256:53f89c001997627554e6afc0feb5906209ba109f4f98c62f2ca8456c214af60c
+  initImage: percona/percona-server-mongodb-operator:1.23.0@sha256:feaff989e25346716d85be9ea918593f89ad7481d30e033df21e0a764a6a484e
+  pause: false
+  unmanaged: false
+  unsafeFlags:
+    # Disposable CI only; production requires the provider's HA topology.
+    replsetSize: true
+  tls:
+    mode: requireTLS
+    allowInvalidCertificates: false
+    certManagementPolicy: userProvidedOnly
+  secrets:
+    ssl: documents-ssl
+    sslInternal: documents-ssl-internal
+  updateStrategy: SmartUpdate
+  upgradeOptions:
+    apply: disabled
+  sharding:
+    enabled: false
+  backup:
+    enabled: false
+  pmm:
+    enabled: false
+  logcollector:
+    enabled: false
+  search:
+    enabled: false
+  replsets:
+    - name: rs0
+      size: 1
+      labels:
+        app: document-database
+      affinity:
+        antiAffinityTopologyKey: none
+      resources:
+        requests:
+          cpu: 300m
+          memory: 768Mi
+        limits:
+          cpu: "1"
+          memory: 1Gi
+      volumeSpec:
+        persistentVolumeClaim:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 1Gi
+  users:
+    - name: catalog-writer
+      db: admin
+      passwordSecretRef:
+        name: documents-writer
+        key: password
+      roles:
+        - name: readWrite
+          db: catalog
+    - name: catalog-reader
+      db: admin
+      passwordSecretRef:
+        name: documents-reader
+        key: password
+      roles:
+        - name: read
+          db: catalog
