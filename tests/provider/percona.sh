@@ -53,7 +53,7 @@ cleanup() {
 			# Do not dump Secrets, database records or system-user logs.
 		fi
 		timeout --signal=TERM --kill-after=5s 150s ksail cluster delete --name "$cluster_name" --provider Docker \
-			--kubeconfig "$KUBECONFIG" --config "$cluster_config" --force --delete-storage || result=1
+			--kubeconfig "$KUBECONFIG" --config "$cluster_config" --mirror-registry '' --force --delete-storage || result=1
 		for node in $(docker ps --all --filter "label=io.x-k8s.kind.cluster=$cluster_name" --format '{{.Names}}'); do
 			bounded docker rm --force "$node" >/dev/null || result=1
 		done
@@ -100,9 +100,10 @@ install_controller() {
 	if [[ ${controller_installed:-false} == true ]]; then
 		capture_controller_logs
 	fi
-	helm template dpc "$repo_root/charts/data-product-controller" --include-crds --namespace products \
+	bounded helm template dpc "$repo_root/charts/data-product-controller" --include-crds --namespace products \
 		--set "image.repository=$1" --set "image.tag=$2" --set "image.digest=$3" --set image.pullPolicy=Never \
-		--set demoProduct.enabled=false --set provisionedSources.enabled=true --set engineProviders.enabled=true | kube apply -f - >/dev/null
+		--set demoProduct.enabled=false --set provisionedSources.enabled=true --set engineProviders.enabled=true |
+		bounded kubectl --request-timeout=0 -n products apply -f - >/dev/null
 	bounded kubectl --request-timeout=0 -n products rollout status deployment/dpc --timeout="$(remaining)s"
 	controller_installed=true
 	forward_registry
@@ -201,7 +202,11 @@ yq -i '.nodes = [.nodes[0]] |
 cluster_started=true
 # Zero CLI node-count overrides preserve Kind's declared image, mounts and
 # kubeadm patches instead of replacing the nodes with KSail's default profile.
-bounded ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml" --control-planes 0 --workers 0
+# Public dependencies use direct registry pulls. Disposable pull-through caches
+# add serialized cold-start latency before Cilium can register its CRDs; only
+# the owned local fixture registry is needed by this acceptance profile.
+bounded ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml" \
+	--control-planes 0 --workers 0 --mirror-registry ''
 control_node=$(docker ps --filter "label=io.x-k8s.kind.cluster=$cluster_name" --filter label=io.x-k8s.kind.role=control-plane --format '{{.Names}}')
 [[ -n $control_node && $control_node != *$'\n'* ]] || {
 	echo 'expected one owned control-plane node' >&2

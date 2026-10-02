@@ -30,10 +30,12 @@ actual_checkov_allowlist=$(
         .metadata.annotations | to_entries[] |
         select(.key | test("^checkov\\.io/skip[0-9]*$")) |
         "rendered:" + $resource + " " + (.value | split("=")[0])' -
+		# shellcheck disable=SC2016 # $resource is a yq variable, not a shell expansion.
 		SCANNER_REPO_ROOT=$repo_root yq e -N 'select(.metadata.annotations != null) |
+		(.kind + "/" + .metadata.name) as $resource |
       .metadata.annotations | to_entries[] |
       select(.key | test("^checkov\\.io/skip[0-9]*$")) |
-      (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + " " + (.value | split("=")[0])' \
+      (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + ":" + $resource + " " + (.value | split("=")[0])' \
 			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml "$repo_root"/tests/provider/*.yaml
 		sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/Dockerfile \1/p' "$repo_root/Dockerfile"
 	} | sort
@@ -41,9 +43,9 @@ actual_checkov_allowlist=$(
 expected_checkov_allowlist=$(
 	printf '%s\n' \
 		'Dockerfile CKV_DOCKER_2' \
-		'deploy/deployment.yaml CKV_K8S_14' \
-		'deploy/deployment.yaml CKV_K8S_38' \
-		'deploy/deployment.yaml CKV_K8S_43' \
+		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_14' \
+		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_38' \
+		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_43' \
 		'rendered:Deployment/data-product-controller CKV_K8S_21' \
 		'rendered:Deployment/data-product-controller CKV_K8S_38' \
 		'rendered:Deployment/data-product-controller CKV_K8S_43' \
@@ -54,10 +56,10 @@ expected_checkov_allowlist=$(
 		'rendered:Service/data-product-controller CKV_K8S_21' \
 		'rendered:Service/data-product-controller-harbour CKV_K8S_21' \
 		'rendered:ServiceAccount/data-product-controller CKV_K8S_21' \
-		'tests/source/consumer.yaml CKV_K8S_43' \
-		'tests/provider/workloads.yaml CKV_K8S_43' \
-		'tests/provider/workloads.yaml CKV_K8S_43' \
-		'tests/provider/workloads.yaml CKV_K8S_43' |
+		'tests/source/consumer.yaml:Pod/consumer CKV_K8S_43' \
+		'tests/provider/workloads.yaml:Deployment/document-query CKV_K8S_43' \
+		'tests/provider/workloads.yaml:Pod/document-writer CKV_K8S_43' \
+		'tests/provider/workloads.yaml:Pod/document-consumer CKV_K8S_43' |
 		sort
 )
 [ "$actual_checkov_allowlist" = "$expected_checkov_allowlist" ] ||

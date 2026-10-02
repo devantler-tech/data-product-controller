@@ -215,6 +215,7 @@ func run() error {
 			Addr:              ":8443",
 			Handler:           queryHandler(readDocuments),
 			ReadHeaderTimeout: 3 * time.Second,
+			ReadTimeout:       5 * time.Second,
 			WriteTimeout:      8 * time.Second,
 			IdleTimeout:       10 * time.Second,
 			MaxHeaderBytes:    8192,
