@@ -127,3 +127,13 @@ and release-flag retirement remain in issues #46, #49, #101, #113 and
 The DCAT activation/retirement review is due 2026-10-30. The contract probe
 uses a real TLS endpoint on the private test network; this does not prove production
 public-route reachability. The controller never fetches its data-plane URLs.
+
+The engine modules exercise SQL/native and Document/native admission and observation with synthetic
+external CRDs. Document acceptance uses the documented Percona 1.23.0 fields, exact-name RBAC,
+both default-off gates, missing source/publication, replica loss/recovery, privileged-user rejection,
+permission revocation, source recreation, independent password rebinding/rotation and retention
+after product deletion. Each engine module has a shared eight-minute deadline. These tests run the
+real controller and Kubernetes API; they do not install CloudNativePG or Percona, run databases,
+verify actual credentials or prove operator-owned lifecycle. That acceptance remains in
+[#38](https://github.com/devantler-tech/data-product-controller/issues/38); engine gate rollout and
+retirement remain in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).

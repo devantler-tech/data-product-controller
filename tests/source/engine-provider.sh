@@ -4,8 +4,12 @@
 : "${repo_root:?run through tests/source/run.sh}"
 : "${test_dir:?run through tests/source/run.sh}"
 
-engine_started_at=$SECONDS
-engine_deadline=$((SECONDS + 480))
+# Each engine acceptance module gets its own bounded budget.
+engine_start_budget() {
+	engine_started_at=$SECONDS
+	engine_deadline=$((SECONDS + 480))
+}
+engine_start_budget
 engine_product_file="$test_dir/engine-product.json"
 engine_cluster_file="$test_dir/engine-cluster.yaml"
 
