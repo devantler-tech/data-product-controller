@@ -90,9 +90,9 @@ jobs:
   source-integration:
     name: Validate source and registry in Kubernetes
     runs-on: ubuntu-latest
-    # The existing lifecycle suite takes about 24 minutes; Document adds an eight-minute
-    # bounded module. Retain its assertions and polling intervals with setup/cleanup headroom.
-    timeout-minutes: 40
+    # SQL, Document and Graph modules retain their independent eight-minute bounds;
+    # the source/catalog lifecycle and setup/cleanup keep their existing assertions.
+    timeout-minutes: 50
     permissions:
       contents: read
     steps:

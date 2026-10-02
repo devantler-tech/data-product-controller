@@ -77,6 +77,7 @@ expected_trivy_allowlist=$(
 		'DS-0026 Dockerfile' \
 		'KSV-0013 deploy/deployment.yaml' \
 		'KSV-0113 docs/examples/document-provider-observer-rbac.yaml' \
+		'KSV-0113 docs/examples/graph-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/sql-provider-observer-rbac.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/controller-deployment.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/demo-deployment.yaml' \
@@ -102,5 +103,6 @@ check_observer_grants() {
 }
 check_observer_grants sql '[[["postgresql.cnpg.io"],["clusters"],["warehouse"],["get"]],[[""],["secrets"],["warehouse-app"],["get"]]]'
 check_observer_grants document '[[["psmdb.percona.com"],["perconaservermongodbs"],["documents"],["get"]],[[""],["secrets"],["documents-reader"],["get"]]]'
+check_observer_grants graph '[[["database.arangodb.com"],["arangodeployments"],["lineage"],["get"]],[[""],["secrets"],["lineage-reader"],["get"]]]'
 
 printf '%s\n' 'scanner suppression tests passed'

@@ -189,7 +189,7 @@ jq 'del(.spec.source.engine) | .spec.source.adapter="crossplane/v1" |
   .spec.source.resourceRef.kind="Database" | .spec.source.connectionSecretRef.name="warehouse-connection"' \
 	"$engine_product_file" | kube apply --dry-run=server -f - >/dev/null
 echo 'PASS: engine admission accepts SQL/native and legacy Crossplane references'
-engine_reject 'unimplemented graph/native' '.spec.source.engine.type="graph"'
+engine_reject 'Graph selection with SQL adapter' '.spec.source.engine.type="graph"'
 engine_reject 'unimplemented document/hybrid' '.spec.source.engine.type="document" | .spec.source.engine.provider="cnpg-hybrid"'
 engine_reject 'unversioned engine selection' '.spec.source.engine.apiVersion="engine-provider/v2"'
 engine_reject 'CNPG without typed selection' 'del(.spec.source.engine)'

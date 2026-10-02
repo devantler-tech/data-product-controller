@@ -1,6 +1,6 @@
 # Select an independently operated engine
 
-A product can wait for an externally owned SQL or Document engine and its published application credentials.
+A product can wait for an externally owned SQL, Document or Graph engine and its published application credentials.
 The controller observes readiness; the database operator creates, upgrades, backs up and deletes
 the source. Product workloads consume the connection Secret directly.
 
@@ -20,10 +20,11 @@ to one adapter and resource API. The runtime resolver repeats that check before 
 | Engine omitted        | `crossplane/v1`      | Namespaced custom resource                    | Matching `writeConnectionSecretToRef`, owned by that resource               |
 | `sql` / `native`      | `cnpg/v1`            | `postgresql.cnpg.io/v1` `Cluster`             | Operator-generated `<cluster>-app` Secret, owned by the current Cluster UID |
 | `document` / `native` | `percona-mongodb/v1` | `psmdb.percona.com/v1` `PerconaServerMongoDB` | Explicit custom-user password Secret, published with the current source UID |
+| `graph` / `native` | `arangodb/v1` | `database.arangodb.com/v1` `ArangoDeployment` | Independently published read-only application password, with v1 metadata and current source UID |
 
-Graph and `cnpg-hybrid` selections are rejected until their adapters and admission rules are delivered.
+`cnpg-hybrid` selections are rejected until their adapters and admission rules are delivered.
 Unknown versions, contradictory adapters and other resource APIs are rejected at admission. SQL
-requires its generated application Secret name; Document publication receives additional runtime
+requires its generated application Secret name; Document and Graph publication receive additional runtime
 checks against the externally owned source. Existing untyped Crossplane products retain their contract.
 
 The [SQL example](examples/sql-provider-product.yaml) refers to a Cluster named `warehouse` in
@@ -123,6 +124,69 @@ password validity, database access or query availability. See Percona's
 [status contract](https://docs.percona.com/percona-operator-for-mongodb/1.23.0/cr-statuses.html) and
 [system-user guidance](https://docs.percona.com/percona-operator-for-mongodb/1.23.0/system-users.html).
 
+## ArangoDB Graph observation contract
+
+The [Graph product](examples/graph-provider-product.yaml) selects `arangodb/v1`. Its query URL
+and OpenAPI document describe a separately operated workload; DPC does not create that workload
+or send AQL queries. Install the ArangoDB operator independently, using the
+[1.4.5 API](https://github.com/arangodb/kube-arangodb/tree/c8ddcb3ff018436f5641607e778b4960cf1794b9/pkg/apis/deployment/v1).
+The initial resource profile requires `spec.mode: Single`, explicit `spec.single.count: 1`,
+`spec.image: arangodb:3.12.12` and enabled authentication. Single mode provides no high availability.
+
+The live typed specification checksum must match both `status.acceptedSpecVersion` and
+`status.appliedVersion`. DPC does not apply defaults before hashing: the operator hashes the raw
+spec and separately stores defaulted `status.accepted-spec`. `Ready`, `SpecAccepted`, `UpToDate`,
+`BootstrapCompleted` and upstream's misspelled `BootstrapSucceded` conditions must be True.
+Deployment phase must be Running, with exactly one Created and Ready Single member, a modern
+Pod name/UID, and matching reported desired and running image IDs and ArangoDB 3.12.12 Community versions. Update,
+upgrade, Secret-change, pending update and member-restart states withdraw readiness. Missing,
+unknown, malformed or duplicate conditions cannot establish readiness. Condition hashes,
+transition timestamps, historical SpecPropagated and Pod-spec checksums are not freshness markers.
+
+An independent publisher owns application setup and the password Secret. The pinned bootstrap
+validator accepts only root accounts. The publisher must create a dedicated non-administrator
+user, deny `_system` and database wildcard access, grant `ro` on the application database, deny
+collection wildcard access and grant `ro` on every named vertex/edge collection. It publishes the
+password for consumption directly by the query workload. DPC sees only this public metadata:
+
+```yaml
+metadata:
+  name: lineage-reader
+  namespace: products
+  annotations:
+    data.devantler.tech/arango-publication: v1
+    data.devantler.tech/arango-user: catalog-reader
+    data.devantler.tech/arango-database: catalog
+    data.devantler.tech/arango-graph: lineage
+    data.devantler.tech/arango-access: read-only
+    data.devantler.tech/arango-collections: products,relations
+  ownerReferences:
+    - apiVersion: database.arangodb.com/v1
+      kind: ArangoDeployment
+      name: lineage
+      uid: <current-source-uid>
+```
+
+Under v1, `read-only` declares the complete grant profile above, including no other collection
+grants. Identifiers start with an ASCII letter followed by at most 63 ASCII letters, digits,
+underscores or hyphens. Collections form a comma-separated list of 1–64 unique identifiers
+without whitespace or wildcards. Root, operator, internal and backup users, system names,
+unsupported versions and writable declarations are rejected. The selected Secret must match
+the current source owner. Default/configured JWT, root-password and operator credential
+publications are unsupported. Do not relabel operator Secrets as application publications.
+
+Apply the [Graph observer Role](examples/graph-provider-observer-rbac.yaml), adjusting its
+ServiceAccount binding. It permits only exact-name GETs on `lineage` and `lineage-reader` in
+`products`. Kubernetes authorizes a whole-Secret GET despite metadata negotiation.
+
+These checks establish operator-reported current-spec readiness and publisher intent. They do
+not verify the installed operator binary, immutable running image, credential values, effective
+permissions, graph existence, queries, backups or distribution support. ArangoDB's
+[Community binary terms](https://arangodb.com/community-license/) restrict deployment uses;
+this adapter neither deploys nor licenses the database. Independently verify the applicable
+edition and terms. Real operator and authenticated AQL acceptance remains
+[#157](https://github.com/devantler-tech/data-product-controller/issues/157).
+
 ## Lifecycle and rollout
 
 Creation and deletion stay with the operator. A missing source reports `SourceNotFound`; deleting
@@ -132,7 +196,7 @@ change or copy values into status. Removing the source declaration or deleting t
 leaves the source and Secret independently owned; the controller adds no finalizers or owner references.
 
 The hosted Kubernetes acceptance suite exercises admission, scoped permissions, both gates,
-readiness loss/recovery, publication ownership and retention using synthetic SQL and Document status fixtures.
+readiness loss/recovery, publication ownership and retention using synthetic SQL, Document and Graph status fixtures.
 It does not install database operators or prove database availability. Real operator acceptance remains
 in [#38](https://github.com/devantler-tech/data-product-controller/issues/38), and released deployment
 acceptance is required before retiring the gate in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).

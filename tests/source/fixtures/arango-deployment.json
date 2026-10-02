@@ -1,0 +1,97 @@
+{
+  "apiVersion": "database.arangodb.com/v1",
+  "kind": "ArangoDeployment",
+  "metadata": {
+    "name": "lineage",
+    "namespace": "products",
+    "uid": "graph-uid",
+    "generation": 3
+  },
+  "spec": {
+    "mode": "Single",
+    "image": "arangodb:3.12.12",
+    "single": {
+      "count": 1
+    },
+    "auth": {
+      "jwtSecretName": "lineage-jwt"
+    },
+    "bootstrap": {
+      "passwordSecretNames": {
+        "root": "lineage-root-password"
+      }
+    }
+  },
+  "status": {
+    "phase": "Running",
+    "acceptedSpecVersion": "226d7bb3a616e388ca182310e0881c2d31bb8b43925a0f6ee624f3d80e77ea94",
+    "appliedVersion": "226d7bb3a616e388ca182310e0881c2d31bb8b43925a0f6ee624f3d80e77ea94",
+    "accepted-spec": {
+      "mode": "Single",
+      "image": "arangodb:3.12.12",
+      "single": {
+        "count": 1
+      },
+      "auth": {
+        "jwtSecretName": "lineage-jwt"
+      },
+      "bootstrap": {
+        "passwordSecretNames": {
+          "root": "lineage-root-password"
+        }
+      }
+    },
+    "current-image": {
+      "image": "arangodb:3.12.12",
+      "image-id": "sha256:graph-image",
+      "arangodb-version": "3.12.12"
+    },
+    "conditions": [
+      {
+        "type": "Ready",
+        "status": "True"
+      },
+      {
+        "type": "UpToDate",
+        "status": "True"
+      },
+      {
+        "type": "SpecAccepted",
+        "status": "True"
+      },
+      {
+        "type": "BootstrapCompleted",
+        "status": "True"
+      },
+      {
+        "type": "BootstrapSucceded",
+        "status": "True"
+      }
+    ],
+    "members": {
+      "single": [
+        {
+          "id": "single1",
+          "phase": "Created",
+          "pod": {
+            "name": "lineage-single1",
+            "uid": "pod-uid"
+          },
+          "image": {
+            "image": "arangodb:3.12.12",
+            "image-id": "sha256:graph-image",
+            "arangodb-version": "3.12.12"
+          },
+          "conditions": [
+            {
+              "type": "Ready",
+              "status": "True"
+            }
+          ],
+          "image-id": "sha256:graph-image",
+          "arango-version": "3.12.12"
+        }
+      ]
+    }
+  }
+}
