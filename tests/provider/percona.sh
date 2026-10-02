@@ -49,11 +49,14 @@ cleanup() {
 			kubectl --request-timeout=10s -n products get pods,pvc -o wide || true
 			kubectl --request-timeout=10s -n products get perconaservermongodbs -o wide || true
 			kubectl --request-timeout=10s -n products get dataproducts -o wide || true
+			kubectl --request-timeout=10s -n products get dataproduct document-product -o json |
+				jq '{generation:.metadata.generation,conditions:.status.conditions}' || true
+			[[ ! -f "$test_dir/forward.log" ]] || cat "$test_dir/forward.log" >&2
 			kubectl --request-timeout=10s -n products get events --sort-by=.metadata.creationTimestamp || true
 			# Do not dump Secrets, database records or system-user logs.
 		fi
 		timeout --signal=TERM --kill-after=5s 150s ksail cluster delete --name "$cluster_name" --provider Docker \
-			--kubeconfig "$KUBECONFIG" --config "$cluster_config" --mirror-registry '' --force --delete-storage || result=1
+			--kubeconfig "$KUBECONFIG" --config "$cluster_config" --force --delete-storage || result=1
 		for node in $(docker ps --all --filter "label=io.x-k8s.kind.cluster=$cluster_name" --format '{{.Names}}'); do
 			bounded docker rm --force "$node" >/dev/null || result=1
 		done
@@ -75,12 +78,8 @@ forward_registry() {
 		wait "$registry_forward_pid" 2>/dev/null || true
 	fi
 	registry_port=''
-	registry_target_port=$(kube get deployment dpc -o json | jq -er '
-    [.spec.template.spec.containers[] | select(.name == "controller") |
-      .ports[] | select(.name == "registry") | .containerPort] |
-    if length == 1 and (.[0] | type == "number") then .[0] else error("registry target unavailable") end')
-	[[ $registry_target_port =~ ^[1-9][0-9]*$ && $registry_target_port -le 65535 ]]
-	kubectl --request-timeout=0 -n products port-forward --address=127.0.0.1 service/dpc :80 >"$test_dir/forward.log" 2>&1 &
+	wait_for 'current controller revision has one Ready registry pod' registry_target_ready
+	kubectl --request-timeout=0 -n products port-forward --address=127.0.0.1 "pod/$registry_pod" ":$registry_target_port" >"$test_dir/forward.log" 2>&1 &
 	registry_forward_pid=$!
 	wait_for 'owned registry port-forward starts on an allocated loopback port' registry_forward_ready || {
 		cat "$test_dir/forward.log" >&2

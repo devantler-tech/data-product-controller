@@ -47,7 +47,19 @@ wait_for() {
 	remaining >/dev/null || return 1
 	printf 'PASS: %s (elapsed %ss)\n' "$description" "$((SECONDS - started_at))"
 }
-# kubectl reports the named pod port resolved from the Service, not Service port 80.
+# Resolve the exact current rollout; a Service can still select a retiring replica.
+registry_target_ready() {
+	kube get deployment dpc -o json >"$test_dir/registry-deployment.json" || return 1
+	kube get replicasets -l app.kubernetes.io/instance=dpc -o json >"$test_dir/registry-replicasets.json" || return 1
+	kube get pods -l app.kubernetes.io/instance=dpc -o json >"$test_dir/registry-pods.json" || return 1
+	jq -n --slurpfile deployment "$test_dir/registry-deployment.json" \
+		--slurpfile replicasets "$test_dir/registry-replicasets.json" \
+		--slurpfile pods "$test_dir/registry-pods.json" \
+		-f "$repo_root/tests/provider/registry-target.jq" >"$test_dir/registry-target.json" || return 1
+	registry_pod=$(jq -er '.pod' "$test_dir/registry-target.json") || return 1
+	registry_target_port=$(jq -er '.port' "$test_dir/registry-target.json") || return 1
+}
+# kubectl reports the named pod port, not the Service's frontend port 80.
 # Accept only an allocated loopback listener owned by the live forwarding process.
 registry_forward_ready() {
 	local line
