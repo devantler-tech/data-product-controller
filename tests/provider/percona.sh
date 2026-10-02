@@ -190,6 +190,7 @@ bounded ksail project init --name "$cluster_name" --distribution Vanilla --provi
 export DPC_TEST_AUDIT_DIR="$test_dir/audit"
 yq -i '.nodes = [.nodes[0]] |
   .nodes[].image = "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a" |
+  .containerdConfigPatches += ["[plugins.\"io.containerd.cri.v1.images\".registry]\n  config_path = \"/etc/containerd/certs.d\""] |
   .nodes[0].extraMounts += [{"hostPath":strenv(DPC_TEST_AUDIT_DIR),"containerPath":"/audit"}] |
   .nodes[0].kubeadmConfigPatches += ["apiVersion: kubeadm.k8s.io/v1beta4\nkind: ClusterConfiguration\napiServer:\n  extraArgs:\n    - name: audit-policy-file\n      value: /audit/policy.yaml\n    - name: audit-log-path\n      value: /audit/log.json\n  extraVolumes:\n    - name: audit\n      hostPath: /audit\n      mountPath: /audit\n      readOnly: false\n      pathType: Directory"]' "$test_dir/cluster/kind.yaml"
 cluster_started=true
@@ -206,9 +207,9 @@ kubectl --request-timeout=15s version -o json | jq -e '.serverVersion.gitVersion
 echo 'PASS: running node image and Kubernetes API match the pinned 1.34.0 profile'
 kubectl --request-timeout=15s create namespace products >/dev/null
 # Only this run's Kind node resolves the disposable registry through its Docker network.
-registry_dir=/etc/containerd/certs.d/localhost:5055
+registry_dir=/etc/containerd/certs.d/localhost_5055_
 bounded docker exec "$control_node" mkdir -p "$registry_dir"
-printf '[host."http://%s-local-registry:5000"]\n' "$cluster_name" |
+printf 'server = "http://%s-local-registry:5000"\n[host."http://%s-local-registry:5000"]\n  capabilities = ["pull", "resolve"]\n' "$cluster_name" "$cluster_name" |
 	bounded docker exec -i "$control_node" cp /dev/stdin "$registry_dir/hosts.toml"
 bounded docker build --tag "dpc-percona:$cluster_name" "$repo_root"
 bounded docker build --file "$repo_root/tests/provider/fixture/Dockerfile" --tag "localhost:5055/provider-fixture:$cluster_name" "$repo_root"
