@@ -34,7 +34,7 @@ actual_checkov_allowlist=$(
       .metadata.annotations | to_entries[] |
       select(.key | test("^checkov\\.io/skip[0-9]*$")) |
       (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + " " + (.value | split("=")[0])' \
-			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml
+			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml "$repo_root"/tests/provider/*.yaml
 		sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/Dockerfile \1/p' "$repo_root/Dockerfile"
 	} | sort
 )
@@ -54,7 +54,10 @@ expected_checkov_allowlist=$(
 		'rendered:Service/data-product-controller CKV_K8S_21' \
 		'rendered:Service/data-product-controller-harbour CKV_K8S_21' \
 		'rendered:ServiceAccount/data-product-controller CKV_K8S_21' \
-		'tests/source/consumer.yaml CKV_K8S_43' |
+		'tests/source/consumer.yaml CKV_K8S_43' \
+		'tests/provider/workloads.yaml CKV_K8S_43' \
+		'tests/provider/workloads.yaml CKV_K8S_43' \
+		'tests/provider/workloads.yaml CKV_K8S_43' |
 		sort
 )
 [ "$actual_checkov_allowlist" = "$expected_checkov_allowlist" ] ||

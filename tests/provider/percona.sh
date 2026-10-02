@@ -175,7 +175,7 @@ rules:
 YAML
 bounded ksail project init --name "$cluster_name" --distribution Vanilla --provider Docker \
 	--cni Cilium --gitops-engine None --policy-engine None --load-balancer Disabled \
-	--metrics-server Disabled --kubeconfig "$KUBECONFIG" --output "$test_dir/cluster" --no-devcontainer
+	--metrics-server Disabled --local-registry localhost:5055 --kubeconfig "$KUBECONFIG" --output "$test_dir/cluster" --no-devcontainer
 export DPC_TEST_AUDIT_DIR="$test_dir/audit"
 yq -i '.nodes = [.nodes[0]] |
   .nodes[].image = "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a" |
@@ -189,8 +189,20 @@ control_node=$(docker ps --filter "label=io.x-k8s.kind.cluster=$cluster_name" --
 	exit 1
 }
 kubectl --request-timeout=15s create namespace products >/dev/null
+# Only this run's Kind node resolves the disposable registry through its Docker network.
+registry_dir=/etc/containerd/certs.d/localhost:5055
+bounded docker exec "$control_node" mkdir -p "$registry_dir"
+printf '[host."http://%s-local-registry:5000"]\n' "$cluster_name" |
+	bounded docker exec -i "$control_node" cp /dev/stdin "$registry_dir/hosts.toml"
 bounded docker build --tag "dpc-percona:$cluster_name" "$repo_root"
-bounded docker build --file "$repo_root/tests/provider/fixture/Dockerfile" --tag "provider-fixture:$cluster_name" "$repo_root"
+bounded docker build --file "$repo_root/tests/provider/fixture/Dockerfile" --tag "localhost:5055/provider-fixture:$cluster_name" "$repo_root"
+bounded docker push "localhost:5055/provider-fixture:$cluster_name"
+fixture_image=$(docker image inspect "localhost:5055/provider-fixture:$cluster_name" --format '{{index .RepoDigests 0}}')
+[[ $fixture_image =~ ^localhost:5055/provider-fixture@sha256:[a-f0-9]{64}$ ]] || {
+	echo 'missing pushed fixture digest' >&2
+	exit 1
+}
+bounded docker exec "$control_node" crictl pull "$fixture_image"
 released_image=ghcr.io/devantler-tech/data-product-controller@sha256:683df7a8c7701ba9b5e31d7801769c84ea221a58560bfbc667462c0c2a5368a8
 bounded cosign verify \
 	--certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@df7fd4f83edade31c121a9de563d9a7b9b1f900d \
@@ -201,16 +213,15 @@ bounded cosign verify \
 bounded docker pull "$released_image"
 [[ $(docker image inspect "$released_image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == a199b4c2e8ac4dde2f34c0a8faeeae6940a592d8 ]]
 # Import only this run's built images into its own node; no release credentials or public push.
-bounded docker save "dpc-percona:$cluster_name" "provider-fixture:$cluster_name" >"$test_dir/images.tar"
+bounded docker save "dpc-percona:$cluster_name" >"$test_dir/images.tar"
 # Kind's containerd may have a private /tmp mount. Stream the archive into the
 # runtime's stdin instead of assuming a copied node path exists in that namespace.
 bounded docker exec -i "$control_node" ctr --namespace k8s.io images import - <"$test_dir/images.tar"
-for image in "dpc-percona:$cluster_name" "provider-fixture:$cluster_name"; do
+for image in "dpc-percona:$cluster_name" "$fixture_image"; do
 	bounded docker exec "$control_node" crictl inspecti "$image" >/dev/null
 done
 bounded docker exec "$control_node" crictl pull "$released_image"
 controller_image="dpc-percona:$cluster_name"
-fixture_image="provider-fixture:$cluster_name"
 printf 'Controller source: %s\n' "$(git -C "$repo_root" rev-parse HEAD)"
 docker image inspect "$controller_image" "$fixture_image" --format '{{.Id}}'
 

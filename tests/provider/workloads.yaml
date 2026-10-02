@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: document-query
   namespace: products
+  annotations:
+    checkov.io/skip1: CKV_K8S_43=The harness substitutes and verifies the immutable digest pushed to its disposable cluster-local registry before applying this workload.
 spec:
   replicas: 1
   selector:
@@ -23,6 +25,7 @@ spec:
       containers:
         - name: query
           image: provider-fixture:immutable
+          imagePullPolicy: Always
           args: [serve]
           env:
             - name: DOCUMENT_USER
@@ -30,8 +33,8 @@ spec:
           ports:
             - containerPort: 8443
           resources:
-            requests: {cpu: 50m, memory: 64Mi}
-            limits: {cpu: 500m, memory: 128Mi}
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 128Mi }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -43,20 +46,30 @@ spec:
               path: /healthz
               port: 8443
             periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: 8443
+            periodSeconds: 10
           volumeMounts:
-            - {name: password, mountPath: /password, readOnly: true}
-            - {name: stale-password, mountPath: /stale-password, readOnly: true}
-            - {name: database-tls, mountPath: /database-tls, readOnly: true}
-            - {name: query-tls, mountPath: /query-tls, readOnly: true}
+            - { name: password, mountPath: /password, readOnly: true }
+            - {
+                name: stale-password,
+                mountPath: /stale-password,
+                readOnly: true,
+              }
+            - { name: database-tls, mountPath: /database-tls, readOnly: true }
+            - { name: query-tls, mountPath: /query-tls, readOnly: true }
       volumes:
         - name: password
-          secret: {secretName: documents-reader}
+          secret: { secretName: documents-reader }
         - name: stale-password
-          secret: {secretName: documents-stale-reader}
+          secret: { secretName: documents-stale-reader }
         - name: database-tls
-          secret: {secretName: documents-ssl}
+          secret: { secretName: documents-ssl }
         - name: query-tls
-          secret: {secretName: document-query-tls}
+          secret: { secretName: document-query-tls }
 ---
 apiVersion: v1
 kind: Service
@@ -64,74 +77,92 @@ metadata:
   name: document-query
   namespace: products
 spec:
-  selector: {app: document-query}
+  selector: { app: document-query }
   ports:
-    - {port: 8443, targetPort: 8443}
+    - { port: 8443, targetPort: 8443 }
 ---
 apiVersion: v1
 kind: Pod
 metadata:
   name: document-writer
   namespace: products
-  labels: {app: document-writer}
+  annotations:
+    checkov.io/skip1: CKV_K8S_43=The harness substitutes and verifies the immutable digest pushed to its disposable cluster-local registry before applying this workload.
+  labels: { app: document-writer }
 spec:
   automountServiceAccountToken: false
   securityContext:
     runAsNonRoot: true
     runAsUser: 65532
     runAsGroup: 65532
-    seccompProfile: {type: RuntimeDefault}
+    seccompProfile: { type: RuntimeDefault }
   containers:
     - name: writer
       image: provider-fixture:immutable
+      imagePullPolicy: Always
       args: [serve]
+      readinessProbe:
+        httpGet: { scheme: HTTPS, path: /healthz, port: 8443 }
+        periodSeconds: 3
+      livenessProbe:
+        httpGet: { scheme: HTTPS, path: /healthz, port: 8443 }
+        periodSeconds: 10
       env:
-        - {name: DOCUMENT_USER, value: catalog-writer}
+        - { name: DOCUMENT_USER, value: catalog-writer }
       resources:
-        requests: {cpu: 50m, memory: 64Mi}
-        limits: {cpu: 500m, memory: 128Mi}
+        requests: { cpu: 50m, memory: 64Mi }
+        limits: { cpu: 500m, memory: 128Mi }
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
-        capabilities: {drop: [ALL]}
+        capabilities: { drop: [ALL] }
       volumeMounts:
-        - {name: password, mountPath: /password, readOnly: true}
-        - {name: database-tls, mountPath: /database-tls, readOnly: true}
-        - {name: query-tls, mountPath: /query-tls, readOnly: true}
+        - { name: password, mountPath: /password, readOnly: true }
+        - { name: database-tls, mountPath: /database-tls, readOnly: true }
+        - { name: query-tls, mountPath: /query-tls, readOnly: true }
   volumes:
     - name: password
-      secret: {secretName: documents-writer}
+      secret: { secretName: documents-writer }
     - name: database-tls
-      secret: {secretName: documents-ssl}
+      secret: { secretName: documents-ssl }
     - name: query-tls
-      secret: {secretName: document-query-tls}
+      secret: { secretName: document-query-tls }
 ---
 apiVersion: v1
 kind: Pod
 metadata:
   name: document-consumer
   namespace: products
-  labels: {app: document-consumer}
+  annotations:
+    checkov.io/skip1: CKV_K8S_43=The harness substitutes and verifies the immutable digest pushed to its disposable cluster-local registry before applying this workload.
+  labels: { app: document-consumer }
 spec:
   automountServiceAccountToken: false
   securityContext:
     runAsNonRoot: true
     runAsUser: 65532
     runAsGroup: 65532
-    seccompProfile: {type: RuntimeDefault}
+    seccompProfile: { type: RuntimeDefault }
   containers:
     - name: consumer
       image: provider-fixture:immutable
+      imagePullPolicy: Always
       args: [serve]
+      readinessProbe:
+        httpGet: { scheme: HTTPS, path: /healthz, port: 8443 }
+        periodSeconds: 3
+      livenessProbe:
+        httpGet: { scheme: HTTPS, path: /healthz, port: 8443 }
+        periodSeconds: 10
       resources:
-        requests: {cpu: 50m, memory: 64Mi}
-        limits: {cpu: 500m, memory: 128Mi}
+        requests: { cpu: 50m, memory: 64Mi }
+        limits: { cpu: 500m, memory: 128Mi }
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
-        capabilities: {drop: [ALL]}
+        capabilities: { drop: [ALL] }
       volumeMounts:
-        - {name: query-tls, mountPath: /query-tls, readOnly: true}
+        - { name: query-tls, mountPath: /query-tls, readOnly: true }
   volumes:
     - name: query-tls
-      secret: {secretName: document-query-tls}
+      secret: { secretName: document-query-tls }

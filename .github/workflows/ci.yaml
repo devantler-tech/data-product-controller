@@ -168,7 +168,8 @@ jobs:
 
   required-checks:
     name: CI - Required Checks
-    needs: [core, browser, release-contract, source-integration, percona-acceptance]
+    needs:
+      [core, browser, release-contract, source-integration, percona-acceptance]
     if: always()
     runs-on: ubuntu-latest
     steps:
