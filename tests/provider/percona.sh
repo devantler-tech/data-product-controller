@@ -41,7 +41,9 @@ cleanup() {
 	fi
 	if [[ $cluster_started == true ]]; then
 		if [[ $result != 0 ]]; then
-			kubectl --request-timeout=10s -n products get pods,perconaservermongodbs,dataproducts,pvc -o wide || true
+			kubectl --request-timeout=10s -n products get pods,pvc -o wide || true
+			kubectl --request-timeout=10s -n products get perconaservermongodbs -o wide || true
+			kubectl --request-timeout=10s -n products get dataproducts -o wide || true
 			kubectl --request-timeout=10s -n products get events --sort-by=.metadata.creationTimestamp || true
 			# Do not dump Secrets, database records or system-user logs.
 		fi
@@ -276,13 +278,31 @@ server_digest=$(platform_digest 'percona/percona-server-mongodb@sha256:53f89c001
 operator_digest=$(platform_digest 'percona/percona-server-mongodb-operator@sha256:feaff989e25346716d85be9ea918593f89ad7481d30e033df21e0a764a6a484e' "$test_dir/operator-index.json")
 bounded kubectl --request-timeout=0 -n products rollout status deployment/percona-psmdb-operator --timeout="$(remaining)s"
 wait_for 'real operator reports the managed TLS replica set ready' database_ready
-kube get pods -l app=document-database -o json | jq -e --arg digest "$server_digest" '
-  [.items[].status.containerStatuses[] | select(.name == "mongod") | .imageID] |
-  length == 1 and all(.[]; endswith($digest))' >/dev/null
-kube get pods -l app.kubernetes.io/name=psmdb-operator -o json | jq -e --arg digest "$operator_digest" '
-  [.items[].status.containerStatuses[] | select(.name == "psmdb-operator") | .imageID] |
-  length == 1 and all(.[]; endswith($digest))' >/dev/null
 kube get pods -o json | jq '[.items[] | {name:.metadata.name,uid:.metadata.uid,images:[.status.containerStatuses[]? | {name,imageID}]}]'
+# CRI may report either the immutable multi-platform index or its selected
+# manifest. Require the exact declared pin, one running container and a node
+# architecture present exactly once in the verified index.
+kubectl --request-timeout=15s get node "$control_node" -o json | jq -e \
+	'.status.nodeInfo.architecture == "amd64" and .status.nodeInfo.operatingSystem == "linux"' >/dev/null
+for component in server operator; do
+	if [[ $component == server ]]; then
+		selector=app=document-database
+		container=mongod
+		image=percona/percona-server-mongodb:8.0.26-11@sha256:53f89c001997627554e6afc0feb5906209ba109f4f98c62f2ca8456c214af60c
+		digest=$server_digest
+	else
+		selector=app.kubernetes.io/name=psmdb-operator
+		container=psmdb-operator
+		image=percona/percona-server-mongodb-operator:1.23.0@sha256:feaff989e25346716d85be9ea918593f89ad7481d30e033df21e0a764a6a484e
+		digest=$operator_digest
+	fi
+	kube get pods -l "$selector" -o json | jq -e --arg container "$container" \
+		--arg image "$image" --arg index "${image##*@}" --arg digest "$digest" '
+    .items | length == 1 and all(.[];
+      ([.spec.containers[] | select(.name == $container and .image == $image)] | length == 1) and
+      ([.status.containerStatuses[] | select(.name == $container and .ready == true and .state.running != null) |
+        select(.imageID | endswith($index) or endswith($digest))] | length == 1))' >/dev/null
+done
 kubectl --request-timeout=15s version -o json | jq '.serverVersion'
 kube get perconaservermongodb documents -o json | jq '{uid:.metadata.uid,finalizers:.metadata.finalizers,state:.status.state,ready:.status.ready}'
 export DPC_PROVIDER_FIXTURE_IMAGE="$fixture_image"

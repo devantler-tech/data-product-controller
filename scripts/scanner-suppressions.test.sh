@@ -91,6 +91,14 @@ expected_trivy_allowlist=$(
 [ "$actual_trivy_allowlist" = "$expected_trivy_allowlist" ] ||
 	fail 'Trivy suppressions must match the approved artifact allowlist'
 
+# The one module-wide advisory is specific to an unused, unmaintained package.
+# The required independent fixture test rejects importing it, including in tests.
+trivy_vulnerability_exceptions=$(yq -o=json -I=0 '.vulnerabilities' "$trivy_ignore")
+trivy_vulnerability_scope=$(printf '%s' "$trivy_vulnerability_exceptions" |
+	yq -o=json -I=0 '[.[] | {"id":.id,"paths":.paths,"expired_at":.expired_at}]')
+[ "$trivy_vulnerability_scope" = '[{"id":"GO-2026-5932","paths":["tests/provider/fixture/go.mod"],"expired_at":"2026-11-02"}]' ] ||
+	fail 'vulnerability exceptions must stay bound to the unused OpenPGP package, fixture module and expiration'
+
 # RBAC cannot restrict Secret gets to metadata. Every suppressed example must stay namespaced
 # and contain only its two exact-name GET rules; extra or wildcard rules must also fail.
 # check_observer_grants bounds each scanner exception to its approved exact-name GETs.
