@@ -131,16 +131,23 @@ and OpenAPI document describe a separately operated workload; DPC does not creat
 or send AQL queries. Install the ArangoDB operator independently, using the
 [1.4.5 API](https://github.com/arangodb/kube-arangodb/tree/c8ddcb3ff018436f5641607e778b4960cf1794b9/pkg/apis/deployment/v1).
 The initial resource profile requires `spec.mode: Single`, explicit `spec.single.count: 1`,
-`spec.image: arangodb:3.12.12` and enabled authentication. Single mode provides no high availability.
+enabled authentication and the original image reference `arangodb:3.12.12`. The verified release
+index `sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf`
+is also accepted with that tag or without a tag, using `arangodb` or
+`docker.io/library/arangodb`. Other digests, registries, image repositories and contradictory tags are
+unsupported. Single mode provides no high availability.
 
 The live typed specification checksum must match both `status.acceptedSpecVersion` and
 `status.appliedVersion`. DPC does not apply defaults before hashing: the operator hashes the raw
 spec and separately stores defaulted `status.accepted-spec`. The accepted specification must also
-retain the supported image, Single/count-one profile and a resolved authentication Secret;
+retain exactly the declared image, Single/count-one profile and a resolved authentication Secret;
 contradictory status does not establish readiness. `Ready`, `SpecAccepted`, `UpToDate`,
 `BootstrapCompleted` and upstream's misspelled `BootstrapSucceded` conditions must be True.
 Deployment phase must be Running, with exactly one Created and Ready Single member, a modern
-Pod name/UID, and matching reported desired and running image IDs and ArangoDB 3.12.12 Community versions. Update,
+Pod name/UID, matching image declarations and reported desired/running image IDs, and ArangoDB
+3.12.12 versions. The verified official immutable index reports an Enterprise binary marker;
+both current and member observations must match that actual binary profile. The marker does not
+establish license entitlement. Update,
 upgrade, Secret-change, pending update and member-restart states withdraw readiness. Missing,
 unknown, malformed or duplicate conditions cannot establish readiness. Condition hashes,
 transition timestamps, historical SpecPropagated and Pod-spec checksums are not freshness markers.
@@ -186,8 +193,8 @@ not verify the installed operator binary, immutable running image, credential va
 permissions, graph existence, queries, backups or distribution support. ArangoDB's
 [Community binary terms](https://arangodb.com/community-license/) restrict deployment uses;
 this adapter neither deploys nor licenses the database. Independently verify the applicable
-edition and terms. Real operator and authenticated AQL acceptance remains
-[#157](https://github.com/devantler-tech/data-product-controller/issues/157).
+edition and terms. The required [real Graph acceptance](real-graph-acceptance.md) separately
+exercises the pinned operator and authenticated traversal; its current-head run must pass.
 
 ## Lifecycle and rollout
 
@@ -202,6 +209,8 @@ readiness loss/recovery, publication ownership and retention using synthetic SQL
 It does not install database operators or prove database availability. The separate required
 [real Document acceptance](real-document-acceptance.md) installs Percona and exercises authenticated queries,
 effective privileges, rotation, outage recovery and retained data. Its current-head run must pass;
-synthetic observer results cannot replace that evidence. The remaining real provider matrix is tracked
+synthetic observer results cannot replace that evidence. The required
+[real Graph acceptance](real-graph-acceptance.md) applies the same boundary to ArangoDB traversal,
+effective grants and retained source recovery. The remaining real provider matrix is tracked
 in [#38](https://github.com/devantler-tech/data-product-controller/issues/38), and released deployment
 acceptance is required before retiring the gate in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).

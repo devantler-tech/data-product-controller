@@ -45,7 +45,10 @@ func connect(passwordPath string) (*mongo.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	certificate, err := tls.LoadX509KeyPair("/database-client-tls/tls.crt", "/database-client-tls/tls.key")
+	certificate, err := tls.LoadX509KeyPair(
+		"/database-client-tls/tls.crt",
+		"/database-client-tls/tls.key",
+	)
 	if err != nil {
 		return nil, errors.New("client certificate unavailable")
 	}
@@ -163,10 +166,14 @@ func probe() error {
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
 	path := "/api/documents"
+	host := "document-query"
+	if os.Getenv("PROVIDER_ENGINE") == "graph" {
+		path, host = "/api/lineage", "graph-query"
+	}
 	if len(os.Args) > 2 && os.Args[2] == "contract" {
 		path = "/openapi.json"
 	}
-	response, err := client.Get("https://document-query.products.svc.cluster.local:8443" + path)
+	response, err := client.Get("https://" + host + ".products.svc.cluster.local:8443" + path)
 	if err != nil {
 		if len(os.Args) > 2 && os.Args[2] == "denied" && networkDenial(err) {
 			return nil
@@ -195,9 +202,23 @@ func probe() error {
 			OpenAPI string                     `json:"openapi"`
 			Paths   map[string]json.RawMessage `json:"paths"`
 		}
+		queryPath := "/api/documents"
+		if os.Getenv("PROVIDER_ENGINE") == "graph" {
+			queryPath = "/api/lineage"
+		}
 		if json.Unmarshal(body, &contract) != nil || contract.OpenAPI != "3.1.0" ||
-			contract.Paths["/api/documents"] == nil {
+			contract.Paths[queryPath] == nil {
 			return errors.New("query contract unavailable")
+		}
+		return nil
+	}
+	if os.Getenv("PROVIDER_ENGINE") == "graph" {
+		var result struct {
+			Lineage []lineageNode `json:"lineage"`
+		}
+		if json.Unmarshal(body, &result) != nil || len(result.Lineage) != 2 ||
+			result.Lineage[0] != (lineageNode{ID: "persistent-lineage-middle", Depth: 1}) || result.Lineage[1] != (lineageNode{ID: "persistent-lineage-target", Depth: 2}) {
+			return errors.New("query did not return persistent two-hop lineage")
 		}
 		return nil
 	}
@@ -218,9 +239,13 @@ func run() error {
 	}
 	switch os.Args[1] {
 	case "serve":
+		handler := queryHandler(readDocuments)
+		if os.Getenv("PROVIDER_ENGINE") == "graph" {
+			handler = graphQueryHandler(readLineage)
+		}
 		server := &http.Server{
 			Addr:              ":8443",
-			Handler:           queryHandler(readDocuments),
+			Handler:           handler,
 			ReadHeaderTimeout: 3 * time.Second,
 			ReadTimeout:       5 * time.Second,
 			WriteTimeout:      8 * time.Second,
@@ -243,7 +268,10 @@ func run() error {
 		return err
 	case "probe":
 		return probe()
-	case "seed", "privileges", "stale-password":
+	case "bootstrap", "rotate", "seed", "writer-check", "privileges", "stale-password":
+		if os.Getenv("PROVIDER_ENGINE") == "graph" {
+			return graphAssertion(os.Args[1])
+		}
 		return databaseAssertion(os.Args[1])
 	default:
 		return errors.New("unknown fixture mode")
@@ -252,7 +280,16 @@ func run() error {
 
 // main reports only a sanitized failure, keeping driver errors and records private.
 func main() {
-	if run() != nil {
+	if err := run(); err != nil {
+		var graphError *graphAPIError
+		if errors.As(err, &graphError) {
+			fmt.Fprintf(
+				os.Stderr,
+				"graph API denial: HTTP=%d code=%d\n",
+				graphError.status,
+				graphError.code,
+			)
+		}
 		// Never print a driver's URI, password, server error or document payload.
 		fmt.Fprintln(os.Stderr, "provider fixture assertion failed")
 		os.Exit(1)

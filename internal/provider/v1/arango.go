@@ -20,7 +20,24 @@ type ArangoDB struct{ Reader client.Reader }
 
 var _ Provider = (*ArangoDB)(nil)
 
-const arangoImage = "arangodb:3.12.12"
+const (
+	arangoImage       = "arangodb:3.12.12"
+	arangoImageDigest = "sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf"
+)
+
+// arangoSupportedImage admits only the existing tag or the verified official release index.
+func arangoSupportedImage(image string) bool {
+	switch image {
+	case arangoImage,
+		arangoImage + "@" + arangoImageDigest,
+		"arangodb@" + arangoImageDigest,
+		"docker.io/library/" + arangoImage + "@" + arangoImageDigest,
+		"docker.io/library/arangodb@" + arangoImageDigest:
+		return true
+	default:
+		return false
+	}
+}
 
 // Observe reads current operator status and Secret metadata, never database data or credentials.
 func (p *ArangoDB) Observe(
@@ -134,10 +151,10 @@ func (p *ArangoDB) Observe(
 
 // arangoReadiness hashes the live raw spec: upstream accepted-spec contains defaults and cannot replace it.
 func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
-	if d.Spec.Image == nil || *d.Spec.Image != arangoImage {
+	if d.Spec.Image == nil || !arangoSupportedImage(*d.Spec.Image) {
 		return unavailable(
 			"SourceVersionUnsupported",
-			"Use the supported official ArangoDB 3.12.12 Community image and operator 1.4.5 API profile.",
+			"Use the supported official ArangoDB 3.12.12 image and operator 1.4.5 API profile.",
 		)
 	}
 	if d.Spec.Mode == nil || *d.Spec.Mode != arangov1.DeploymentModeSingle ||
@@ -175,7 +192,7 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 		acceptedSpec == nil || acceptedSpec.Mode == nil ||
 		*acceptedSpec.Mode != arangov1.DeploymentModeSingle ||
 		acceptedSpec.Single.Count == nil || *acceptedSpec.Single.Count != 1 ||
-		acceptedSpec.Image == nil || *acceptedSpec.Image != arangoImage ||
+		acceptedSpec.Image == nil || *acceptedSpec.Image != *d.Spec.Image ||
 		acceptedSpec.Authentication.GetJWTSecretName() == "" ||
 		!acceptedSpec.Authentication.IsAuthenticated() ||
 		d.Status.Conditions.IsTrue(arangov1.ConditionTypeUpdateInProgress) ||
@@ -191,14 +208,14 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 		return arangoNotReady()
 	}
 	image := d.Status.CurrentImage
-	if !arangoCurrentImage(image) || len(d.Status.Members.Single) != 1 {
+	if !arangoCurrentImage(image, *d.Spec.Image) || len(d.Status.Members.Single) != 1 {
 		return arangoNotReady()
 	}
 	member := d.Status.Members.Single[0]
 	if member.ID == "" || member.Phase != arangov1.MemberPhaseCreated || member.Pod == nil ||
 		member.Pod.Name == "" ||
 		member.Pod.UID == "" ||
-		!arangoCurrentImage(member.Image) ||
+		!arangoCurrentImage(member.Image, *d.Spec.Image) ||
 		member.Image.ImageID != image.ImageID ||
 		member.ImageID != image.ImageID ||
 		string(member.ArangoVersion) != "3.12.12" ||
@@ -215,11 +232,14 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 	return provisionerv1.Observation{Ready: true}
 }
 
-// arangoCurrentImage requires the supported Community version and a resolved image identity.
-func arangoCurrentImage(image *arangov1.ImageInfo) bool {
-	return image != nil && image.Image == arangoImage && image.ImageID != "" &&
+// arangoCurrentImage binds the binary marker to the observed official release profile, not a license entitlement.
+func arangoCurrentImage(image *arangov1.ImageInfo, expected string) bool {
+	// The verified official index contains a binary that reports license=enterprise.
+	// The existing tag-only profile retains its earlier Community marker contract.
+	enterpriseBuild := strings.HasSuffix(expected, "@"+arangoImageDigest)
+	return image != nil && image.Image == expected && image.ImageID != "" &&
 		string(image.ArangoDBVersion) == "3.12.12" &&
-		!image.Enterprise
+		image.Enterprise == enterpriseBuild
 }
 
 // arangoConditions rejects ambiguous lists; condition hashes and timestamps are not freshness markers.

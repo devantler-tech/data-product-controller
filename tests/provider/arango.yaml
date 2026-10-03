@@ -1,0 +1,33 @@
+apiVersion: database.arangodb.com/v1
+kind: ArangoDeployment
+metadata:
+  name: lineage
+  namespace: products
+spec:
+  mode: Single
+  environment: Development
+  image: arangodb:3.12.12@sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf
+  imagePullPolicy: Always
+  downtimeAllowed: true
+  auth:
+    jwtSecretName: lineage-jwt
+  bootstrap:
+    passwordSecretNames:
+      root: lineage-root-password
+  tls:
+    caSecretName: lineage-ca
+  externalAccess:
+    type: None
+  single:
+    count: 1
+    labels:
+      app: graph-database
+    resources:
+      requests: { cpu: 300m, memory: 512Mi }
+      limits: { cpu: "1", memory: 1Gi }
+    volumeClaimTemplate:
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests:
+            storage: 1Gi

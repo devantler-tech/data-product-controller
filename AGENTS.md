@@ -49,7 +49,8 @@ Do not copy instructions into them.
   and an explicitly referenced custom-user password Secret with only declared read roles and current
   source ownership. The password publisher is independent; never assume automatic operator ownership.
   Graph/native uses `arangodb/v1`, the pinned operator 1.4.5 typed API and official ArangoDB
-  3.12.12 Community Single profile with explicit count one. Hash the live spec without defaults;
+  3.12.12 Single profile with explicit count one, its original tag or verified official
+  release index, and matching accepted/current/member image declarations and the actual official binary edition marker. Hash the live spec without defaults;
   require matching accepted/applied versions, runtime readiness and successful bootstrap. Graph
   publication is independently declared through bounded read-only application metadata and current
   source ownership; root/JWT/operator publications are unsupported. No database client is instantiated.
@@ -103,6 +104,10 @@ when the local environment cannot run it. See `docs/source-integration-tests.md`
 The required native Document job separately runs `bash tests/provider/percona.sh`
 against the real pinned Percona operator. Its independent database-client fixture
 has a separate Go module and must be tested explicitly. See `docs/real-document-acceptance.md`.
+
+The required native Graph job runs `bash tests/provider/arango.sh` against the real
+pinned ArangoDB operator. It requires authenticated traversal, specific authorization denials
+and retained member recovery with operator-written readiness. See `docs/real-graph-acceptance.md`.
 
 API type or marker changes require deep-copy code, CRDs, and RBAC to be regenerated with controller-tools v0.21.0. Distribute the generated CRD to the chart and release artifact; all three copies must remain identical:
 
