@@ -29,7 +29,7 @@ UIDs, rejects stale publication ownership and rebinds the independent password p
 The last phase independently disables both observer gates, checks zero source/Secret GETs across
 a polling interval, restores readiness and deletes only the product descriptor. The query and
 external identities must survive. Controller output must contain neither projected passwords nor
-fixture records. The complete source/Secret audit must contain observed exact GETs and no
+fixture records. The complete source/Secret audit must contain observed GET requests and no
 mutation attempts, including denied requests. List or watch access also fails this scoped profile.
 Cleanup removes only the run's disposable cluster and storage; cleanup failure
 is a failed acceptance result.

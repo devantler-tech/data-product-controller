@@ -20,6 +20,7 @@ source_api_group=database.arangodb.com
 source_resource=arangodeployments
 source "$repo_root/tests/provider/common.sh"
 
+# database_ready requires the real operator to report its initialized Single member ready.
 database_ready() {
 	kube get arangodeployment lineage -o json | jq -e '
     .status.phase == "Running" and .status.bootstrapInitialized == true and
@@ -27,10 +28,12 @@ database_ready() {
     any(.status.conditions[]?; .type == "Ready" and .status == "True") and
     any(.status.members.single[0].conditions[]?; .type == "Ready" and .status == "True")' >/dev/null
 }
+# bind_publication binds the independent reader publication to the current source UID.
 bind_publication() {
 	kube patch secret lineage-reader --type=merge -p \
 		"$(jq -nc --arg uid "$1" '{metadata:{ownerReferences:[{apiVersion:"database.arangodb.com/v1",kind:"ArangoDeployment",name:"lineage",uid:$uid}]}}')" >/dev/null
 }
+# retained_identities captures live source, credential and storage identities without secret data.
 retained_identities() {
 	kube get arangodeployment,secret,pvc -o json | jq -ceS '[.items[] | . as $resource |
     select(.kind == "PersistentVolumeClaim" or
@@ -39,6 +42,7 @@ retained_identities() {
     {kind,name:.metadata.name,uid:.metadata.uid,deleting:.metadata.deletionTimestamp}] |
     if length >= 6 and all(.[]; .uid != null and .deleting == null) then sort_by(.kind,.name) else error("retention incomplete") end'
 }
+# apply_workloads applies the restricted query, writer and consumer fixtures after separate bootstrap.
 apply_workloads() {
 	export DPC_PROVIDER_FIXTURE_IMAGE="$fixture_image"
 	# Reuse the restricted, health-probed workload template, replacing its public

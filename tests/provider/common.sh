@@ -12,6 +12,7 @@ work_deadline=$((started_at + 1980))
 phase_deadline=$work_deadline
 source "$repo_root/tests/provider/budget.sh"
 
+# cleanup stops forwarding and removes only this disposable cluster and its private files.
 cleanup() {
 	local result=$? node
 	trap - EXIT INT TERM
@@ -46,6 +47,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# forward_registry forwards the current controller revision through a Ready registry pod.
 forward_registry() {
 	if [[ -n ${registry_forward_pid:-} ]]; then
 		kill "$registry_forward_pid" 2>/dev/null || true
@@ -56,11 +58,13 @@ forward_registry() {
 	start_registry_forward
 }
 
+# capture_controller_logs collects complete current-replica logs before any replacement.
 capture_controller_logs() {
 	# Read full logs from all current replicas before replacement. Collection
 	# failure means incomplete leak-check evidence and fails acceptance.
 	kube logs -l app.kubernetes.io/instance=dpc --all-containers=true --prefix=true --tail=-1 >>"$test_dir/controller.log"
 }
+# install_controller installs the selected artifact and waits for its current rollout.
 install_controller() {
 	if [[ ${controller_installed:-false} == true ]]; then
 		capture_controller_logs
@@ -74,6 +78,7 @@ install_controller() {
 	forward_registry
 }
 
+# product_ready checks current-generation conditions and the served registry descriptor.
 product_ready() {
 	local status=$1 reason=${2:-}
 	kube get dataproduct "$product_name" -o json >"$test_dir/product.json" || return 1
@@ -93,16 +98,19 @@ product_ready() {
 		--arg id "$product_id" '.products | length == 1 and .[0].id == $id and .[0].ready == $ready' "$test_dir/registry.json" >/dev/null
 }
 
+# registry_empty requires the removed descriptor to disappear from the served registry.
 registry_empty() {
 	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
 	curl --fail --silent --max-time 5 "http://127.0.0.1:$registry_port/api/v1/products" >"$test_dir/registry.json" || return 1
 	jq -e '.products | type == "array" and length == 0' "$test_dir/registry.json" >/dev/null
 }
 
+# audit_reads counts completed controller GET requests within the current phase deadline.
 audit_reads() {
-	docker exec "$control_node" cat /audit/log.json | jq -s '[.[] | select(.stage == "ResponseComplete" and .verb == "get")] | length'
+	bounded docker exec "$control_node" cat /audit/log.json | jq -s '[.[] | select(.stage == "ResponseComplete" and .verb == "get")] | length'
 }
 
+# disabled_without_reads requires a disabled gate to perform no external reads across a polling interval.
 disabled_without_reads() {
 	local reason=$1 before after
 	product_ready False "$reason" || return 1
@@ -117,6 +125,7 @@ disabled_without_reads() {
 	echo 'PASS: disabled gate has zero source or Secret reads across a polling interval'
 }
 
+# platform_digest resolves the unique Linux amd64 child of an immutable image index.
 platform_digest() {
 	local image=$1 file=$2
 	bounded docker buildx imagetools inspect --raw "$image" >"$file" || return 1
@@ -127,6 +136,7 @@ platform_digest() {
     else $immutable end' "$file"
 }
 
+# require_pinned_image checks the Ready container against its declared image and running digest.
 require_pinned_image() {
 	local selector=$1 container=$2 image=$3 digest=$4
 	kube get pods -l "$selector" -o json | jq -e --arg container "$container" \
@@ -137,6 +147,7 @@ require_pinned_image() {
         select(.imageID | endswith($index) or endswith($digest))] | length == 1))' >/dev/null
 }
 
+# make_certificate issues a disposable certificate for the explicitly named DNS identities.
 make_certificate() {
 	local name=$1 san=$2 organization=${3:-disposable-provider}
 	openssl req -newkey rsa:2048 -nodes -subj "/CN=$name/O=$organization" \
@@ -146,9 +157,12 @@ make_certificate() {
 		-in "$test_dir/tls/$name.csr" -extfile "$test_dir/tls/$name.ext" -out "$test_dir/tls/$name.crt" >/dev/null 2>&1
 }
 
+# kube bounds Kubernetes API requests to the disposable products namespace.
 kube() { kubectl --request-timeout=15s -n products "$@"; }
+# query runs the independent consumer assertion without database credentials.
 query() { kube exec "$consumer_pod" -- /fixture probe "$@"; }
 
+# start_cluster creates the disposable cluster and verifies its effective audit configuration.
 start_cluster() {
 	phase setup 360
 	mkdir "$test_dir/audit"

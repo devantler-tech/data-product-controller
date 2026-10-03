@@ -12,7 +12,16 @@ import (
 
 // TestAuditReadRejectsExpiredPhase prevents observation from consuming the cleanup reserve.
 func TestAuditReadRejectsExpiredPhase(t *testing.T) {
-	script, err := os.ReadFile("../percona.sh")
+	for _, scriptPath := range []string{"../percona.sh", "../common.sh"} {
+		t.Run(scriptPath, func(t *testing.T) {
+			testAuditReadRejectsExpiredPhase(t, scriptPath)
+		})
+	}
+}
+
+// testAuditReadRejectsExpiredPhase exercises the repository's actual audit-reader function.
+func testAuditReadRejectsExpiredPhase(t *testing.T, scriptPath string) {
+	script, err := os.ReadFile(scriptPath)
 	if err != nil {
 		t.Fatal(err)
 	}

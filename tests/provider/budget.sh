@@ -51,7 +51,7 @@ require_audit_server() {
 require_read_only_source_audit() {
 	bounded docker exec "$control_node" cat /audit/log.json |
 		jq -se -f "$repo_root/tests/provider/audit-read-only.jq" >/dev/null || return 1
-	echo 'PASS: controller audit contains observed exact reads and zero source mutation attempts'
+	echo 'PASS: controller audit contains observed GET requests and zero source mutation attempts'
 }
 
 # Retry one observation until success or the phase deadline, retaining failure diagnostics.
