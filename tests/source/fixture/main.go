@@ -27,7 +27,7 @@ func main() {
 // run dispatches the fixture's fixed modes and rejects unsupported commands.
 func run(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("expected serve, control, idle, or probe")
+		return errors.New("expected serve, control, idle, probe, or metrics")
 	}
 	switch args[0] {
 	case "serve":
@@ -44,6 +44,8 @@ func run(ctx context.Context, args []string) error {
 		return idle(ctx)
 	case "probe":
 		return probe(ctx, args[1:])
+	case "metrics":
+		return metrics(ctx, args[1:])
 	default:
 		return errors.New("unknown fixture command")
 	}

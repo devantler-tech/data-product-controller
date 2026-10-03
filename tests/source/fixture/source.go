@@ -15,10 +15,14 @@ type source struct {
 	contractDown atomic.Bool
 }
 
-// contract can fail independently of the authenticated export to test contract-specific readiness.
+// contract requires credential-free access and can fail independently of the authenticated export.
 func (s *source) contract(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if len(r.Header.Values("Authorization")) != 0 || len(r.Header.Values("Cookie")) != 0 {
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	if s.contractDown.Load() {

@@ -9,8 +9,8 @@ for command in ksail docker kubectl helm jq yq openssl cosign timeout; do
 	}
 done
 helm_version=$(helm version --short)
-[[ $helm_version =~ ^v3\.(1[2-9]|[2-9][0-9])\. ]] || {
-	echo 'source acceptance requires Helm 3.12 or newer within major version 3 for executable post-rendering' >&2
+[[ $helm_version =~ ^v3\.(1[3-9]|[2-9][0-9])\. ]] || {
+	echo 'source acceptance requires Helm 3.13 or newer within major version 3 for executable post-rendering and release metadata' >&2
 	exit 1
 }
 
@@ -24,6 +24,7 @@ source_started=false
 started_at=$SECONDS
 integration_deadline=$((started_at + 2700))
 
+# cleanup removes this run's source and cluster, preserving failure status and emitting only selected fixture diagnostics.
 cleanup() {
 	result=$?
 	trap - EXIT INT TERM
@@ -50,6 +51,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# wait_for retries one assertion until its allowance or the absolute integration deadline expires.
 wait_for() {
 	local description=$1 timeout=$2
 	shift 2
@@ -73,8 +75,11 @@ wait_for() {
 	done
 }
 
+# kube scopes requests to the fixture namespace and bounds each API request.
 kube() { kubectl --request-timeout=15s -n products "$@"; }
+# probe makes a bounded request from the authorized consumer so assertions exercise cluster networking.
 probe() { kube exec consumer -- /fixture probe --timeout 10s "$@"; }
+# registry_ready selects one exact fixture descriptor instead of accepting another product's readiness.
 registry_ready() { probe --url http://dpc/api/v1/products --registry-product "products/${2:-existing-export}" --registry-ready "$1"; }
 # Probe every endpoint directly: a successful Service request can hide a non-serving follower.
 registry_replicas_ready() {
@@ -101,6 +106,7 @@ registry_replicas_ready() {
 		probe --url "http://$address:8082/api/v1/ui-config" --contains '"uiContractEnabled":false,"uiAppearanceEnabled":false' || return 1
 	done <<<"$addresses"
 }
+# conditions requires both connector and aggregate conditions to match the product's current generation.
 conditions() {
 	local status=$1 reason=${2:-}
 	kube get dataproduct existing-export -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -109,9 +115,11 @@ conditions() {
       select(.status == $status and .observedGeneration == $product.metadata.generation and
         ($reason == "" or .reason == $reason))] | length == 2' >/dev/null
 }
+# readiness joins Kubernetes conditions with the selected registry descriptor's reported readiness.
 readiness() {
 	conditions "$1" "${3:-}" && registry_ready "$2"
 }
+# source_secret updates only the synthetic projected credential while keeping the fixture's HTTPS endpoint fixed.
 source_secret() {
 	jq -n --arg token "$1" '{endpointURL:"https://source.products.svc.cluster.local/export",bearerToken:$token}' \
 		>"$test_dir/config.json"
@@ -119,10 +127,15 @@ source_secret() {
 		--dry-run=client -o yaml | kube apply -f - >/dev/null
 }
 source "$repo_root/tests/source/helm-lifecycle.sh"
+source "$repo_root/tests/source/source-lifecycle.sh"
+source "$repo_root/tests/source/contract-matrix.sh"
+source "$repo_root/tests/source/connector-matrix.sh"
+# source_pod returns the sole nondeleting connector Pod UID, rejecting ambiguous rollout states.
 source_pod() {
 	kube get pods -l app.kubernetes.io/component=http-source -o json |
 		jq -er '.items | map(select(.metadata.deletionTimestamp == null)) | if length == 1 then .[0].metadata.uid else error("expected one connector Pod") end'
 }
+# contract_readiness requires a healthy connector alongside matching current contract, aggregate and registry readiness.
 contract_readiness() {
 	local status=$1 reason=$2
 	kube get dataproduct existing-export -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -133,6 +146,7 @@ contract_readiness() {
     any(.status.conditions[]?; .type == "ContractsReady" and .reason == $reason)' >/dev/null &&
 		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
 }
+# independent_resource_uids records the existing connector and Secret only when neither is deleting or owned by the product.
 independent_resource_uids() {
 	kube get deployment/dpc-http-source secret/existing-export -o json |
 		jq -ceS --arg product_uid "$1" '
@@ -142,6 +156,7 @@ independent_resource_uids() {
     then [.items[] | {key: (.kind + "/" + .metadata.name), value: .metadata.uid}] | from_entries
     else error("connector and credentials must exist independently of the product without pending deletion") end'
 }
+# disabled_export targets a disabled replica directly and requires refusal on both data and readiness endpoints.
 disabled_export() {
 	local address
 	address=$(kube get pods -l app.kubernetes.io/component=http-source -o json | jq -er '
@@ -281,107 +296,8 @@ wait_for 'healthy source reaches product and registry readiness' 240 readiness T
 wait_for 'authorized consumer reads the real export' 120 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
 
-# Independent publication lets contract outages leave the authenticated export healthy.
-jq --arg cidr "$DPC_SOURCE_IP/32" '.contractProbe={enabled:true,
-  url:"https://source.products.svc.cluster.local/contract",targetCIDR:$cidr,
-  monitorPodLabels:{app:"source-consumer"}}' "$test_dir/values.yaml" >"$test_dir/contract-values.yaml"
-mv "$test_dir/contract-values.yaml" "$test_dir/values.yaml"
-install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
-kube --request-timeout=0 rollout status deployment/dpc-contract-probe --timeout=240s
-kube patch dataproduct existing-export --type=merge -p '{"spec":{"outputs":[{"name":"query","protocol":"OpenAPI","url":"https://export.example.com/api/data","contractUrl":"https://source.products.svc.cluster.local/contract","mediaType":"application/json"}],"contractChecks":[{"output":"query","resourceRef":{"apiVersion":"apps/v1","kind":"Deployment","name":"dpc-contract-probe"}}]}}'
-wait_for 'contract checks default off without changing connector health' 180 contract_readiness False ContractFeatureDisabled
-kube set env deployment/dpc CONTRACT_READINESS_ENABLED=true
-kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
-wait_for 'contract checks require their exact-resource grant' 180 contract_readiness False ContractProbeAccessDenied
-yq 'with(select(.kind == "Role"); .rules[0].resourceNames = ["dpc-contract-probe"]) |
-  with(select(.kind == "RoleBinding"); .subjects[0].name = "dpc" | .subjects[0].namespace = "products")' \
-	"$repo_root/docs/examples/contract-observer-rbac.yaml" >"$test_dir/contract-rbac.yaml"
-kube apply -f "$test_dir/contract-rbac.yaml"
-wait_for 'published contract reaches product and registry readiness' 180 contract_readiness True ContractsReady
-docker exec "$source_container" /fixture control contract-down
-wait_for 'contract outage reaches readiness while connector stays healthy' 240 contract_readiness False ContractProbeNotReady
-probe --url http://dpc-contract-probe:8081/metrics --contains 'contract_probe_ready 0'
-probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
-docker exec "$source_container" /fixture control contract-up
-wait_for 'contract publication recovery restores product readiness' 240 contract_readiness True ContractsReady
-probe --url http://dpc-contract-probe:8081/metrics --contains 'contract_probe_ready 1'
-kube patch dataproduct existing-export --type=json -p '[{"op":"replace","path":"/spec/outputs/0/contractUrl","value":"https://source.products.svc.cluster.local/other"}]'
-wait_for 'a changed contract URL rejects the previous healthy probe' 180 contract_readiness False ContractProbeConfigurationMismatch
-kube patch dataproduct existing-export --type=json -p '[{"op":"replace","path":"/spec/outputs/0/contractUrl","value":"https://source.products.svc.cluster.local/contract"}]'
-wait_for 'matching the probe URL restores contract readiness' 180 contract_readiness True ContractsReady
-kube delete role export-contract-observer
-wait_for 'revoked contract observation access becomes unready' 180 contract_readiness False ContractProbeAccessDenied
-kube apply -f "$test_dir/contract-rbac.yaml"
-wait_for 'restored contract observation access recovers' 180 contract_readiness True ContractsReady
-kube set env deployment/dpc-contract-probe CONTRACT_READINESS_ENABLED=false
-wait_for 'disabled probe execution fails closed' 180 contract_readiness False ContractProbeConfigurationMismatch
-wait_for 'disabled probe reports its release gate' 180 probe --url http://dpc-contract-probe:8081/readyz --want-status 503 --contains FeatureDisabled
-kube set env deployment/dpc-contract-probe CONTRACT_READINESS_ENABLED=true
-kube --request-timeout=0 rollout status deployment/dpc-contract-probe --timeout=240s
-wait_for 'reenabled probe execution restores readiness' 180 contract_readiness True ContractsReady
-wait_for 'unauthorized monitor cannot reach contract metrics' 90 kube exec outsider -- /fixture probe \
-	--url http://dpc-contract-probe:8081/metrics --want-error --timeout 5s
-kube patch dataproduct existing-export --type=merge -p '{"spec":{"contractChecks":null}}'
-wait_for 'removing contract checks preserves connector readiness' 180 readiness True true
-kube get dataproduct existing-export -o json | jq -e 'all(.status.conditions[]; .type != "ContractsReady")' >/dev/null
-kube get deployment dpc-contract-probe >/dev/null
-echo 'PASS: detached contract probe remains independently owned'
-
-connector_uid=$(source_pod)
-wait_for 'unauthorized consumer is denied by NetworkPolicy' 90 kube exec outsider -- /fixture probe \
-	--url http://dpc-http-source/api/data --want-error --timeout 5s
-kube label pod outsider app=source-consumer --overwrite
-wait_for 'the same consumer succeeds with the authorized label' 90 kube exec outsider -- /fixture probe \
-	--url http://dpc-http-source/api/data --contains '"fixture":"source"' --timeout 5s
-kube label pod outsider app=outsider --overwrite
-wait_for 'removing the label restores denial for the same consumer' 90 kube exec outsider -- /fixture probe \
-	--url http://dpc-http-source/api/data --want-error --timeout 5s
-probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
-
-docker exec "$source_container" /fixture control down
-wait_for 'source outage reaches product and registry readiness' 240 readiness False false
-probe --url http://dpc-http-source-metrics:8081/metrics --contains 'http_source_ready 0'
-docker exec "$source_container" /fixture control healthy
-wait_for 'source recovery reaches product and registry readiness' 240 readiness True true
-
-kube delete role export-connector-observer
-wait_for 'revoked observation access is reflected without a restart' 180 readiness False false ConnectorAccessDenied
-kube apply -f "$test_dir/observer-rbac.yaml"
-wait_for 'observation access recovery' 180 readiness True true
-
-docker exec "$source_container" /fixture control rotated
-wait_for 'rotated upstream credential rejects the old projected token' 240 readiness False false
-source_secret fixture-token-b
-wait_for 'projected Secret rotation recovers the source' 300 readiness True true
-probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
-[[ "$(source_pod)" == "$connector_uid" ]] || {
-	echo 'credential rotation replaced the connector Pod' >&2
-	exit 1
-}
-echo 'PASS: credential rotation retained the connector Pod'
-
-# RollingUpdate may retain the old ready replica. Inspect the disabled replica
-# directly so an old serving Pod cannot falsely prove the flag's behavior.
-kube set env deployment/dpc-http-source HTTP_SOURCE_ENABLED=false
-wait_for 'disabled export replica refuses data and readiness' 180 disabled_export
-wait_for 'incomplete disabled rollout makes the product unavailable' 180 readiness False false
-kube set env deployment/dpc-http-source HTTP_SOURCE_ENABLED=true
-kube --request-timeout=0 rollout status deployment/dpc-http-source --timeout=240s
-wait_for 're-enabled export recovers the complete rollout' 240 readiness True true
-
-product_uid=$(kube get dataproduct existing-export -o json | jq -er '.metadata.uid | select(. != null and . != "")')
-resource_uids=$(independent_resource_uids "$product_uid")
-kube delete dataproduct existing-export
-wait_for 'deleted product disappears from the registry' 120 probe --url http://dpc/api/v1/products --contains '"products":[]'
-retained_uids=$(independent_resource_uids "$product_uid")
-[[ "$retained_uids" == "$resource_uids" ]] || {
-	echo 'product deletion replaced an independently owned workload or credential Secret' >&2
-	exit 1
-}
-probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
-docker exec "$source_container" /fixture probe --url http://127.0.0.1:9000/healthz --timeout 3s
-echo 'PASS: product deletion retained independently owned workloads and credentials'
-
+source "$repo_root/tests/source/installed-matrix.sh"
+installed_lifecycle_matrix
 source "$repo_root/tests/source/composition.sh"
 source "$repo_root/tests/source/catalog.sh"
 source "$repo_root/tests/source/engine-provider.sh"
