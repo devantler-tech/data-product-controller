@@ -67,6 +67,12 @@ kube() {
 				.metadata.ownerReferences == [{apiVersion:"postgresql.cnpg.io/v1",kind:"Cluster",name:"warehouse",uid:$uid}]
 			' <<<"${@: -1}" >/dev/null
 			sql_owner=$source_identity
+		else
+			[[ $verified == true ]]
+			jq -e '
+				(has("data")|not) and (has("stringData")|not) and
+				.metadata.ownerReferences == [{apiVersion:"v1",kind:"ConfigMap",name:"postgres-bootstrap",uid:"independent-anchor"}]
+			' <<<"${@: -1}" >/dev/null
 		fi
 		;;
 	*) echo "unexpected Kubernetes operation" >&2; return 1 ;;

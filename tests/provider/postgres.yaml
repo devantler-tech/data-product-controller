@@ -5,7 +5,7 @@ metadata:
   namespace: products
 spec:
   instances: 1
-  imageName: ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8
+  imageName: ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc1.16.0@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8
   enableSuperuserAccess: false
   storage:
     size: 1Gi

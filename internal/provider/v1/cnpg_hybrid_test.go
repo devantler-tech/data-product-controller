@@ -78,7 +78,7 @@ func TestHybridObservation(t *testing.T) {
 		{name: "owned preloaded AGE graph", engine: "graph", reason: "SourceReady", secretReads: 1, mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
 		}},
-		{name: "untagged owned AGE graph", engine: "graph", reason: "SourceReady", secretReads: 1, mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+		{name: "AGE digest without CNPG version tag", engine: "graph", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
 			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8")
 		}},
@@ -150,7 +150,7 @@ func TestHybridObservation(t *testing.T) {
 		{name: "wrong tag with authentic digest", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			setHybridImage(t, c, "ghcr.io/cloudnative-pg/postgresql:17.12-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712")
 		}},
-		{name: "untagged supported digest", reason: "SourceReady", secretReads: 1, mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+		{name: "core digest without CNPG version tag", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			setHybridImage(t, c, "ghcr.io/cloudnative-pg/postgresql@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712")
 		}},
 		{name: "catalog indirection", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {

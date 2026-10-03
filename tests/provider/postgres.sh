@@ -29,7 +29,7 @@ provider_diagnostics() {
 }
 
 # Bound to the anonymously readable, signed artifact produced by the owned AGE release.
-age_image=ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8
+age_image=ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc1.16.0@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8
 age_source=04d6ec7b517b59e6d2cffcab484f8a42a711c1ce
 age_release=v1.16.0
 age_publisher=86f0f95e5ac93ec914f5717f561af878b7d09bf1
@@ -291,15 +291,14 @@ wait_for 'recreated source serves all retained records before republishing crede
 publication_anchor_uid=$(kube get configmap postgres-bootstrap -o jsonpath='{.metadata.uid}')
 [[ -n $publication_anchor_uid ]]
 for model in document graph; do
-	# Retain a live independent owner while testing a stale source identity. A sole
-	# deleted owner would let Kubernetes garbage-collect the real password Secret.
-	kube patch secret "warehouse-$model-reader" --type=merge -p "$(jq -nc --arg uid "$old_uid" --arg anchor "$publication_anchor_uid" '{metadata:{ownerReferences:[
-      {apiVersion:"postgresql.cnpg.io/v1",kind:"Cluster",name:"warehouse",uid:$uid},
+	# Retain the Secret under an independent owner while testing the absence of
+	# a current Cluster owner, without racing garbage collection of a stale UID.
+	kube patch secret "warehouse-$model-reader" --type=merge -p "$(jq -nc --arg anchor "$publication_anchor_uid" '{metadata:{ownerReferences:[
       {apiVersion:"v1",kind:"ConfigMap",name:"postgres-bootstrap",uid:$anchor}]}}')" >/dev/null
 done
-# Every descriptor rejects unowned or stale credentials while independent queries keep working.
+# Every descriptor rejects a publication without a current source owner while queries keep working.
 for model in sql document graph; do
-	wait_for "$model rejects stale source identity" model_unavailable "$model" ConnectionOwnerMismatch
+	wait_for "$model rejects a publication without a current source owner" model_unavailable "$model" ConnectionOwnerMismatch
 done
 bind_sql_publication
 bind_hybrid_publications

@@ -15,14 +15,14 @@ Apply the release's CRD before upgrading an existing chart installation, as desc
 `spec.source.engine` uses the `engine-provider/v1` contract. Admission binds each supported selection
 to one adapter and resource API. The runtime resolver repeats that check before any reads.
 
-| Selection             | Adapter              | Referenced resource                           | Connection publication                                                                          |
-|-----------------------|----------------------|-----------------------------------------------|-------------------------------------------------------------------------------------------------|
-| Engine omitted        | `crossplane/v1`      | Namespaced custom resource                    | Matching `writeConnectionSecretToRef`, owned by that resource                                   |
-| `sql` / `native`      | `cnpg/v1`            | `postgresql.cnpg.io/v1` `Cluster`             | Operator-generated `<cluster>-app` Secret, owned by the current Cluster UID                     |
-| `document` / `native` | `percona-mongodb/v1` | `psmdb.percona.com/v1` `PerconaServerMongoDB` | Explicit custom-user password Secret, published with the current source UID                     |
-| `graph` / `native`    | `arangodb/v1`        | `database.arangodb.com/v1` `ArangoDeployment` | Independently published read-only application password, with v1 metadata and current source UID |
-| `document` / `cnpg-hybrid` | `cnpg-hybrid/v1` | `postgresql.cnpg.io/v1` `Cluster` | Dedicated JSONB reader publication, current source UID and generation |
-| `graph` / `cnpg-hybrid` | `cnpg-hybrid/v1` | `postgresql.cnpg.io/v1` `Cluster` | Dedicated AGE reader publication, current source UID and generation |
+| Selection                  | Adapter              | Referenced resource                           | Connection publication                                                                          |
+|----------------------------|----------------------|-----------------------------------------------|-------------------------------------------------------------------------------------------------|
+| Engine omitted             | `crossplane/v1`      | Namespaced custom resource                    | Matching `writeConnectionSecretToRef`, owned by that resource                                   |
+| `sql` / `native`           | `cnpg/v1`            | `postgresql.cnpg.io/v1` `Cluster`             | Operator-generated `<cluster>-app` Secret, owned by the current Cluster UID                     |
+| `document` / `native`      | `percona-mongodb/v1` | `psmdb.percona.com/v1` `PerconaServerMongoDB` | Explicit custom-user password Secret, published with the current source UID                     |
+| `graph` / `native`         | `arangodb/v1`        | `database.arangodb.com/v1` `ArangoDeployment` | Independently published read-only application password, with v1 metadata and current source UID |
+| `document` / `cnpg-hybrid` | `cnpg-hybrid/v1`     | `postgresql.cnpg.io/v1` `Cluster`             | Dedicated JSONB reader publication, current source UID and generation                           |
+| `graph` / `cnpg-hybrid`    | `cnpg-hybrid/v1`     | `postgresql.cnpg.io/v1` `Cluster`             | Dedicated AGE reader publication, current source UID and generation                             |
 
 SQL uses the native adapter; a SQL hybrid selection is unsupported.
 Unknown versions, contradictory adapters and other resource APIs are rejected at admission. SQL
@@ -86,8 +86,9 @@ The supported immutable profiles are:
 - Core JSONB: `ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712`.
 - JSONB or AGE: `ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc1.16.0@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8`.
 
-Each also permits the same repository and digest without a tag. Other tags, digests and
-repositories are unsupported, including newer owned images until their profile is validated.
+Both the version tag and digest are required: CloudNativePG uses the tag to detect upgrades,
+while the digest fixes the image bytes. Digest-only references, other tags, digests and repositories
+are unsupported, including newer owned images until their profile is validated.
 Real PostgreSQL acceptance uses CloudNativePG 1.30.1; source observation does not verify the
 installed operator binary. The owned image's v1.16.0 source is
 `04d6ec7b517b59e6d2cffcab484f8a42a711c1ce`, signed by the immutable publisher

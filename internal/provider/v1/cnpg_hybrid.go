@@ -152,14 +152,15 @@ func hybridSourceProfile(cluster *unstructured.Unstructured, engine string) bool
 	}
 	const repository = "ghcr.io/cloudnative-pg/postgresql"
 	const digest = "sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712"
-	if image == repository+"@"+digest || image == repository+":17.11-minimal-trixie@"+digest {
+	// CNPG requires a version tag to detect upgrades, even when a digest fixes the bytes.
+	if image == repository+":17.11-minimal-trixie@"+digest {
 		return engine == "document"
 	}
 	// Bind the capability to the anonymously verified v1.16.0 release artifact.
 	const ageRepository = "ghcr.io/devantler-tech/data-product-controller-postgresql-age"
 	const ageDigest = "sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8"
 	const ageTag = "17.11-age1.7.0-dpc1.16.0"
-	if image != ageRepository+"@"+ageDigest && image != ageRepository+":"+ageTag+"@"+ageDigest {
+	if image != ageRepository+":"+ageTag+"@"+ageDigest {
 		return false
 	}
 	return engine == "document" || hybridAGEPreload(cluster)
