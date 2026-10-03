@@ -104,6 +104,9 @@ func TestHybridDocumentObservation(t *testing.T) {
 		{name: "unknown capability", reason: "ConnectionPublicationUnsupported", secretReads: 1, mutate: func(_ *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			s.Annotations["data.devantler.tech/cnpg-hybrid-capability"] = "jsonb/v2"
 		}},
+		{name: "graph capability on document reader", reason: "ConnectionPublicationUnsupported", secretReads: 1, mutate: func(_ *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			s.Annotations["data.devantler.tech/cnpg-hybrid-capability"] = "age/1.7.0"
+		}},
 		{name: "invalid table", reason: "ConnectionPublicationUnsupported", secretReads: 1, mutate: func(_ *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			s.Annotations["data.devantler.tech/cnpg-hybrid-table"] = "documents;drop"
 		}},
@@ -192,8 +195,12 @@ func hybridDocumentFixture(
 		"spec",
 		"imageName",
 	)
-	_ = unstructured.SetNestedField(cluster.Object,
-		"ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712", "status", "image")
+	_ = unstructured.SetNestedField(
+		cluster.Object,
+		"ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712",
+		"status",
+		"image",
+	)
 	secret.Name = "warehouse-reader"
 	secret.Annotations = map[string]string{
 		"data.devantler.tech/cnpg-hybrid-publication":       "v1",
