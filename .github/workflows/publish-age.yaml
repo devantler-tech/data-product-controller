@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # Build the caller's tagged release source.
+      packages: write # Push the owned AGE image and signature.
+      id-token: write # Verify the reusable workflow identity and sign the artifact.
     steps:
       - name: Require the owned release source
         env:

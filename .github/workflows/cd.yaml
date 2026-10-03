@@ -25,9 +25,9 @@ jobs:
   publish-age:
     name: Publish signed PostgreSQL AGE image
     permissions:
-      contents: read
-      packages: write
-      id-token: write
+      contents: read # Build the tagged release source.
+      packages: write # Publish only the independently versioned AGE image.
+      id-token: write # Sign that artifact with the immutable publisher identity.
     uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@4a2570c98423a49d2aea00b84576065a64854180
 
   smoke:

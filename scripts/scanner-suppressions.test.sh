@@ -22,6 +22,10 @@ esac
 rendered=$(helm template data-product-controller "$chart" \
 	--namespace data-product-system \
 	--set route.enabled=true)
+# Dockerfile inventory must work on hosted runners without ripgrep. Fail closed
+# if enumeration fails instead of losing an error inside the allowlist pipeline.
+dockerfiles=$(find "$repo_root" -type d -name .git -prune -o -type f -name Dockerfile -print) ||
+	fail 'Dockerfile inventory is unavailable'
 actual_checkov_allowlist=$(
 	{
 		# shellcheck disable=SC2016 # $resource is a yq variable, not a shell expansion.
@@ -38,7 +42,7 @@ actual_checkov_allowlist=$(
       select(.key | test("^checkov\\.io/skip[0-9]*$")) |
       (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + ":" + $resource + " " + (.value | split("=")[0])' \
 			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml "$repo_root"/tests/provider/*.yaml
-		rg --files -g Dockerfile "$repo_root" | while IFS= read -r dockerfile; do
+		printf '%s\n' "$dockerfiles" | while IFS= read -r dockerfile; do
 			artifact=${dockerfile#"$repo_root"/}
 			sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/\1/p' "$dockerfile" |
 				while IFS= read -r check; do printf '%s %s\n' "$artifact" "$check"; done

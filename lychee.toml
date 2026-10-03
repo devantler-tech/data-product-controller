@@ -13,6 +13,7 @@ exclude = [
   "(^|/)api/observations$",
   # Signing identities are compared by Cosign, not fetched as documentation pages.
   "^https://github\\.com/\\$GITHUB_WORKFLOW_REF$",
+  "^https://github\\.com/\\$SIGNING_WORKFLOW$",
   "^https://github\\.com/devantler-tech/actions/\\.github/workflows/publish-app\\.yaml@[0-9a-f]{40}$",
   "^https://token\\.actions\\.githubusercontent\\.com/?$",
   # This fixture-only loopback route is exercised inside its container by probes.

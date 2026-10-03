@@ -28,6 +28,7 @@ RUN /usr/lib/apt/apt-helper -o Acquire::https::Timeout=90 -o Acquire::Retries=3 
     && mkdir -p /out/usr/lib/postgresql/17/lib/plugins /out/usr/share/doc/postgresql-age \
     && ln -s ../age.so /out/usr/lib/postgresql/17/lib/plugins/age.so \
     && cp LICENSE NOTICE /out/usr/share/doc/postgresql-age/
+USER 26
 
 FROM ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712
 USER 0
