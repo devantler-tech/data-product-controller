@@ -246,5 +246,6 @@ for marker in synthetic-graph-reader-original synthetic-graph-reader-replacement
 		exit 1
 	fi
 done
+require_read_only_source_audit
 echo 'PASS: real ArangoDB traversal, privileges, rotation, recovery, gates and independent retention'
 bounded docker stats --no-stream --format 'Owned cluster CPU={{.CPUPerc}} memory={{.MemUsage}}' "$control_node"

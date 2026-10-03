@@ -454,5 +454,6 @@ for marker in synthetic-reader-original synthetic-reader-replacement synthetic-w
 		exit 1
 	fi
 done
+require_read_only_source_audit
 echo 'PASS: complete real Percona query, privilege and lifecycle acceptance'
 bounded docker stats --no-stream --format 'Owned cluster CPU={{.CPUPerc}} memory={{.MemUsage}}' "$control_node"

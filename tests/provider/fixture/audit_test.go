@@ -7,6 +7,47 @@ import (
 	"testing"
 )
 
+// TestAuditReadOnlyRequiresObservedGets rejects attempts to mutate or broaden source access.
+func TestAuditReadOnlyRequiresObservedGets(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		verbs []string
+		want  bool
+	}{
+		{"observed exact reads", []string{"get", "get"}, true},
+		{"no evidence", nil, false},
+		{"create", []string{"get", "create"}, false},
+		{"update", []string{"get", "update"}, false},
+		{"patch", []string{"get", "patch"}, false},
+		{"delete", []string{"get", "delete"}, false},
+		{"delete collection", []string{"get", "deletecollection"}, false},
+		{"list", []string{"get", "list"}, false},
+		{"watch", []string{"get", "watch"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var input strings.Builder
+			for _, verb := range tc.verbs {
+				data, err := json.Marshal(map[string]any{
+					"stage": "ResponseComplete", "verb": verb,
+					"user":           map[string]any{"username": "system:serviceaccount:products:dpc"},
+					"responseStatus": map[string]any{"code": 403},
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				input.Write(data)
+				input.WriteByte('\n')
+			}
+			cmd := exec.Command("jq", "-se", "-f", "../audit-read-only.jq")
+			cmd.Stdin = strings.NewReader(input.String())
+			output, err := cmd.CombinedOutput()
+			if (err == nil) != tc.want {
+				t.Fatalf("read-only=%v, want %v: %s", err == nil, tc.want, output)
+			}
+		})
+	}
+}
+
 // TestAuditServerRejectsInactiveConfiguration prevents zero reads from proving a disabled observer.
 func TestAuditServerRejectsInactiveConfiguration(t *testing.T) {
 	for _, tc := range []struct {
