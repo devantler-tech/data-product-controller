@@ -80,6 +80,8 @@ kube() {
   for argument in "$@"; do [[ $argument != --subresource=status ]] || endpoint=status; done
   [[ $endpoint == "$DPC_TEST_ENDPOINT" ]]
 }
+
+
 restore_members() {
 `+body+`
 }
@@ -103,5 +105,39 @@ fi
 				t.Fatalf("recovery endpoint: %v %s", err, output)
 			}
 		})
+	}
+}
+
+// The operator may already remove old Pods while orphan-deleting the source.
+// Missing recorded runtime objects must not abort cleanup of the remaining recorded objects.
+func TestGraphRecoveryAcceptsAlreadyRemovedRuntimeObjects(t *testing.T) {
+	script, err := os.ReadFile("../arango.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var deletion string
+	for _, line := range strings.Split(string(script), "\n") {
+		if strings.HasPrefix(line, "bounded kubectl ") && strings.Contains(line, "old-members.json") {
+			deletion = line
+			break
+		}
+	}
+	if deletion == "" {
+		t.Fatal("recorded runtime deletion missing")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "bash", "-c", `set -euo pipefail
+test_dir=unused
+remaining() { echo 10; }
+bounded() { "$@"; }
+kubectl() {
+  for argument in "$@"; do [[ $argument != --ignore-not-found ]] || return 0; done
+  echo 'recorded Pod is already absent' >&2
+  return 1
+}
+`+deletion)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("already removed runtime objects: %v %s", err, output)
 	}
 }

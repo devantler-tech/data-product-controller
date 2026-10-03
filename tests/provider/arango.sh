@@ -46,6 +46,15 @@ reader_rotation_ready() {
 	kube exec graph-bootstrap -- /fixture rotate || return 1
 	kube exec deployment/graph-query -- /fixture stale-password
 }
+# restore_scheduling replaces the outage selector with the observed node's concrete hostname.
+# Null restores the operator's last accepted selector; a merge-patch empty map preserves old keys.
+restore_scheduling() {
+	local hostname
+	hostname=$(kubectl --request-timeout=15s get node "$control_node" -o json |
+		jq -er '.metadata.labels["kubernetes.io/hostname"] | select(type == "string" and length > 0)') || return 1
+	kube patch arangodeployment lineage --type=json -p \
+		"$(jq -nc --arg hostname "$hostname" '[{op:"replace",path:"/spec/single/nodeSelector",value:{"kubernetes.io/hostname":$hostname}}]')" >/dev/null
+}
 # restore_members patches observed member identities through the source's served status contract.
 restore_members() {
 	local endpoint
@@ -59,6 +68,27 @@ restore_members() {
 	else
 		kube patch arangodeployment lineage --type=merge --patch-file "$test_dir/recovery-members.json" >/dev/null
 	fi
+}
+# record_old_members fences runtime cleanup by the observed source and current member identities.
+# The operator's ArangoMembers are not labelled, so Pod selectors cannot identify those resources.
+record_old_members() {
+	kube get pods -l arango_deployment=lineage -o json >"$test_dir/old-pods.json"
+	kube get arangomembers -o json | jq --arg uid "$source_uid" \
+		--slurpfile recovery "$test_dir/recovery-members.json" '
+    .items |= map(select(.kind == "ArangoMember" and .spec.group == "single" and
+      .spec.deploymentUID == $uid and
+      (.spec.id as $id | any($recovery[0].status.members.single[]; .id == $id)) and
+      any(.metadata.ownerReferences[]?; .apiVersion == "database.arangodb.com/v1" and
+        .kind == "ArangoDeployment" and .name == "lineage" and .uid == $uid)))' >"$test_dir/old-arangomembers.json"
+	jq -ne --slurpfile pods "$test_dir/old-pods.json" \
+		--slurpfile members "$test_dir/old-arangomembers.json" '
+    {apiVersion:"v1",kind:"List",items:($pods[0].items + $members[0].items)} |
+    if (.items | any(.kind == "Pod") and ([.[] | select(.kind == "ArangoMember")] | length == 1) and
+      all(.[]; (.kind == "Pod" or .kind == "ArangoMember") and .metadata.namespace == "products" and
+        (.metadata.uid | type == "string" and length > 0) and
+        (.metadata.name | type == "string" and startswith("lineage-single-")) and
+        (.kind != "Pod" or .metadata.labels.arango_deployment == "lineage")))
+    then . else error("incomplete or unsafe retained runtime inventory") end' >"$test_dir/old-members.json"
 }
 # retained_identities captures live source, credential and storage identities without secret data.
 retained_identities() {
@@ -213,7 +243,7 @@ phase 'actual scheduling outage and recovery' 360
 kube patch arangodeployment lineage --type=merge -p '{"spec":{"single":{"nodeSelector":{"data.devantler.tech/acceptance-node":"unavailable"}}}}' >/dev/null
 wait_for 'actual operator update withdraws current readiness' product_ready False SourceNotReady
 wait_for 'real query reports the missing server' query outage
-kube patch arangodeployment lineage --type=merge -p '{"spec":{"single":{"nodeSelector":null}}}' >/dev/null
+restore_scheduling
 wait_for 'operator reconciles and restarts the retained source' database_ready
 wait_for 'same two-hop lineage survives restart' query
 wait_for 'operator current spec republishes readiness' product_ready True SourceReady
@@ -233,14 +263,11 @@ kube get arangodeployment lineage -o json | jq -e '
     all($members[]; (.id | type == "string" and length > 0) and
       ((.persistentVolumeClaim.name // .persistentVolumeClaimName) | type == "string" and length > 0))
   then {status:{members:{single:$members}}} else error("incomplete retained member observation") end' >"$test_dir/recovery-members.json"
-kube get pods,arangomembers -l arango_deployment=lineage -o json >"$test_dir/old-members.json"
-jq -e '.items | length > 0 and any(.[]; .kind == "Pod") and
-  all(.[]; (.kind == "Pod" or .kind == "ArangoMember") and .metadata.namespace == "products" and
-    .metadata.labels.arango_deployment == "lineage" and .metadata.uid != null)' "$test_dir/old-members.json" >/dev/null
+record_old_members
 bounded kubectl --request-timeout=0 -n products delete arangodeployment lineage --cascade=orphan --timeout="$(remaining)s"
 # Remove only recorded orphaned runtime objects. The upstream recovery procedure
 # reuses observed member IDs and PVC names; it supplies no fabricated ready status.
-bounded kubectl --request-timeout=0 -n products delete -f "$test_dir/old-members.json" --timeout="$(remaining)s"
+bounded kubectl --request-timeout=0 -n products delete --ignore-not-found -f "$test_dir/old-members.json" --timeout="$(remaining)s"
 yq '.metadata.annotations."deployment.arangodb.com/maintenance"="true"' "$repo_root/tests/provider/arango.yaml" | kube apply -f - >/dev/null
 restore_members
 new_uid=$(kube get arangodeployment lineage -o jsonpath='{.metadata.uid}')
