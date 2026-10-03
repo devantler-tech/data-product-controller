@@ -4,7 +4,10 @@ repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 chart="$repo_root/charts/data-product-controller"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-fail() { printf '%s\n' "UI host origin chart test: $1" >&2; exit 1; }
+fail() {
+	printf '%s\n' "UI host origin chart test: $1" >&2
+	exit 1
+}
 
 # Catch a renderer that approves the kit in only one side of the publisher contract.
 for contract in false true; do
