@@ -33,6 +33,17 @@ bounded() {
 	timeout --signal=TERM --kill-after=5s "${left}s" "$@"
 }
 
+# Verify the live API server, node mount and exact policy before trusting audit counts.
+require_audit_server() {
+	: "${repo_root:?owned repository required}" "${control_node:?owned control-plane node required}"
+	kubectl --request-timeout=15s -n kube-system get pods -l component=kube-apiserver -o json |
+		jq -e -f "$repo_root/tests/provider/audit-server.jq" >/dev/null || return 1
+	bounded docker exec "$control_node" cat /audit/policy.yaml >"$test_dir/audit/node-policy.yaml" || return 1
+	cmp -s "$test_dir/audit/policy.yaml" "$test_dir/audit/node-policy.yaml" || return 1
+	bounded docker exec "$control_node" test -f /audit/log.json || return 1
+	echo 'PASS: running API server writes audit events using the exact acceptance policy'
+}
+
 wait_for() {
 	local description=$1
 	shift

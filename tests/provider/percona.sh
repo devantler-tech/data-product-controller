@@ -145,6 +145,10 @@ disabled_without_reads() {
 	local reason=$1 before after
 	product_ready False "$reason" || return 1
 	before=$(audit_reads) || return 1
+	((before > 0)) || {
+		echo 'audit policy has not observed the enabled controller; zero-read evidence is incomplete' >&2
+		return 1
+	}
 	bounded sleep 35
 	after=$(audit_reads) || return 1
 	[[ $before == "$after" ]] || {
@@ -191,11 +195,13 @@ if [[ -d $test_dir/cluster/kind/mirrors ]]; then
 	exit 1
 fi
 export DPC_TEST_AUDIT_DIR="$test_dir/audit"
+# Kind chooses the kubeadm API version for the pinned Kubernetes node. Omitting
+# apiVersion matches that document; map arguments remain compatible across versions.
 yq -i '.nodes = [.nodes[0]] |
   .nodes[].image = "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a" |
   .containerdConfigPatches += ["[plugins.\"io.containerd.cri.v1.images\".registry]\n  config_path = \"/etc/containerd/certs.d\""] |
   .nodes[0].extraMounts += [{"hostPath":strenv(DPC_TEST_AUDIT_DIR),"containerPath":"/audit"}] |
-  .nodes[0].kubeadmConfigPatches += ["apiVersion: kubeadm.k8s.io/v1beta4\nkind: ClusterConfiguration\napiServer:\n  extraArgs:\n    - name: audit-policy-file\n      value: /audit/policy.yaml\n    - name: audit-log-path\n      value: /audit/log.json\n  extraVolumes:\n    - name: audit\n      hostPath: /audit\n      mountPath: /audit\n      readOnly: false\n      pathType: Directory"]' "$test_dir/cluster/kind.yaml"
+  .nodes[0].kubeadmConfigPatches += ["kind: ClusterConfiguration\napiServer:\n  extraArgs:\n    audit-policy-file: /audit/policy.yaml\n    audit-log-path: /audit/log.json\n  extraVolumes:\n    - name: audit\n      hostPath: /audit\n      mountPath: /audit\n      readOnly: false\n      pathType: Directory"]' "$test_dir/cluster/kind.yaml"
 cluster_started=true
 # Zero CLI node-count overrides preserve Kind's declared image, mounts and
 # kubeadm patches instead of replacing the nodes with KSail's default profile.
@@ -212,6 +218,7 @@ control_node=$(docker ps --filter "label=io.x-k8s.kind.cluster=$cluster_name" --
 [[ $(docker inspect "$control_node" --format '{{.Config.Image}}') == kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a ]]
 kubectl --request-timeout=15s version -o json | jq -e '.serverVersion.gitVersion == "v1.34.0"' >/dev/null
 echo 'PASS: running node image and Kubernetes API match the pinned 1.34.0 profile'
+require_audit_server
 kubectl --request-timeout=15s create namespace products >/dev/null
 # Only this run's Kind node resolves the disposable registry through its Docker network.
 registry_dir=/etc/containerd/certs.d/localhost_5055_
