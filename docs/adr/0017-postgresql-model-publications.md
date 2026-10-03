@@ -1,6 +1,6 @@
 # ADR 0017: PostgreSQL model publications
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-10-03
 
 ## Context
