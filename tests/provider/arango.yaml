@@ -16,6 +16,7 @@ spec:
       root: lineage-root-password
   tls:
     caSecretName: lineage-ca
+    altNames: [lineage.products.svc.cluster.local]
   externalAccess:
     type: None
   single:

@@ -41,6 +41,25 @@ bind_publication() {
 	kube patch secret lineage-reader --type=merge -p \
 		"$(jq -nc --arg uid "$1" '{metadata:{ownerReferences:[{apiVersion:"database.arangodb.com/v1",kind:"ArangoDeployment",name:"lineage",uid:$uid}]}}')" >/dev/null
 }
+# reader_rotation_ready retries publication until the old credential is actually rejected.
+reader_rotation_ready() {
+	kube exec graph-bootstrap -- /fixture rotate || return 1
+	kube exec deployment/graph-query -- /fixture stale-password
+}
+# restore_members patches observed member identities through the source's served status contract.
+restore_members() {
+	local endpoint
+	endpoint=$(kubectl --request-timeout=15s get crd arangodeployments.database.arangodb.com -o json | jq -er '
+    [.spec.versions[]? | select(.name == "v1" and .served == true)] |
+    if length != 1 then error("unknown served ArangoDeployment contract")
+    elif .[0].subresources.status != null then "status" else "main" end') || return 1
+	printf 'Recovery status endpoint: %s\n' "$endpoint"
+	if [[ $endpoint == status ]]; then
+		kube patch arangodeployment lineage --subresource=status --type=merge --patch-file "$test_dir/recovery-members.json" >/dev/null
+	else
+		kube patch arangodeployment lineage --type=merge --patch-file "$test_dir/recovery-members.json" >/dev/null
+	fi
+}
 # retained_identities captures live source, credential and storage identities without secret data.
 retained_identities() {
 	kube get arangodeployment,secret,pvc -o json | jq -ceS '[.items[] | . as $resource |
@@ -202,8 +221,7 @@ wait_for 'operator current spec republishes readiness' product_ready True Source
 phase 'password rotation and retained source recreation' 600
 printf 'synthetic-graph-reader-replacement' >"$test_dir/reader-password"
 kube create secret generic lineage-reader --from-file=password="$test_dir/reader-password" --dry-run=client -o yaml | kube apply -f - >/dev/null
-wait_for 'independent bootstrap publisher observes and installs the rotated projection' kube exec graph-bootstrap -- /fixture rotate
-wait_for 'old password receives an actual authentication rejection' kube exec deployment/graph-query -- /fixture stale-password
+wait_for 'independent publisher installs the replacement and the old password is rejected' reader_rotation_ready
 wait_for 'same query workload uses the rotated password' query
 [[ $(kube get secret lineage-reader -o jsonpath='{.metadata.uid}') == "$secret_uid" ]]
 [[ $(kube get pod -l app=graph-query -o jsonpath='{.items[0].metadata.uid}') == "$query_pod_uid" ]]
@@ -224,7 +242,7 @@ bounded kubectl --request-timeout=0 -n products delete arangodeployment lineage 
 # reuses observed member IDs and PVC names; it supplies no fabricated ready status.
 bounded kubectl --request-timeout=0 -n products delete -f "$test_dir/old-members.json" --timeout="$(remaining)s"
 yq '.metadata.annotations."deployment.arangodb.com/maintenance"="true"' "$repo_root/tests/provider/arango.yaml" | kube apply -f - >/dev/null
-kube patch arangodeployment lineage --subresource=status --type=merge --patch-file "$test_dir/recovery-members.json" >/dev/null
+restore_members
 new_uid=$(kube get arangodeployment lineage -o jsonpath='{.metadata.uid}')
 [[ $new_uid != "$source_uid" ]]
 kube annotate arangodeployment lineage deployment.arangodb.com/maintenance- >/dev/null
