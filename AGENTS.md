@@ -16,6 +16,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/registry/` — read-only descriptor API and reference registry UI.
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
 - `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
+- `internal/preflight/` and `cmd/product-check/` — default-off local publisher validation using the embedded delivered CRD and bounded public descriptor preview.
 - `web/` and `cmd/ui-kit/` — portable UI protocol library and independent, default-off compatibility host.
 - `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
@@ -81,6 +82,12 @@ Do not copy instructions into them.
   service/distribution identities, strict contexts and input/output bounds. Never infer permissions,
   transfer formats or connector services from query metadata. Compatibility covers the catalog
   data model only; see `docs/dsp-catalog.md`.
+- Publisher preflight uses the default-off `publisher-preflight` gate. Keep input caller-selected,
+  regular-file-only and bounded; never fetch references, instantiate a Kubernetes client, read
+  credentials or apply resources. Validate the embedded delivered create-time schema, CEL and
+  metadata rules, and reuse canonical public projection and declared compatibility rules.
+  Imported status never establishes readiness. Missing local producers remain unresolved;
+  invalid or incomplete bundles publish no descriptor previews. See `docs/publisher-preflight.md`.
 
 ## Validation
 

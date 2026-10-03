@@ -31,7 +31,7 @@ jobs:
     uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@86f0f95e5ac93ec914f5717f561af878b7d09bf1
 
   smoke:
-    name: Verify published exporter and portable UI host
+    name: Verify published offline commands and portable UI host
     needs: publish
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -66,3 +66,4 @@ jobs:
           [[ "$(docker image inspect "$digest" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" == "$EXPECTED_SHA" ]]
           bash tests/source/dsp-catalog.sh "$digest"
           bash tests/source/ui-kit.sh "$digest"
+          bash tests/source/product-check.sh "$digest"
