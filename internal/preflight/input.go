@@ -9,7 +9,6 @@ import (
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"go.yaml.in/yaml/v3"
 	kubejson "k8s.io/apimachinery/pkg/util/json"
-	kubeyaml "sigs.k8s.io/yaml"
 )
 
 const maxInputBytes = 2 << 20
@@ -49,11 +48,11 @@ func readDocuments(in io.Reader) ([]document, string, int) {
 		if code := checkNode(&node, 0); code != "" {
 			return nil, code, number
 		}
-		normalized, err := yaml.Marshal(&node)
+		value, err := decodeYAMLValue(&node)
 		if err != nil {
 			return nil, "InvalidDocument", number
 		}
-		encoded, err := kubeyaml.YAMLToJSONStrict(normalized)
+		encoded, err := json.Marshal(value)
 		if err != nil {
 			return nil, "InvalidDocument", number
 		}
@@ -82,6 +81,51 @@ func readDocuments(in io.Reader) ([]document, string, int) {
 		return nil, "NoProducts", 0
 	}
 	return documents, "", 0
+}
+
+// Decode the already checked syntax tree without serializing and reparsing YAML.
+// Date scalars retain their authored string; admission owns format validation.
+func decodeYAMLValue(node *yaml.Node) (any, error) {
+	switch node.Kind {
+	case yaml.DocumentNode:
+		if len(node.Content) != 1 {
+			return nil, errors.New("invalid document")
+		}
+		return decodeYAMLValue(node.Content[0])
+	case yaml.MappingNode:
+		object := make(map[string]any, len(node.Content)/2)
+		for index := 0; index < len(node.Content); index += 2 {
+			value, err := decodeYAMLValue(node.Content[index+1])
+			if err != nil {
+				return nil, err
+			}
+			object[node.Content[index].Value] = value
+		}
+		return object, nil
+	case yaml.SequenceNode:
+		values := make([]any, len(node.Content))
+		for index, child := range node.Content {
+			value, err := decodeYAMLValue(child)
+			if err != nil {
+				return nil, err
+			}
+			values[index] = value
+		}
+		return values, nil
+	case yaml.ScalarNode:
+		if node.Tag == "!!timestamp" {
+			return node.Value, nil
+		}
+		var value any
+		if err := node.Decode(&value); err != nil {
+			return nil, err
+		}
+		return value, nil
+	case yaml.AliasNode:
+		return nil, errors.New("invalid document")
+	default:
+		return nil, errors.New("invalid document")
+	}
 }
 
 func checkNode(node *yaml.Node, depth int) string {

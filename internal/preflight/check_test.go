@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -293,12 +294,17 @@ func TestBundleIdentityAndNamespace(t *testing.T) {
 
 func TestPublicPublicationProfile(t *testing.T) {
 	t.Parallel()
+	credentialURL := (&url.URL{
+		Scheme: "https",
+		Host:   "api.example.test",
+		User:   url.UserPassword("example-user", "example-password"),
+	}).String()
 	for _, tc := range []struct {
 		name, code string
 		mutate     func(*data.DataProduct)
 	}{
-		{"credential URL", "InvalidPublicMetadata", func(p *data.DataProduct) { p.Spec.Outputs[0].URL = "https://user:PRIVATE_VALUE@api.example.test" }},
-		{"credential ID", "InvalidPublicMetadata", func(p *data.DataProduct) { p.Spec.ID = "https://user:PRIVATE_VALUE@api.example.test/product" }},
+		{"credential URL", "InvalidPublicMetadata", func(p *data.DataProduct) { p.Spec.Outputs[0].URL = credentialURL }},
+		{"credential ID", "InvalidPublicMetadata", func(p *data.DataProduct) { p.Spec.ID = credentialURL + "/product" }},
 		{"fragment ID", "InvalidPublicMetadata", func(p *data.DataProduct) { p.Spec.ID = "https://api.example.test/product#PRIVATE_VALUE" }},
 		{"missing ID host", "AdmissionInvalid", func(p *data.DataProduct) { p.Spec.ID = "https://" }},
 		{"zone URL", "InvalidPublicMetadata", func(p *data.DataProduct) { p.Spec.Outputs[0].URL = "https://[fe80::1%25en0]/" }},
@@ -575,5 +581,41 @@ func TestCompleteReportBudget(t *testing.T) {
 	requireCode(t, r, "PreviewLimit")
 	if r.Valid || len(r.Descriptors) != 0 {
 		t.Fatal("oversized report emitted partial public previews")
+	}
+}
+
+func TestYAMLScalarPublication(t *testing.T) {
+	t.Parallel()
+	input := `apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: scalar
+  namespace: products
+  generation: 9007199254740993
+spec:
+  id: urn:example:scalar
+  name: yes
+  description: 2026-10-03
+  version: v1.0.0
+  owner:
+    name: Example
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://api.example.test/observations
+      contractUrl: https://api.example.test/openapi.json
+`
+	documents, code, _ := readDocuments(strings.NewReader(input))
+	if code != "" || len(documents) != 1 {
+		t.Fatalf("scalar declarations rejected: %s", code)
+	}
+	p := documents[0].product
+	if p.Generation != 9007199254740993 || p.Spec.Name != "yes" ||
+		p.Spec.Description != "2026-10-03" {
+		t.Fatal("YAML scalar meaning or integer precision changed")
+	}
+	r := check(t, input)
+	if !r.Valid || !r.Complete || len(r.Descriptors) != 1 {
+		t.Fatalf("scalar publication failed: %+v", r)
 	}
 }
