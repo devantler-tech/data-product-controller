@@ -43,16 +43,25 @@ spec:
             periodSeconds: 10
           volumeMounts:
             - { name: password, mountPath: /password, readOnly: true }
-            - { name: stale-password, mountPath: /stale-password, readOnly: true }
+            - {
+                name: stale-password,
+                mountPath: /stale-password,
+                readOnly: true,
+              }
             - { name: database-tls, mountPath: /database-tls, readOnly: true }
             - { name: query-tls, mountPath: /query-tls, readOnly: true }
       volumes:
         - name: password
-          secret: { secretName: warehouse-app, items: [{ key: password, path: password }] }
+          secret:
+            {
+              secretName: warehouse-app,
+              items: [{ key: password, path: password }],
+            }
         - name: stale-password
           secret: { secretName: warehouse-stale-reader }
         - name: database-tls
-          secret: { secretName: warehouse-ca, items: [{ key: ca.crt, path: ca.crt }] }
+          secret:
+            { secretName: warehouse-ca, items: [{ key: ca.crt, path: ca.crt }] }
         - name: query-tls
           secret: { secretName: postgres-query-tls }
 ---
@@ -105,9 +114,14 @@ spec:
         - { name: query-tls, mountPath: /query-tls, readOnly: true }
   volumes:
     - name: password
-      secret: { secretName: warehouse-writer, items: [{ key: password, path: password }] }
+      secret:
+        {
+          secretName: warehouse-writer,
+          items: [{ key: password, path: password }],
+        }
     - name: database-tls
-      secret: { secretName: warehouse-ca, items: [{ key: ca.crt, path: ca.crt }] }
+      secret:
+        { secretName: warehouse-ca, items: [{ key: ca.crt, path: ca.crt }] }
     - name: query-tls
       secret: { secretName: postgres-query-tls }
 ---

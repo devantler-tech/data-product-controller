@@ -97,11 +97,11 @@ installed operator binary. The owned image's v1.16.0 source is
 Choose the hybrid provider for PostgreSQL storage and operating conventions, with these explicit
 capability differences:
 
-| Model | Hybrid query capability | Native provider difference |
-|---|---|---|
-| Document | JSONB values in PostgreSQL tables, with a publisher-selected schema, table and column | It does not provide MongoDB wire-protocol compatibility, MongoDB operators or native document command semantics |
-| Graph | AGE Cypher over graph tables in the selected PostgreSQL database | It does not expose ArangoDB AQL or its native graph/document APIs |
-| Lifecycle | Both models share the independently operated CNPG source, storage and failure domain | Dedicated native engines have their own operators, configuration and source lifecycle |
+| Model     | Hybrid query capability                                                               | Native provider difference                                                                                      |
+|-----------|---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| Document  | JSONB values in PostgreSQL tables, with a publisher-selected schema, table and column | It does not provide MongoDB wire-protocol compatibility, MongoDB operators or native document command semantics |
+| Graph     | AGE Cypher over graph tables in the selected PostgreSQL database                      | It does not expose ArangoDB AQL or its native graph/document APIs                                               |
+| Lifecycle | Both models share the independently operated CNPG source, storage and failure domain  | Dedicated native engines have their own operators, configuration and source lifecycle                           |
 
 Query contracts describe each independent application interface; selecting a model does not make
 native and hybrid query languages interchangeable. AGE requires supported preload configuration,

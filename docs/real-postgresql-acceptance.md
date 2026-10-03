@@ -14,11 +14,11 @@ That check returns only a boolean; query readers gain no server-settings privile
 
 Three independently operated query workloads expose fixed HTTPS GET contracts:
 
-| Model | Database read | Authorization proof |
-|---|---|---|
-| Native SQL | A retained row through a dedicated SQL reader | INSERT, UPDATE and DELETE each fail with PostgreSQL `42501` |
+| Model           | Database read                                  | Authorization proof                                                             |
+|-----------------|------------------------------------------------|---------------------------------------------------------------------------------|
+| Native SQL      | A retained row through a dedicated SQL reader  | INSERT, UPDATE and DELETE each fail with PostgreSQL `42501`                     |
 | Hybrid Document | JSONB records filtered by the published marker | INSERT, UPDATE and DELETE each fail with `42501`; private records stay excluded |
-| Hybrid Graph | Actual AGE traversal across one and two hops | Cypher CREATE, SET and DETACH DELETE each fail with `42501` |
+| Hybrid Graph    | Actual AGE traversal across one and two hops   | Cypher CREATE, SET and DETACH DELETE each fail with `42501`                     |
 
 All readers also reject privileged role creation, schema creation and assuming the writer role.
 Successful reads before and after these checks distinguish denied privileges from an unavailable
