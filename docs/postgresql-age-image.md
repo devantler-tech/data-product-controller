@@ -14,6 +14,12 @@ the release source revision and repeats the authenticated graph query after pull
 Readback first removes the job's registry login, requiring anonymous artifact and signature access.
 Both its initial build and release readback must pass before the artifact is considered delivered.
 
+For the first publication, set this image's package visibility to **Public** in its GitHub
+package settings. Container packages have their own visibility; a public source repository
+does not establish anonymous package access. If the verification fails because the package is
+private, keep the artifact undelivered, correct that package's visibility and verify publication
+again. See [package access and visibility](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility).
+
 Before merging a publisher change, a signed `v0.0.0-age-proof.<run>` tag can exercise that
 same release path at the reviewed commit. This reserved namespace publishes only the AGE
 artifact; controller, manifest and chart publication is skipped. The proof must record the actual
