@@ -30,20 +30,22 @@ actual_checkov_allowlist=$(
         .metadata.annotations | to_entries[] |
         select(.key | test("^checkov\\.io/skip[0-9]*$")) |
         "rendered:" + $resource + " " + (.value | split("=")[0])' -
+		# shellcheck disable=SC2016 # $resource is a yq variable, not a shell expansion.
 		SCANNER_REPO_ROOT=$repo_root yq e -N 'select(.metadata.annotations != null) |
+		(.kind + "/" + .metadata.name) as $resource |
       .metadata.annotations | to_entries[] |
       select(.key | test("^checkov\\.io/skip[0-9]*$")) |
-      (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + " " + (.value | split("=")[0])' \
-			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml
+      (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + ":" + $resource + " " + (.value | split("=")[0])' \
+			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml "$repo_root"/tests/provider/*.yaml
 		sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/Dockerfile \1/p' "$repo_root/Dockerfile"
 	} | sort
 )
 expected_checkov_allowlist=$(
 	printf '%s\n' \
 		'Dockerfile CKV_DOCKER_2' \
-		'deploy/deployment.yaml CKV_K8S_14' \
-		'deploy/deployment.yaml CKV_K8S_38' \
-		'deploy/deployment.yaml CKV_K8S_43' \
+		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_14' \
+		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_38' \
+		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_43' \
 		'rendered:Deployment/data-product-controller CKV_K8S_21' \
 		'rendered:Deployment/data-product-controller CKV_K8S_38' \
 		'rendered:Deployment/data-product-controller CKV_K8S_43' \
@@ -54,7 +56,10 @@ expected_checkov_allowlist=$(
 		'rendered:Service/data-product-controller CKV_K8S_21' \
 		'rendered:Service/data-product-controller-harbour CKV_K8S_21' \
 		'rendered:ServiceAccount/data-product-controller CKV_K8S_21' \
-		'tests/source/consumer.yaml CKV_K8S_43' |
+		'tests/source/consumer.yaml:Pod/consumer CKV_K8S_43' \
+		'tests/provider/workloads.yaml:Deployment/document-query CKV_K8S_43' \
+		'tests/provider/workloads.yaml:Pod/document-writer CKV_K8S_43' \
+		'tests/provider/workloads.yaml:Pod/document-consumer CKV_K8S_43' |
 		sort
 )
 [ "$actual_checkov_allowlist" = "$expected_checkov_allowlist" ] ||
@@ -87,6 +92,14 @@ expected_trivy_allowlist=$(
 )
 [ "$actual_trivy_allowlist" = "$expected_trivy_allowlist" ] ||
 	fail 'Trivy suppressions must match the approved artifact allowlist'
+
+# The one module-wide advisory is specific to an unused, unmaintained package.
+# The required independent fixture test rejects importing it, including in tests.
+trivy_vulnerability_exceptions=$(yq -o=json -I=0 '.vulnerabilities' "$trivy_ignore")
+trivy_vulnerability_scope=$(printf '%s' "$trivy_vulnerability_exceptions" |
+	yq -o=json -I=0 '[.[] | {"id":.id,"paths":.paths,"expired_at":.expired_at}]')
+[ "$trivy_vulnerability_scope" = '[{"id":"GO-2026-5932","paths":["tests/provider/fixture/go.mod"],"expired_at":"2026-11-02"}]' ] ||
+	fail 'vulnerability exceptions must stay bound to the unused OpenPGP package, fixture module and expiration'
 
 # RBAC cannot restrict Secret gets to metadata. Every suppressed example must stay namespaced
 # and contain only its two exact-name GET rules; extra or wildcard rules must also fail.

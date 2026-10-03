@@ -1,0 +1,95 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: document-query
+  namespace: products
+spec:
+  podSelector:
+    matchLabels: { app: document-query }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: document-consumer }
+      ports:
+        - { protocol: TCP, port: 8443 }
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app: document-database }
+      ports:
+        - { protocol: TCP, port: 27017 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: document-writer
+  namespace: products
+spec:
+  podSelector:
+    matchLabels: { app: document-writer }
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app: document-database }
+      ports:
+        - { protocol: TCP, port: 27017 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: document-consumer
+  namespace: products
+spec:
+  podSelector:
+    matchLabels: { app: document-consumer }
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress:
+    - to:
+        - podSelector:
+            matchLabels: { app: document-query }
+      ports:
+        - { protocol: TCP, port: 8443 }
+    - to:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: kube-system }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: document-database
+  namespace: products
+spec:
+  podSelector:
+    matchLabels: { app: document-database }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: document-database }
+        - podSelector:
+            matchLabels: { app: document-query }
+        - podSelector:
+            matchLabels: { app: document-writer }
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: psmdb-operator }
+      ports:
+        - { protocol: TCP, port: 27017 }

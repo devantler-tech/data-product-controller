@@ -10,6 +10,16 @@ EXCLUDED_DIRECTORIES:
   - .github/prompts
   - .jscpd
 
+# OSV's Go call analysis must use the repository toolchain, rather than the
+# older compiler bundled in MegaLinter. Otherwise it cannot load either module
+# and reports module-wide findings without examining the compiled packages.
+PRE_COMMANDS:
+  - command: export GOTOOLCHAIN=$(awk '/^go / {print "go" $2; exit}' go.mod)
+    cwd: workspace
+    output_variables: [GOTOOLCHAIN]
+    run_before_linters: true
+    continue_if_failed: false
+
 DISABLE_LINTERS:
   # MegaLinter's Go flavor pins its own toolchain and runs it with GOTOOLCHAIN=local, so a
   # go.mod directive newer than that toolchain fails package loading outright:

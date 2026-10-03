@@ -2,7 +2,9 @@ version: 2
 
 updates:
   - package-ecosystem: gomod
-    directory: /
+    directories:
+      - /
+      - /tests/provider/fixture
     schedule:
       interval: daily
     cooldown:

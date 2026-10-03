@@ -90,6 +90,7 @@ sh scripts/scanner-suppressions.test.sh
 sh scripts/toolchain.test.sh
 helm lint charts/data-product-controller
 golangci-lint run
+(cd tests/provider/fixture && go test -race -count=1 ./... && go vet ./...)
 ```
 
 Workflow changes also require `actionlint` and `zizmor`.
@@ -98,6 +99,10 @@ The required CI source-integration job runs `bash tests/source/run.sh` in an
 ephemeral KSail cluster with enforced NetworkPolicy. It requires Docker and several
 gigabytes of free disk space; hosted execution supplies the real-cluster evidence
 when the local environment cannot run it. See `docs/source-integration-tests.md`.
+
+The required native Document job separately runs `bash tests/provider/percona.sh`
+against the real pinned Percona operator. Its independent database-client fixture
+has a separate Go module and must be tested explicitly. See `docs/real-document-acceptance.md`.
 
 API type or marker changes require deep-copy code, CRDs, and RBAC to be regenerated with controller-tools v0.21.0. Distribute the generated CRD to the chart and release artifact; all three copies must remain identical:
 

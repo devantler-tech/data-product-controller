@@ -1,3 +1,9 @@
+vulnerabilities:
+  - id: GO-2026-5932
+    paths:
+      - tests/provider/fixture/go.mod
+    expired_at: 2026-11-02
+    statement: The advisory affects the unused golang.org/x/crypto/openpgp package, with no fixed version. Mandatory fixture dependency tests reject importing that package or any subpackage; govulncheck and OSV compiled-package analysis report no affected packages. This exception applies only to the independent acceptance module and expires for reassessment.
 misconfigurations:
   - id: KSV-0113
     paths:
