@@ -143,7 +143,7 @@ func hybridSourceProfile(cluster *unstructured.Unstructured, engine string) bool
 		return false
 	}
 	image, _, err := unstructured.NestedString(cluster.Object, "spec", "imageName")
-	if err != nil || engine != "document" {
+	if err != nil || (engine != "document" && engine != "graph") {
 		return false
 	}
 	currentImage, reported, err := unstructured.NestedString(cluster.Object, "status", "image")
@@ -152,7 +152,18 @@ func hybridSourceProfile(cluster *unstructured.Unstructured, engine string) bool
 	}
 	const repository = "ghcr.io/cloudnative-pg/postgresql"
 	const digest = "sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712"
-	return image == repository+"@"+digest || image == repository+":17.11-minimal-trixie@"+digest
+	if image == repository+"@"+digest || image == repository+":17.11-minimal-trixie@"+digest {
+		return engine == "document"
+	}
+	// This signed publication proof is replaced by the verified stable release
+	// artifact before the hybrid delivery is opened for review.
+	const ageRepository = "ghcr.io/devantler-tech/data-product-controller-postgresql-age"
+	const ageDigest = "sha256:c24fab14cdede789cbe4c13a9a218571b75b55826161e4b3283f82c6ea4d3c4f"
+	const ageTag = "17.11-age1.7.0-dpc0.0.0-age-proof.01a0fdb3.1"
+	if image != ageRepository+"@"+ageDigest && image != ageRepository+":"+ageTag+"@"+ageDigest {
+		return false
+	}
+	return engine == "document" || hybridAGEPreload(cluster)
 }
 
 // hybridCurrentOwner binds only to the observed source's live identity without adopting either object.

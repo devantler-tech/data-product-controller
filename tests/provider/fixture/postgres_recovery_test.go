@@ -16,7 +16,10 @@ func TestPostgresRecoveryRebindsRetainedSQLPublication(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, recovery, found := strings.Cut(string(script), "\nphase 'independent source recreation and generation rebinding' 300\n")
+	_, recovery, found := strings.Cut(
+		string(script),
+		"\nphase 'independent source recreation and generation rebinding' 300\n",
+	)
 	if !found {
 		t.Fatal("source recovery phase missing")
 	}
