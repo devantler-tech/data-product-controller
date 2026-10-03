@@ -28,8 +28,11 @@ func TestAuditReadOnlyRequiresObservedGets(t *testing.T) {
 			var input strings.Builder
 			for _, verb := range tc.verbs {
 				data, err := json.Marshal(map[string]any{
-					"stage": "ResponseComplete", "verb": verb,
-					"user":           map[string]any{"username": "system:serviceaccount:products:dpc"},
+					"stage": "ResponseComplete",
+					"verb":  verb,
+					"user": map[string]any{
+						"username": "system:serviceaccount:products:dpc",
+					},
 					"responseStatus": map[string]any{"code": 403},
 				})
 				if err != nil {
@@ -72,15 +75,29 @@ func TestAuditServerRejectsInactiveConfiguration(t *testing.T) {
 			}
 			mounts := []any{}
 			if tc.mount {
-				mounts = append(mounts, map[string]any{"name": "audit", "mountPath": "/audit", "readOnly": false})
+				mounts = append(
+					mounts,
+					map[string]any{"name": "audit", "mountPath": "/audit", "readOnly": false},
+				)
 			}
 			hostPath := "/audit"
 			if !tc.host {
 				hostPath = "/unrelated"
 			}
 			value := map[string]any{"items": []any{map[string]any{"spec": map[string]any{
-				"containers": []any{map[string]any{"name": "kube-apiserver", "command": command, "volumeMounts": mounts}},
-				"volumes":    []any{map[string]any{"name": "audit", "hostPath": map[string]any{"path": hostPath, "type": "Directory"}}},
+				"containers": []any{
+					map[string]any{
+						"name":         "kube-apiserver",
+						"command":      command,
+						"volumeMounts": mounts,
+					},
+				},
+				"volumes": []any{
+					map[string]any{
+						"name":     "audit",
+						"hostPath": map[string]any{"path": hostPath, "type": "Directory"},
+					},
+				},
 			}}}}
 			data, err := json.Marshal(value)
 			if err != nil {

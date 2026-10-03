@@ -44,9 +44,15 @@ func testAuditReadRejectsExpiredPhase(t *testing.T, scriptPath string) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "bash", "-c",
+	command := exec.CommandContext(
+		ctx,
+		"bash",
+		"-c",
 		`set -euo pipefail; work_deadline=60; test_dir=$1; started_at=$SECONDS; source "$2"; control_node=owned-node; audit_reads() {`+"\n"+body+"\n"+`}; phase_deadline=0; audit_reads`,
-		"audit-budget-test", dir, helper)
+		"audit-budget-test",
+		dir,
+		helper,
+	)
 	command.Env = append(os.Environ(), "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	output, err := command.CombinedOutput()
 	if ctx.Err() != nil || err == nil || strings.Contains(string(output), "audit-docker-called") {
@@ -106,11 +112,18 @@ func TestProviderBudgetRejectsShellFunctions(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "bash", "-c",
+	command := exec.CommandContext(
+		ctx,
+		"bash",
+		"-c",
 		`set -euo pipefail; work_deadline=$((SECONDS+60)); test_dir=$1; started_at=$SECONDS; source "$2"; phase acceptance 30; kube() { echo must-not-run; }; bounded kube exec writer`,
-		"budget-test", t.TempDir(), helper)
+		"budget-test",
+		t.TempDir(),
+		helper,
+	)
 	output, err := command.CombinedOutput()
-	if ctx.Err() != nil || err == nil || !strings.Contains(string(output), "bounded requires an external executable") {
+	if ctx.Err() != nil || err == nil ||
+		!strings.Contains(string(output), "bounded requires an external executable") {
 		t.Fatalf("expected explicit rejection before timeout executes: %v: %s", err, output)
 	}
 	if strings.Contains(string(output), "must-not-run") {
