@@ -10,6 +10,9 @@ permissions: {}
 jobs:
   publish:
     name: Publish signed image and manifests
+    # Reserved image-acceptance tags exercise AGE publication without advancing
+    # the controller image or manifest aliases.
+    if: ${{ !startsWith(github.ref_name, 'v0.0.0-age-proof.') }}
     permissions:
       contents: read # Checkout the tagged source.
       packages: write # Publish the image and manifest artifact to GHCR.
