@@ -67,7 +67,7 @@ func NewEngineReader(config *rest.Config) (client.Reader, error) {
 		},
 		meta.RESTScopeNamespace,
 	)
-	bounded := rest.CopyConfig(config)
+	bounded := MetadataOnlyConfig(config)
 	bounded.Timeout = 5 * time.Second
 	reader, err := client.New(bounded, client.Options{Scheme: runtime.NewScheme(), Mapper: mapper})
 	if err != nil {
