@@ -192,6 +192,10 @@ func hybridPublication(annotations map[string]string, generation int64, engine s
 		strings.HasPrefix(user, "cnpg_") {
 		return false
 	}
+	if engine == "graph" {
+		return annotations[prefix+"capability"] == "age/1.7.0" &&
+			hybridIdentifier.MatchString(annotations[prefix+"graph"])
+	}
 	if engine != "document" || annotations[prefix+"capability"] != "jsonb/v1" {
 		return false
 	}

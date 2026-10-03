@@ -5,6 +5,9 @@ KSail Kubernetes 1.34 cluster with enforced Cilium NetworkPolicy. The job instal
 CloudNativePG 1.30.1 operator from a checksum-verified Helm package. PostgreSQL uses the owned
 signed AGE 1.7 image; acceptance verifies its digest, source revision, release tag and immutable
 signing workflow, then checks the operator and database images actually running in the cluster.
+The independent owner also checks effective server preloading and the installed AGE version
+over the instance's local socket, before initial queries and after retained-source recovery.
+That check returns only a boolean; query readers gain no server-settings privilege.
 
 Three independently operated query workloads expose fixed HTTPS GET contracts:
 

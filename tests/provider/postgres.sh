@@ -42,6 +42,17 @@ database_ready() {
     .status.currentPrimary != "" and .status.currentPrimary == .status.targetPrimary and
     any(.status.conditions[]?; .type == "Ready" and .status == "True")' >/dev/null
 }
+# age_profile_ready verifies effective preload and installed AGE through the independent owner's local session.
+age_profile_ready() {
+	local primary observed
+	primary=$(kube get cluster warehouse -o jsonpath='{.status.currentPrimary}') || return 1
+	[[ -n $primary ]] || return 1
+	observed=$(bounded kubectl --request-timeout=0 -n products exec -i "$primary" -c postgres -- \
+		env 'PGOPTIONS=-c statement_timeout=5000' psql -X --no-password -qAt \
+		-v ON_ERROR_STOP=1 -h /controller/run -p 5432 -U postgres -d catalog -f - \
+		<"$repo_root/tests/provider/age-runtime.sql" 2>"$test_dir/age-profile.log") || return 1
+	[[ $observed == t ]]
+}
 # publication_names lists the three independent publication names without credential data.
 publication_names() { printf '%s\n' warehouse-app warehouse-document-reader warehouse-graph-reader; }
 # bind_hybrid_publications binds current source identity and generation to verified model capabilities.
@@ -139,6 +150,7 @@ done
 kube create configmap postgres-bootstrap --from-file="bootstrap.sql=$repo_root/tests/provider/postgres-bootstrap.sql" >/dev/null
 kube apply -f "$repo_root/tests/provider/postgres.yaml" >/dev/null
 wait_for 'real CNPG operator reports one settled PostgreSQL primary' database_ready
+wait_for 'the independent owner verifies effective AGE preload and extension version' age_profile_ready
 require_pinned_image app.kubernetes.io/name=cloudnative-pg manager "$operator_image" "$operator_platform"
 require_pinned_image 'cnpg.io/cluster=warehouse,cnpg.io/podRole=instance' postgres "$age_image" "$age_platform"
 kube get cluster warehouse -o json | jq '{image:.status.image,instances:.status.instances,readyInstances:.status.readyInstances}'
@@ -226,6 +238,7 @@ wait_for 'actual hibernation withdraws all current product readiness' matrix_rea
 for model in sql document graph; do wait_for "$model reports the actual database outage" query_model "$model" outage; done
 kube annotate cluster warehouse cnpg.io/hibernation=off --overwrite >/dev/null
 wait_for 'same PostgreSQL storage recovers' database_ready
+wait_for 'resumed source retains the effective AGE runtime profile' age_profile_ready
 wait_for 'all persisted SQL, JSONB and AGE records recover' query_all
 wait_for 'all current metadata publications recover' matrix_ready True SourceReady
 [[ $before_pause == "$(retained_identities)" ]]
@@ -252,6 +265,7 @@ kube apply -f "$repo_root/tests/provider/postgres.yaml" >/dev/null
 new_uid=$(kube get cluster warehouse -o jsonpath='{.metadata.uid}')
 [[ $new_uid != "$old_uid" ]]
 wait_for 'recreated independent source adopts retained storage' database_ready
+wait_for 'recreated source retains the effective AGE runtime profile' age_profile_ready
 publication_anchor_uid=$(kube get configmap postgres-bootstrap -o jsonpath='{.metadata.uid}')
 [[ -n $publication_anchor_uid ]]
 for model in document graph; do
