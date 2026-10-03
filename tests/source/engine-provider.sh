@@ -56,7 +56,7 @@ engine_ready() {
     ([.status.conditions[]? | select(.type == "Ready" or .type == "SourceReady") |
       select(.status == $status and .observedGeneration == $product.metadata.generation)] | length == 2) and
     any(.status.conditions[]?; .type == "SourceReady" and .reason == $reason)' >/dev/null &&
-		probe --url http://dpc/api/v1/products --contains "\"ready\":$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
+		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)" engine-warehouse
 }
 
 # Count server-side schema rejection only; transport and authorization errors must fail acceptance.

@@ -2,12 +2,17 @@
 set -euo pipefail
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
-for command in ksail docker kubectl helm jq yq openssl; do
+for command in ksail docker kubectl helm jq yq openssl cosign timeout; do
 	command -v "$command" >/dev/null || {
 		echo "missing prerequisite: $command" >&2
 		exit 1
 	}
 done
+helm_version=$(helm version --short)
+[[ $helm_version =~ ^v3\.(1[2-9]|[2-9][0-9])\. ]] || {
+	echo 'source acceptance requires Helm 3.12 or newer within major version 3 for executable post-rendering' >&2
+	exit 1
+}
 
 test_dir=$(mktemp -d)
 cluster_name="dpc-e2e-${GITHUB_RUN_ID:-local}-${GITHUB_RUN_ATTEMPT:-0}-$RANDOM"
@@ -17,6 +22,7 @@ cluster_started=false
 source_container="$cluster_name-source"
 source_started=false
 started_at=$SECONDS
+integration_deadline=$((started_at + 2700))
 
 cleanup() {
 	result=$?
@@ -48,27 +54,47 @@ wait_for() {
 	local description=$1 timeout=$2
 	shift 2
 	local deadline=$((SECONDS + timeout))
-	until "$@" >"$test_dir/wait.log" 2>&1; do
+	((deadline <= integration_deadline)) || deadline=$integration_deadline
+	while :; do
 		if ((SECONDS >= deadline)); then
 			echo "timed out: $description" >&2
-			cat "$test_dir/wait.log" >&2
+			[[ ! -f "$test_dir/wait.log" ]] || cat "$test_dir/wait.log" >&2
 			return 1
+		fi
+		if "$@" >"$test_dir/wait.log" 2>&1; then
+			((SECONDS < deadline)) || {
+				echo "timed out: $description" >&2
+				return 1
+			}
+			echo "PASS: $description"
+			return 0
 		fi
 		sleep 2
 	done
-	echo "PASS: $description"
 }
 
 kube() { kubectl --request-timeout=15s -n products "$@"; }
 probe() { kube exec consumer -- /fixture probe --timeout 10s "$@"; }
-registry_ready() { probe --url http://dpc/api/v1/products --contains "\"ready\":$1"; }
+registry_ready() { probe --url http://dpc/api/v1/products --registry-product "products/${2:-existing-export}" --registry-ready "$1"; }
 # Probe every endpoint directly: a successful Service request can hide a non-serving follower.
 registry_replicas_ready() {
 	local addresses address
+	kube get deployment/dpc -o json >"$test_dir/registry-deployment.json" || return 1
+	kube get replicasets -o json >"$test_dir/registry-replicasets.json" || return 1
 	addresses=$(kube get pods -l app.kubernetes.io/component=controller -o json |
-		jq -er '[.items[] | select(.metadata.deletionTimestamp == null) |
+		jq -er --slurpfile deployment "$test_dir/registry-deployment.json" --slurpfile replicasets "$test_dir/registry-replicasets.json" '
+    $deployment[0] as $d | ($d.metadata.annotations["deployment.kubernetes.io/revision"]) as $revision |
+    [$replicasets[0].items[] | select(.metadata.deletionTimestamp == null and .metadata.annotations["deployment.kubernetes.io/revision"] == $revision) |
+      select(any(.metadata.ownerReferences[]?; .uid == $d.metadata.uid and .controller == true))] as $rs |
+    if ($revision | type) != "string" or ($revision | test("^[1-9][0-9]*$") | not) or
+      $d.status.observedGeneration != $d.metadata.generation or $d.spec.replicas != 2 or
+      $d.status.replicas != 2 or $d.status.updatedReplicas != 2 or $d.status.readyReplicas != 2 or
+      $d.status.availableReplicas != 2 or ($rs | length) != 1 then error("registry rollout incomplete")
+    else [.items[] | select(.metadata.deletionTimestamp == null) |
+      select(any(.metadata.ownerReferences[]?; .uid == $rs[0].metadata.uid and .controller == true)) |
       select(any(.status.conditions[]?; .type == "Ready" and .status == "True")) |
-      .status.podIP // empty] | if length == 2 then .[] else error("expected two ready registry endpoints") end') || return 1
+      select(any(.status.containerStatuses[]?; .name == "controller" and .ready == true)) |
+      .status.podIP // empty] | if length == 2 then .[] else error("expected two current ready registry endpoints") end end') || return 1
 	while IFS= read -r address; do
 		probe --url "http://$address:8082/api/v1/products" --contains '"products":' || return 1
 		probe --url "http://$address:8082/" --contains '<title>Data products</title>' || return 1
@@ -92,11 +118,7 @@ source_secret() {
 	kube create secret generic existing-export --from-file=config.json="$test_dir/config.json" \
 		--dry-run=client -o yaml | kube apply -f - >/dev/null
 }
-install_chart() {
-	helm template dpc "$repo_root/charts/data-product-controller" --include-crds \
-		--namespace products --values "$test_dir/values.yaml" "$@" |
-		"$repo_root/tests/source/trust-test-ca.sh" | kube apply -f - >/dev/null
-}
+source "$repo_root/tests/source/helm-lifecycle.sh"
 source_pod() {
 	kube get pods -l app.kubernetes.io/component=http-source -o json |
 		jq -er '.items | map(select(.metadata.deletionTimestamp == null)) | if length == 1 then .[0].metadata.uid else error("expected one connector Pod") end'
@@ -136,6 +158,11 @@ ksail project init --name "$cluster_name" --distribution Vanilla --provider Dock
 	--output "$test_dir/cluster" --no-devcontainer
 cluster_started=true
 ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml"
+cluster_context=$(kubectl config current-context)
+[[ -n "$cluster_context" ]] || {
+	echo 'owned fixture context missing' >&2
+	exit 1
+}
 kubectl --request-timeout=0 -n kube-system rollout status daemonset/cilium --timeout=180s
 [[ -z "$(kubectl --request-timeout=15s -n kube-system get daemonset kindnet --ignore-not-found -o name)" ]] || {
 	echo 'unexpected default Kind CNI alongside Cilium' >&2
@@ -225,6 +252,11 @@ jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
   httpSource:{enabled:false,secretName:"existing-export",sourceCIDR:$cidr,
     consumerPodLabels:{app:"source-consumer"},monitorPodLabels:{app:"source-consumer"}}
 }' >"$test_dir/values.yaml"
+
+mkdir "$test_dir/candidate-chart"
+helm package "$repo_root/charts/data-product-controller" --destination "$test_dir/candidate-chart" >/dev/null
+candidate_chart="$test_dir/candidate-chart/data-product-controller-$(helm show chart "$repo_root/charts/data-product-controller" | yq -r '.version').tgz"
+helm_release_lifecycle
 
 install_chart
 kube get deployments -l app.kubernetes.io/component=http-source -o json | jq -e '.items | length == 0' >/dev/null

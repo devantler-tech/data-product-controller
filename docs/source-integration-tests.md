@@ -11,7 +11,8 @@ host port. This exercises the chart's external-source CIDR rule: Cilium's defaul
 [CIDR policy behavior](https://docs.cilium.io/en/stable/security/policy/layer3/)
 does not match Cilium-managed Pod identities. The suite keeps that default intact.
 
-Run it on a machine with Docker, KSail 7.182.6, kubectl, Helm, jq, yq, and OpenSSL:
+Run it on a machine with Docker (including Buildx), KSail 7.182.6, kubectl,
+Helm 3.12 or newer within major version 3, Cosign, GNU timeout, jq, yq, and OpenSSL:
 
 ```bash
 bash tests/source/run.sh
@@ -31,12 +32,19 @@ running. Hosted-runner disposal is the backstop for uncatchable termination in C
 after an uncatchable local termination, remove the named cluster and source
 container manually.
 
-Both images are built from the checked-out source and pushed to the local
-registry. The chart uses the resulting immutable image digest. The harness renders
-the chart, mounts the generated CA through a test-only manifest filter, and applies
-the resources. It does not create a Helm release. Certificate and hostname
-verification stay enabled. Production chart defaults and deployment configuration
-are unchanged.
+The candidate and independent fixture images are built from the checked-out source
+and pushed to the local registry by digest. Acceptance first verifies the published
+v1.12.0 controller and chart against their signatures, release source revision and
+actual Linux/amd64 image identity. It installs that packaged chart through Helm,
+queries the export, explicitly updates the retained CRD, and upgrades to a locally
+packaged candidate. A real Helm rollback restores the released baseline; query,
+current rollout and independent source/credential UIDs must recover before the
+candidate is restored. Helm rollback retains the newer CRD intentionally.
+
+Each install/upgrade uses an explicit disposable kubeconfig/context and a test-only
+CA post-renderer. Certificate and hostname verification stay enabled. No production
+Helm command runs. See [release acceptance](release-acceptance.md) and
+[rollout observation](rollout-observation.md) for the artifact and observation boundaries.
 
 The harness installs Kind's documented [local registry alias](https://kind.sigs.k8s.io/docs/user/local-registry/)
 inside only its own nodes. This maps the host's `localhost:5055` image references
@@ -56,8 +64,9 @@ explicitly and rejects a cluster that also installed Kind's default CNI.
 ## Observed behavior
 
 The controller runs with two replicas and leader election enabled. The allowed
-consumer addresses every ready controller Pod directly and reads its descriptor
-API. This checks the non-leader endpoint as well as the leader; one successful
+consumer addresses every current ready controller Pod directly and reads its descriptor
+API, requiring the current Deployment generation and ReplicaSet ownership. This
+checks the non-leader endpoint as well as the leader; one successful
 Service request cannot hide a replica that does not serve the registry.
 
 The suite checks the workload-absent HTTP default and both connector-observation
@@ -88,7 +97,9 @@ that the retained connector still works.
 
 ## Bounds and evidence
 
-Each assertion has a deadline and reports its phase. Source failure detection
+Each assertion has a deadline and reports its phase. Waits share a 45-minute
+acceptance deadline, reserving time inside the hosted 50-minute job for cleanup.
+Source failure detection
 includes Kubernetes probe thresholds before the controller's polling interval;
 Secret projection has an independent propagation delay. There is no universal
 30-second end-to-end convergence claim. The script reports total elapsed runtime

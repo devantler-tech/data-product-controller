@@ -15,7 +15,7 @@ graph_ready() {
     ([.status.conditions[]? | select(.type == "Ready" or .type == "SourceReady") |
       select(.status == $status and .observedGeneration == $product.metadata.generation)] | length == 2) and
     any(.status.conditions[]?; .type == "SourceReady" and .reason == $reason)' >/dev/null &&
-		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
+		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)" graph-product
 }
 
 graph_publish() {
