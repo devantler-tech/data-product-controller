@@ -33,8 +33,11 @@ CloudNativePG hibernation must withdraw current readiness and make every query r
 database outage. Resuming the same source must restore the persisted records and retained object
 identities. For every reader, password rotation must produce an actual `28P01` rejection for the
 old password, recover through the new projected password and preserve the query Pod and Secret UIDs.
-An orphaned source recreation must retain storage, reject stale hybrid ownership and recover after
-binding to the new source identity.
+An orphaned source recreation must retain storage and credentials and reject unowned or stale
+publications for all three models. The independent owner verifies the recovered queries and retained
+object UIDs before republishing credential ownership. CNPG leaves an existing ownerless application
+Secret unchanged, so the owner explicitly rebinds the retained SQL publication metadata as well as
+the hybrid publications; it does not change password data.
 
 Both default-off controller gates are tested independently. The running Kubernetes API server must
 use the exact audit policy and demonstrate enabled controller reads before unchanged audit counts

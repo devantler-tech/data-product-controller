@@ -16,6 +16,18 @@ source_api_group=postgresql.cnpg.io
 source_resource=clusters
 source "$repo_root/tests/provider/common.sh"
 
+# provider_diagnostics reports readiness and identity markers without credentials or database records.
+provider_diagnostics() {
+	kube get cluster warehouse -o json | jq '{
+    uid:.metadata.uid,generation:.metadata.generation,image:.status.image,phase:.status.phase,
+    instances:.status.instances,readyInstances:.status.readyInstances,
+    currentPrimary:.status.currentPrimary,targetPrimary:.status.targetPrimary,
+    conditions:[.status.conditions[]? | {type,status,reason,observedGeneration}]}'
+	kube get dataproducts -o json | jq '[.items[] | {
+    name:.metadata.name,generation:.metadata.generation,
+    conditions:[.status.conditions[]? | {type,status,reason,observedGeneration}]}]'
+}
+
 # Bound to the anonymously readable, signed artifact produced by the owned AGE release.
 # Resolve these literals from release readback before opening this change for review.
 age_image=__AGE_IMAGE_DIGEST__
@@ -55,6 +67,15 @@ age_profile_ready() {
 }
 # publication_names lists the three independent publication names without credential data.
 publication_names() { printf '%s\n' warehouse-app warehouse-document-reader warehouse-graph-reader; }
+# bind_sql_publication republishes only recovered credential ownership after independent query/retention proof.
+# CNPG deliberately does not adopt an existing application Secret without a Cluster owner.
+bind_sql_publication() {
+	local uid
+	uid=$(kube get cluster warehouse -o jsonpath='{.metadata.uid}')
+	[[ -n $uid ]] || return 1
+	kube patch secret warehouse-app --type=merge -p "$(jq -nc --arg uid "$uid" '{metadata:{
+    ownerReferences:[{apiVersion:"postgresql.cnpg.io/v1",kind:"Cluster",name:"warehouse",uid:$uid}]}}')" >/dev/null
+}
 # bind_hybrid_publications binds current source identity and generation to verified model capabilities.
 bind_hybrid_publications() {
 	local uid generation model
@@ -95,8 +116,8 @@ matrix_ready() {
 	jq -e --argjson ready "$(if [[ $status == True ]]; then echo true; else echo false; fi)" '
     .products | length==3 and (map(.id)|sort)==["urn:example:postgres-document","urn:example:postgres-graph","urn:example:postgres-sql"] and all(.[]; .ready==$ready)' "$test_dir/registry.json" >/dev/null
 }
-# hybrid_unavailable checks a named hybrid failure in current conditions and the served registry.
-hybrid_unavailable() {
+# model_unavailable checks one model's current failure conditions and the served registry.
+model_unavailable() {
 	local model=$1 reason=$2
 	kube get dataproduct "postgres-$model-product" -o json >"$test_dir/hybrid-failure.json" || return 1
 	cat "$test_dir/hybrid-failure.json" >>"$test_dir/products-seen.jsonl"
@@ -225,7 +246,7 @@ query_all
 kube patch cluster warehouse --type=merge -p '{"spec":{"resources":{"limits":{"cpu":"900m"}}}}' >/dev/null
 wait_for 'source spec change settles independently of publication metadata' database_ready
 for model in document graph; do
-	wait_for "$model rejects a publication from the previous source generation" hybrid_unavailable "$model" ConnectionPublicationUnsupported
+	wait_for "$model rejects a publication from the previous source generation" model_unavailable "$model" ConnectionPublicationUnsupported
 done
 query_all
 bind_hybrid_publications
@@ -266,6 +287,8 @@ new_uid=$(kube get cluster warehouse -o jsonpath='{.metadata.uid}')
 [[ $new_uid != "$old_uid" ]]
 wait_for 'recreated independent source adopts retained storage' database_ready
 wait_for 'recreated source retains the effective AGE runtime profile' age_profile_ready
+wait_for 'recreated source serves all retained records before republishing credentials' query_all
+[[ $(jq -c 'map(select(.kind!="Cluster"))' <<<"$before_recreation") == "$(retained_identities | jq -c 'map(select(.kind!="Cluster"))')" ]]
 publication_anchor_uid=$(kube get configmap postgres-bootstrap -o jsonpath='{.metadata.uid}')
 [[ -n $publication_anchor_uid ]]
 for model in document graph; do
@@ -275,10 +298,11 @@ for model in document graph; do
       {apiVersion:"postgresql.cnpg.io/v1",kind:"Cluster",name:"warehouse",uid:$uid},
       {apiVersion:"v1",kind:"ConfigMap",name:"postgres-bootstrap",uid:$anchor}]}}')" >/dev/null
 done
-# Hybrid descriptors must reject the old identity even while their independent queries work.
-for model in document graph; do
-	wait_for "$model rejects stale source identity" hybrid_unavailable "$model" ConnectionOwnerMismatch
+# Every descriptor rejects unowned or stale credentials while independent queries keep working.
+for model in sql document graph; do
+	wait_for "$model rejects stale source identity" model_unavailable "$model" ConnectionOwnerMismatch
 done
+bind_sql_publication
 bind_hybrid_publications
 wait_for 'fresh source UID restores all current publications' matrix_ready True SourceReady
 wait_for 'recreated source serves every retained model record' query_all
