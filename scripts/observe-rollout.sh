@@ -133,6 +133,7 @@ deployment_identities='[]'
 for ((i = 0; i < ${#deployments[@]}; i++)); do
 	deployment_identities=$(jq -cn --argjson current "$deployment_identities" --arg name "${deployments[$i]}" --arg container "${containers[$i]}" '$current + [{name:$name,container:$container}]')
 done
+# Evaluate the retained initial and final metadata without reading private payloads.
 check_json() {
 	local mode=$1
 	jq -en --arg mode "$mode" --arg namespace "$namespace" --arg image "$image" \
@@ -141,6 +142,7 @@ check_json() {
 		--slurpfile products "$evidence_dir/products.json" --slurpfile deployments "$evidence_dir/deployments.json" \
 		--slurpfile replicasets "$evidence_dir/replicasets.json" --slurpfile pods "$evidence_dir/pods.json" \
 		--slurpfile final_products "$evidence_dir/final-products.json" --slurpfile final_deployments "$evidence_dir/final-deployments.json" \
+		--slurpfile final_replicasets "$evidence_dir/final-replicasets.json" --slurpfile final_pods "$evidence_dir/final-pods.json" \
 		-f "$script_dir/observe-rollout.jq" >"$evidence_dir/summary.json" 2>/dev/null
 }
 check() { bounded check_json "$1"; }
@@ -151,6 +153,8 @@ json_array() {
 }
 printf '[]\n' >"$evidence_dir/final-products.json"
 printf '[]\n' >"$evidence_dir/final-deployments.json"
+printf '{"items":[]}\n' >"$evidence_dir/final-replicasets.json"
+printf '{"items":[]}\n' >"$evidence_dir/final-pods.json"
 while :; do
 	product_files=() deployment_files=()
 	for ((i = 0; i < ${#products[@]}; i++)); do
@@ -179,6 +183,8 @@ while :; do
 			deployment_files+=("$file")
 			read_metadata deployment "$file" deployments.apps "${deployments[$i]}"
 		done
+		read_metadata replicasets "$evidence_dir/final-replicasets.json" replicasets.apps
+		read_metadata pods "$evidence_dir/final-pods.json" pods
 		bounded json_array "$evidence_dir/final-products.json" "${product_files[@]}" || fail read_incomplete
 		bounded json_array "$evidence_dir/final-deployments.json" "${deployment_files[@]}" || fail read_incomplete
 		check final || fail rollout_changed

@@ -90,18 +90,29 @@ case "$OBSERVER_CASE" in
   product_recreated) [[ $count == 1 || $key != product ]] || filter='.product.metadata.uid="replacement-product"' ;;
   product_changed) [[ $count == 1 || $key != product ]] || filter='.product.metadata.generation=5' ;;
   product_failed) [[ $count == 1 || $key != product ]] || filter='.product.status.conditions[0].status="False"' ;;
+  final_wrong_runtime) [[ $count == 1 || $key != pods ]] || filter='.pods.items[0].status.containerStatuses[0].imageID="containerd://sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"' ;;
+  final_unready_pod) [[ $count == 1 || $key != pods ]] || filter='.pods.items[0].status.conditions[0].status="False"' ;;
+  final_terminating_pod) [[ $count == 1 || $key != pods ]] || filter='.pods.items[0].metadata.deletionTimestamp="2026-01-01T00:00:00Z"' ;;
+  final_foreign_rs) [[ $count == 1 || $key != replicasets ]] || filter='.replicasets.items[0].metadata.ownerReferences[0].uid="foreign-deployment"' ;;
+  final_rs_generation) [[ $count == 1 || $key != replicasets ]] || filter='.replicasets.items[0].metadata.generation=4 | .replicasets.items[0].status.observedGeneration=4' ;;
+  final_new_rs) [[ $count == 1 || $key != replicasets ]] || filter='.replicasets.items += [(.replicasets.items[0] | .metadata.name="new-current" | .metadata.uid="new-current-uid")]' ;;
+  final_rs_recreated) [[ $count == 1 || ($key != replicasets && $key != pods) ]] || filter='.replicasets.items[0].metadata.uid="replacement-rs" | .pods.items[].metadata.ownerReferences[0].uid="replacement-rs"' ;;
+  final_pod_recreated) [[ $count == 1 || $key != pods ]] || filter='.pods.items[0].metadata.uid="replacement-pod" | .pods.items[0].metadata.name="replacement-pod"' ;;
 esac
 jq "$filter | .$key" "$OBSERVER_FIXTURES/base.json"
+if [[ $OBSERVER_CASE == final_incomplete_read && $key == pods && $count -gt 1 ]]; then exit 42; fi
 if [[ $OBSERVER_CASE == extra_response && $key == pods ]]; then jq '.pods' "$OBSERVER_FIXTURES/base.json"; fi
 BASH
 chmod +x "$test_dir/bin/kubectl"
 export PATH="$test_dir/bin:$PATH"
 
+# Check the real observer's result, phase-specific failure and private evidence.
 run_observer() {
 	local scenario=$1 expected=$2
 	export OBSERVER_CASE=$scenario
 	local output="$test_dir/$scenario.out" status=0 invocation_timeout=1
 	case "$scenario" in ready | typed_inventory | foreign_inventory | index_runtime | pullable_runtime | reconfigured | recreated | revised | product_recreated | product_changed | product_failed) invocation_timeout=5 ;; hung | slow_snapshot) invocation_timeout=2 ;; esac
+	case "$scenario" in final_*) invocation_timeout=5 ;; esac
 	bash "$repo_root/scripts/observe-rollout.sh" \
 		--kubeconfig "$test_dir/kubeconfig" --context fixture --namespace products \
 		--product export --deployment dpc:controller --condition Ready --condition ConnectorReady \
@@ -115,6 +126,8 @@ run_observer() {
 		}
 		jq -e '.complete == true and .products == 1 and .deployments == 1 and .pods == 2' "$output" >/dev/null
 		[[ -s "$test_dir/evidence-$scenario/product-0-final.json" && -s "$test_dir/evidence-$scenario/deployment-0-final.json" ]]
+		[[ -s "$test_dir/evidence-$scenario/final-replicasets.json" && -s "$test_dir/evidence-$scenario/final-pods.json" ]]
+		[[ $(cat "$test_dir/$scenario-replicasets.count") == 2 && $(cat "$test_dir/$scenario-pods.count") == 2 ]]
 		if grep -Rq DO_NOT_RETAIN "$test_dir/evidence-$scenario" "$output" "$test_dir/$scenario.err"; then
 			printf 'FAIL %s: private fields retained\n' "$scenario"
 			exit 1
@@ -132,6 +145,8 @@ run_observer() {
 		jq -e '.complete == false and (.failure | type == "string")' "$output" >/dev/null
 		case "$scenario" in
 		reconfigured | recreated | revised | product_recreated | product_changed | product_failed) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
+		final_incomplete_read) jq -e '.failure == "read_incomplete"' "$output" >/dev/null ;;
+		final_*) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
 		hung | slow_snapshot) jq -e '.failure == "deadline_exceeded"' "$output" >/dev/null ;;
 		esac
 		if grep -Rq DO_NOT_RETAIN "$test_dir/evidence-$scenario" "$output" "$test_dir/$scenario.err"; then
@@ -147,6 +162,10 @@ run_observer typed_inventory success
 run_observer foreign_inventory success
 run_observer index_runtime success
 run_observer pullable_runtime success
+for scenario in final_wrong_runtime final_unready_pod final_terminating_pod final_foreign_rs final_rs_generation final_new_rs final_rs_recreated final_incomplete_read; do
+	run_observer "$scenario" failure
+done
+run_observer final_pod_recreated success
 for scenario in wrong_inventory wrong_pod_item wrong_rs_item extra_response invalid_running stale_product duplicate_condition missing_condition zero_replicas stale_deployment partial_replicas missing_runtime wrong_runtime garbage_runtime wrong_container wrong_image unready_pod duplicate_pod_ready terminating_pod foreign_pod old_pods extra_old_pod missing_rs duplicate_rs stale_rs foreign_rs empty_pods forbidden empty reconfigured recreated revised product_recreated product_changed product_failed; do
 	run_observer "$scenario" failure
 done

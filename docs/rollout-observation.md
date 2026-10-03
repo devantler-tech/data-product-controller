@@ -53,8 +53,10 @@ Every Pod owned by that Deployment's ReplicaSets must belong to that current
 ReplicaSet, be live and Ready, and run the named container with the exact image
 and a permitted runtime digest. Old, terminating or partially ready replicas
 cannot supply readiness. Unrelated namespace workloads do not contribute to the
-result. Final named reads recheck readiness and bind the product UID/generation
-and Deployment UID/generation/revision to the original snapshot.
+result. Final reads refresh the named resources and namespace workload inventories,
+recheck full readiness and runtime identity, and bind the product UID/generation,
+Deployment UID/generation/revision and current ReplicaSet UID/generation to the
+original snapshot. A healthy replacement Pod under that same ReplicaSet is valid.
 
 The caller needs those read permissions through its existing identity. The
 observer requests no Secrets, executes no container commands, and never mutates

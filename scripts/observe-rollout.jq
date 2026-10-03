@@ -12,6 +12,8 @@ $ARGS.named.replicasets as $replicasets |
 $ARGS.named.pods as $pods |
 $ARGS.named.final_products as $final_products |
 $ARGS.named.final_deployments as $final_deployments |
+$ARGS.named.final_replicasets as $final_replicasets |
+$ARGS.named.final_pods as $final_pods |
 def metadata:
   {name, namespace, uid, generation, deletionTimestamp,
    revision: .annotations["deployment.kubernetes.io/revision"],
@@ -77,8 +79,9 @@ def pod_ready($rs; $container):
   any(.status.containerStatuses[]; .name == $container and .ready == true and
     .state.running == true and .state.waiting == false and .state.terminated == false and
     (.imageID | runtime_allowed));
-def workload_ready($d; $container):
-  [$replicasets[0].items[] | select(owned("Deployment"; $d.metadata.name; $d.metadata.uid))] as $owned |
+# Validate current ownership, complete readiness and runtime identity in this inventory pair.
+def workload_ready($d; $container; $replica_inventory; $pod_inventory):
+  [$replica_inventory.items[] | select(owned("Deployment"; $d.metadata.name; $d.metadata.uid))] as $owned |
   [$owned[] | select(.metadata.revision == $d.metadata.revision)] as $current |
   ($current | length) == 1 and
   ($current[0] | identity(.metadata.name; "ReplicaSet"; "apps/v1")) and
@@ -87,7 +90,7 @@ def workload_ready($d; $container):
   all([$current[0].status.replicas,$current[0].status.readyReplicas,$current[0].status.availableReplicas][]; . == $d.spec.replicas) and
   ([$current[0].spec.containers[] | select(.name == $container)] | length) == 1 and
   any($current[0].spec.containers[]; .name == $container and .image == $image) and
-  ([$pods[0].items[] | . as $p | select(any($owned[]; . as $r | $p | owned("ReplicaSet"; $r.metadata.name; $r.metadata.uid)))] as $owned_pods |
+  ([$pod_inventory.items[] | . as $p | select(any($owned[]; . as $r | $p | owned("ReplicaSet"; $r.metadata.name; $r.metadata.uid)))] as $owned_pods |
     ($owned_pods | length) == $d.spec.replicas and all($owned_pods[]; pod_ready($current[0]; $container)));
 def inventory_valid($items):
   ($items | type == "array" and length <= 4096) and
@@ -99,10 +102,22 @@ def snapshot_ready:
   inventory_valid($replicasets[0].items) and inventory_valid($pods[0].items) and
   all(range(0; $product_names | length); . as $i | $products[0][$i] | product_ready($product_names[$i])) and
   all(range(0; $deployment_identities | length); . as $i | $deployment_identities[$i] as $identity |
-    $deployments[0][$i] as $d | ($d | deployment_ready($identity.name; $identity.container)) and workload_ready($d; $identity.container));
+    $deployments[0][$i] as $d | ($d | deployment_ready($identity.name; $identity.container)) and
+    workload_ready($d; $identity.container; $replicasets[0]; $pods[0]));
+def current_replicasets($d; $inventory):
+  [$inventory.items[] | select(owned("Deployment"; $d.metadata.name; $d.metadata.uid) and
+    .metadata.revision == $d.metadata.revision)];
+# Require both reads to describe the same current ReplicaSet and spec generation.
+def current_replicaset_stable($before; $after):
+  current_replicasets($before; $replicasets[0]) as $initial |
+  current_replicasets($after; $final_replicasets[0]) as $final |
+  ($initial | length) == 1 and ($final | length) == 1 and
+  $final[0].metadata.uid == $initial[0].metadata.uid and
+  $final[0].metadata.generation == $initial[0].metadata.generation;
 def final_stable:
   ($final_products[0] | length) == ($product_names | length) and
   ($final_deployments[0] | length) == ($deployment_identities | length) and
+  inventory_valid($final_replicasets[0].items) and inventory_valid($final_pods[0].items) and
   all(range(0; $product_names | length); . as $i | $final_products[0][$i] as $after |
     ($after | product_ready($product_names[$i])) and
     $after.metadata.uid == $products[0][$i].metadata.uid and $after.metadata.generation == $products[0][$i].metadata.generation) and
@@ -110,7 +125,9 @@ def final_stable:
     $final_deployments[0][$i] as $after | ($after | deployment_ready($identity.name; $identity.container)) and
     $after.metadata.uid == $deployments[0][$i].metadata.uid and
     $after.metadata.generation == $deployments[0][$i].metadata.generation and
-    $after.metadata.revision == $deployments[0][$i].metadata.revision);
+    $after.metadata.revision == $deployments[0][$i].metadata.revision and
+    workload_ready($after; $identity.container; $final_replicasets[0]; $final_pods[0]) and
+    current_replicaset_stable($deployments[0][$i]; $after));
 
 if $mode == "product" or $mode == "deployment" or $mode == "replicasets" or $mode == "pods" then
   if type != "array" or length != 1 then error("invalid_response")
