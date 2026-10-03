@@ -31,7 +31,7 @@ spec:
     {{- if .Values.uiContract.enabled }}
     contract:
       apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
-      hostOrigins: [{{ printf "https://%s" .Values.route.host | quote }}]
+      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
       capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
     {{- end }}
 {{- end }}

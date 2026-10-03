@@ -11,6 +11,8 @@ dcatCatalog:
   id: ""
 uiContract:
   enabled: false
+  # Additional publisher-approved exact HTTPS origins; the registry is always included.
+  additionalHostOrigins: []
 uiAppearance:
   # Independent operator grant for v2 theme hints; also requires uiContract.
   enabled: false

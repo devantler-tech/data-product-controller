@@ -13,6 +13,20 @@ and kit. Set `UI_CONTRACT_ENABLED=true` explicitly for a development evaluation.
 The chart exposes `uiContract.enabled: true`. The registry workspace is available
 by default. With routing enabled, the chart declares the catalogue
 origin in the demo manifest and in the demo's separate `UI_HOST_ORIGINS` setting.
+Use `uiContract.additionalHostOrigins` for independently deployed compatibility
+hosts. The chart includes the registry origin automatically and uses the same
+validated list in both declarations:
+
+```yaml
+uiContract:
+  enabled: true
+  additionalHostOrigins:
+    - https://kit.example
+```
+
+Up to fifteen additional origins are supported. Each must be a distinct canonical
+HTTPS origin; repeating the registry origin is rejected. The existing flag still
+defaults off, and a disabled UI contract publishes no host grants.
 
 A contract-bearing UI is unavailable in the registry while the flag is off.
 It does not fall back to a legacy frame. Existing descriptors without `contract`
@@ -173,6 +187,9 @@ explicit deployment choice, just as serving the static kit itself is.
 
 ## Run the independent compatibility kit
 
+For the signed image command, health probes and HTTPS gateway deployment, see
+the [portable host deployment guide](portable-ui-host.md).
+
 Use a TLS certificate trusted by your browser for the chosen host. The Go command
 serves only static assets and has no Kubernetes or registry dependency:
 
@@ -188,7 +205,8 @@ product's own allowlist, paste the manifest, choose grants, and select **Validat
 and open**. Keep private keys out of the repository. The demo command is HTTP
 behind an independently managed TLS endpoint; the kit does not terminate TLS for
 the product. When testing the chart's demo in a second host, explicitly configure
-that additional origin in both its manifest and its own deployment.
+that additional origin through `uiContract.additionalHostOrigins`. For products
+published outside the chart, configure both their manifest and their own deployment.
 
 Alternatively, serve `web/index.html`, `kit.css`, `kit.js`, and `ui-contract.js`
 from any HTTPS static host. Apply the policy in `web.KitHandler`: same-origin
