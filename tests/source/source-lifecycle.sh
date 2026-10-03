@@ -9,8 +9,10 @@ lifecycle_begin() {
 		echo 'lifecycle acceptance requires the owned disposable fixture' >&2
 		return 1
 	}
-	# Leave time for the existing composition/catalog/provider cases and cleanup.
-	lifecycle_suite_deadline=${lifecycle_suite_deadline:-$((SECONDS + 18 * 60))}
+	# Two Secret projections share the source phase; keep all waits inside the coordinator.
+	[[ ${integration_deadline:-} =~ ^[1-9][0-9]*$ ]] || return 1
+	lifecycle_suite_deadline=${lifecycle_suite_deadline:-$((SECONDS + 30 * 60))}
+	((lifecycle_suite_deadline <= integration_deadline)) || lifecycle_suite_deadline=$integration_deadline
 	lifecycle_deadline=$((SECONDS + $2))
 	((lifecycle_deadline <= lifecycle_suite_deadline)) || lifecycle_deadline=$lifecycle_suite_deadline
 	echo "PHASE: $1"
@@ -62,7 +64,7 @@ lifecycle_contract_healthy() {
 }
 
 source_lifecycle_run() {
-	lifecycle_begin 'installed HTTP source lifecycle' 480 || return 1
+	lifecycle_begin 'installed HTTP source lifecycle' 900 || return 1
 	lifecycle_wait 'authorized consumer reads the export' 120 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 	probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
 	probe --url http://dpc-http-source/metrics --want-status 404

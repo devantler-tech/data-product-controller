@@ -75,11 +75,14 @@ and each metric line to 8 KiB. Requests reject redirects, ambient proxies, embed
 credentials and query parameters; HTTPS retains certificate verification. Neither
 metrics collection nor controller observation fetches product records.
 
-Each module has an eight-minute budget. The three modules and rollback callbacks
-share an eighteen-minute budget so the existing composition, catalog and provider
-assertions retain time within the hosted job's fifty-minute ceiling. Per-assertion
-deadlines are clamped to the remaining budget. The coordinator must invoke rollback
-callbacks before its remaining independent suites.
+The source module has a fifteen-minute budget because its two independent Secret
+projections can each consume their existing five-minute allowance. The contract and
+connector modules each retain an eight-minute budget. All modules and rollback
+callbacks share a thirty-minute budget, clamped to the coordinator's absolute
+forty-five-minute deadline inside the hosted job's fifty-minute ceiling. Each
+per-assertion deadline is clamped to the remaining phase and suite budgets. The
+coordinator invokes rollback callbacks before its remaining independent suites;
+only a complete hosted run establishes that the entire suite fits.
 
 Once the connector reaches actual zero capacity or the required partial/full
 Deployment state, its current-generation conditions and exact selected registry
