@@ -19,9 +19,11 @@ bash scripts/verify-release-artifacts.sh \
 Requires Cosign, Docker with Buildx, Helm, jq, yq and GNU `timeout` (or `gtimeout`).
 The repositories and signing identities are fixed to the owned controller/image
 and chart publishers. Signatures must bind the supplied digest, owned caller
-repository, release tag and source revision. The platform index must select exactly
-one matching Linux manifest, the pulled image must carry the expected OCI source
-revision, and the real packaged chart metadata must match the declared version.
+repository, release tag and source revision. A platform index must select exactly
+one matching Linux manifest; a single-platform manifest uses its signed digest
+directly. The pulled image must report the requested OS and architecture and carry
+the expected OCI source revision. The real packaged chart metadata must match the
+declared version.
 The command rejects incomplete verification, mutable references, platform ambiguity,
 revision/version drift, reused evidence directories and an exhausted shared deadline.
 
