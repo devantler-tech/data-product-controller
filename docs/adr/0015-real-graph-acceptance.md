@@ -25,9 +25,11 @@ failures cannot satisfy the denied-write assertion.
 
 Acceptance checks operator-written current-spec readiness, publication ownership, enforced
 consumer isolation, outage recovery, same-name credential rotation, source recreation and
-retained PVC identities. Source recovery follows the operator's documented maintenance procedure:
-restore only previously observed member IDs and PVC names, then let the real operator recompute
-readiness and image/spec evidence. It never fabricates Ready conditions or spec checksums.
+retained PVC identities. Source recovery restores only previously observed member IDs and PVC names
+while the disposable namespaced operator is stopped, verifies them through the live API, then lets
+the same operator recompute readiness and image/spec evidence. Maintenance pauses inspection but
+does not prevent constructor status writes. Identity verification also follows recovered readiness.
+The procedure never fabricates Ready conditions or spec checksums.
 
 Both controller gates independently withdraw readiness and perform zero audited source/Secret
 GETs while the independent query remains available. Descriptor deletion leaves external source,

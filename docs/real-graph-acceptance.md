@@ -40,6 +40,10 @@ Pod to its observed name and UID instead of guessing the operator's generated na
 Pods already removed by the operator's deletion finalizer.
 The recovery patch uses the live served CRD's status endpoint; an unknown serving contract fails
 before any patch, and a plain status field does not receive a subresource request.
+The namespaced operator is stopped only after old-source finalizers and recorded runtime cleanup
+finish. Its constructor writes status before maintenance inspection, so maintenance alone cannot
+protect recovery. Acceptance restores and reads back the exact observed member/PVC fields while
+the operator is stopped, restarts the same operator, and requires the same fields after readiness.
 
 The last phase independently disables both observer gates, checks zero source/Secret GETs across
 a polling interval, restores readiness and deletes only the product descriptor. The query and

@@ -83,6 +83,41 @@ restore_members() {
 		kube patch arangodeployment lineage --type=merge --patch-file "$test_dir/recovery-members.json" >/dev/null
 	fi
 }
+# pause_recovery_operator fences constructor status writes in this disposable namespace.
+# Maintenance pauses inspection only; initial startup can still overwrite externally restored status.
+pause_recovery_operator() {
+	local observed
+	observed=$(kube get deployment arango-arango-operator -o json) || return 1
+	jq -e '.metadata.namespace == "products" and .spec.replicas == 1 and
+    .metadata.labels["app.kubernetes.io/name"] == "kube-arangodb" and
+    .metadata.labels["app.kubernetes.io/instance"] == "arango" and
+    .metadata.annotations["meta.helm.sh/release-name"] == "arango" and
+    .metadata.annotations["meta.helm.sh/release-namespace"] == "products" and
+    (.metadata.uid | type == "string" and length > 0) and
+    (.spec.selector.matchLabels | type == "object" and length > 0)' <<<"$observed" >/dev/null || return 1
+	recovery_operator_uid=$(jq -r '.metadata.uid' <<<"$observed")
+	recovery_operator_replicas=$(jq -r '.spec.replicas' <<<"$observed")
+	recovery_operator_selector=$(jq -r '.spec.selector.matchLabels | to_entries | sort_by(.key) | map(.key + "=" + .value) | join(",")' <<<"$observed")
+	bounded kubectl --request-timeout=0 -n products scale deployment/arango-arango-operator --current-replicas=1 --replicas=0
+	wait_for 'owned operator has no live Pods before status restoration' recovery_operator_stopped
+}
+# recovery_operator_stopped requires actual absence, including when deletion already finished.
+recovery_operator_stopped() {
+	kube get pods -l "$recovery_operator_selector" -o json | jq -e '.items | length == 0' >/dev/null
+}
+# retained_members_match requires exact observed member and PVC identity, without ready-status fabrication.
+retained_members_match() {
+	kube get arangodeployment lineage -o json | jq -e --slurpfile recovery "$test_dir/recovery-members.json" '
+    [.status.members.single[]? | {id,persistentVolumeClaim,persistentVolumeClaimName}] ==
+    $recovery[0].status.members.single' >/dev/null
+}
+# resume_recovery_operator starts the same operator only after live restored-status verification.
+resume_recovery_operator() {
+	kube get deployment arango-arango-operator -o json | jq -e --arg uid "$recovery_operator_uid" \
+		'.metadata.uid == $uid' >/dev/null || return 1
+	bounded kubectl --request-timeout=0 -n products scale deployment/arango-arango-operator --current-replicas=0 --replicas="$recovery_operator_replicas"
+	bounded kubectl --request-timeout=0 -n products rollout status deployment/arango-arango-operator --timeout="$(remaining)s"
+}
 # record_old_members fences runtime cleanup by the observed source and current member identities.
 # The operator's ArangoMembers are not labelled, so Pod selectors cannot identify those resources.
 record_old_members() {
@@ -291,12 +326,15 @@ bounded kubectl --request-timeout=0 -n products delete arangodeployment lineage 
 # Remove only recorded orphaned runtime objects. The upstream recovery procedure
 # reuses observed member IDs and PVC names; it supplies no fabricated ready status.
 bounded kubectl --request-timeout=0 -n products delete --ignore-not-found -f "$test_dir/old-members.json" --timeout="$(remaining)s"
-yq '.metadata.annotations."deployment.arangodb.com/maintenance"="true"' "$repo_root/tests/provider/arango.yaml" | kube apply -f - >/dev/null
+pause_recovery_operator
+kube apply -f "$repo_root/tests/provider/arango.yaml" >/dev/null
 restore_members
+retained_members_match
 new_uid=$(kube get arangodeployment lineage -o jsonpath='{.metadata.uid}')
 [[ $new_uid != "$source_uid" ]]
-kube annotate arangodeployment lineage deployment.arangodb.com/maintenance- >/dev/null
+resume_recovery_operator
 wait_for 'real operator recovers the recreated source using retained members' database_ready
+retained_members_match
 wait_for 'stale application ownership is rejected' product_ready False ConnectionOwnerMismatch
 bind_publication "$new_uid"
 wait_for 'independent publisher binds the current source UID' product_ready True SourceReady
