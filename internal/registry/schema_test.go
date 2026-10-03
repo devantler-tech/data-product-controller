@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -245,7 +246,11 @@ func TestDiscoveryRejectsInvalidPublicMetadata(t *testing.T) {
 		{"label-boundary", func(p *datav1alpha1.DataProduct) { p.Name = "a.-b" }},
 		{"long-label", func(p *datav1alpha1.DataProduct) { p.Name = strings.Repeat("a", 64) }},
 		{"credential-url", func(p *datav1alpha1.DataProduct) {
-			p.Spec.Outputs[0].URL = "https://user:private-sentinel@example.test/data"
+			invalid := url.URL{
+				Scheme: "https", Host: "example.test", Path: "/data",
+				User: url.UserPassword("user", "private-sentinel"),
+			}
+			p.Spec.Outputs[0].URL = invalid.String()
 		}},
 		{"fragment-url", func(p *datav1alpha1.DataProduct) {
 			p.Spec.Outputs[0].ContractURL = "https://example.test/contract#fragment"

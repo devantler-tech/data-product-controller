@@ -89,7 +89,7 @@ func (s *server) discoveryProducts(writer http.ResponseWriter, request *http.Req
 		readFailure(writer, err)
 		return
 	}
-	if len(products.Items) > int(query.Limit) || len(products.Continue) > maxNativeCursorBytes {
+	if int64(len(products.Items)) > query.Limit || len(products.Continue) > maxNativeCursorBytes {
 		discoveryFailure(
 			writer,
 			http.StatusBadGateway,

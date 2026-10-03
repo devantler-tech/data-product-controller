@@ -85,6 +85,28 @@ func TestOfflineDescriptorHandoff(t *testing.T) {
 			otherRequests.Load(),
 		)
 	}
+	// Declared metadata stays offline, including legitimate local DNS and IP destinations.
+	for _, metadataURL := range []string{
+		"https://localhost/query",
+		"https://localhost/path%20ok?query=%25",
+		"https://publisher.example:443/query",
+		"https://127.0.0.1:8443/query",
+		"https://[::1]:8443/query",
+	} {
+		var local map[string]any
+		if err := json.Unmarshal([]byte(data), &local); err != nil {
+			t.Fatal(err)
+		}
+		descriptorEntry(t, local["outputs"])["url"] = metadataURL
+		page.MustEval(
+			`(text) => { document.querySelector('#descriptor-file').value=''; document.querySelector('#descriptor').value=text; document.querySelector('#descriptor-form').requestSubmit(); }`,
+			descriptorJSON(t, local),
+		)
+		page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
+		if otherRequests.Load() != 0 {
+			t.Fatal("local metadata URL was fetched during descriptor import")
+		}
+	}
 	// A complete descriptor retains optional composition metadata and independently gated v2 presentation.
 	var expanded map[string]any
 	if err := json.Unmarshal([]byte(data), &expanded); err != nil {
@@ -205,6 +227,36 @@ func TestOfflineDescriptorHandoff(t *testing.T) {
 		}},
 		{name: "credential URL", mutate: func(d map[string]any) {
 			descriptorEntry(t, d["outputs"])["url"] = "https://user:secret@publisher.example/query"
+		}},
+		{name: "nonliteral HTTPS scheme", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https:publisher.example/query"
+		}},
+		{name: "empty HTTPS authority", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https:///publisher.example/query"
+		}},
+		{name: "uppercase HTTPS scheme", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "HTTPS://publisher.example/query"
+		}},
+		{name: "malformed metadata host", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://bad_host.example/query"
+		}},
+		{name: "empty metadata DNS label", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://a..b/query"
+		}},
+		{name: "unicode metadata URL", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://publisher.example/café"
+		}},
+		{name: "zero metadata port", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://publisher.example:0/query"
+		}},
+		{name: "empty metadata port", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://publisher.example:/query"
+		}},
+		{name: "invalid metadata URL escape", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://publisher.example/%zz"
+		}},
+		{name: "nonliteral UI HTTPS scheme", mutate: func(d map[string]any) {
+			descriptorObject(t, d, "ui")["url"] = "https:" + strings.TrimPrefix(product.URL, "https://") + "/ui"
 		}},
 		{name: "unknown private field", mutate: func(d map[string]any) { d["credentials"] = "must not import" }},
 		{name: "malformed JSON", raw: "{"},

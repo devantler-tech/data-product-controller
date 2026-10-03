@@ -548,7 +548,7 @@ async function loadMore() {
 /** Download only the observed public descriptor, with its snapshot semantics unchanged. */
 function saveDescriptor() {
   if (!discoveryEnabled || !selectedDescriptor) return;
-  const url = URL.createObjectURL(new Blob([JSON.stringify(selectedDescriptor, null, 2)], {type: "application/json"}));
+  const url = URL.createObjectURL(new Blob([JSON.stringify(selectedDescriptor)], {type: "application/json"}));
   const link = document.createElement("a");
   link.href = url;
   link.download = `${selectedDescriptor.namespace}-${selectedDescriptor.name}.json`;

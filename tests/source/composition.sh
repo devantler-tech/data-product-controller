@@ -21,7 +21,6 @@ probe --url http://dpc/api/v2/products --want-status 404
 kube set env deployment/dpc COMPOSITION_ENABLED=true REGISTRY_DISCOVERY_ENABLED=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 wait_for 'three products reach compatible composition readiness' 120 composition_ready DependenciesReady True
-source "$repo_root/tests/source/registry-discovery.sh"
 wait_for 'public registry exposes verified composition' 120 probe --url http://dpc/api/v1/products --contains '"composition":{"reason":"CompositionVerified"'
 probe --url http://dpc/api/v1/products --contains '"productID":"urn:example:harbour"'
 echo 'PASS: public registry exposes observed producer lineage'
@@ -31,6 +30,8 @@ kubectl --request-timeout=15s create namespace private-products
 kube get dataproduct harbour -o json | jq 'del(.metadata, .status) |
   .metadata={name:"private-harbour",namespace:"private-products"} |
   .spec.owner.name="Private producer team"' | kubectl --request-timeout=15s apply -f -
+# Discovery must exclude an existing foreign product, not just match a single-namespace fixture.
+source "$repo_root/tests/source/registry-discovery.sh"
 kube create serviceaccount composition-reader
 kube create role composition-reader --verb=get --resource=dataproducts.data.devantler.tech
 kube create rolebinding composition-reader --role=composition-reader --serviceaccount=products:composition-reader

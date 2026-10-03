@@ -5,6 +5,7 @@ package browser_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -16,6 +17,7 @@ import (
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
+	"github.com/devantler-tech/data-product-controller/web"
 	"github.com/go-rod/rod/lib/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -299,5 +301,108 @@ func TestDiscoveryHealthAndLineage(t *testing.T) {
 	page.MustSetViewport(390, 844, 1, false)
 	if page.MustEval(`() => document.documentElement.scrollWidth>innerWidth`).Bool() {
 		t.Fatal("discovery details overflow narrow viewport")
+	}
+}
+
+// TestDiscoveryExportFitsOfflineImport keeps the actual downloaded document within the shared wire limit.
+func TestDiscoveryExportFitsOfflineImport(t *testing.T) {
+	productServer := httptest.NewTLSServer(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(`<!doctype html><title>Independent product</title><script>
+		addEventListener('message', e => {
+		if (e.source !== parent || e.data.type !== 'init') return;
+		parent.postMessage({apiVersion:e.data.apiVersion,type:'ready',session:e.data.session},e.origin);
+		});</script>`))
+		}),
+	)
+	t.Cleanup(productServer.Close)
+	kit := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
+		ContractEnabled:  func() bool { return true },
+		DiscoveryEnabled: func() bool { return true },
+	}))
+	t.Cleanup(kit.Close)
+	product := workspaceProduct(productServer.URL)
+	product.Spec.Name = strings.Repeat("n", 16000)
+	product.Spec.Description = strings.Repeat("d", 16000)
+	product.Spec.Owner.Name = strings.Repeat("o", 16000)
+	product.Spec.Outputs = make([]datav1alpha1.OutputPort, 100)
+	for index := range product.Spec.Outputs {
+		product.Spec.Outputs[index] = datav1alpha1.OutputPort{
+			Name: fmt.Sprintf("query-%d", index), Protocol: datav1alpha1.ProtocolOpenAPI,
+			URL: "https://example.test/data", ContractURL: "https://example.test/openapi.json",
+		}
+	}
+	product.Spec.UI.Contract = &datav1alpha1.UIContract{
+		APIVersion:   "data-product-ui/v1",
+		HostOrigins:  []datav1alpha1.UIHostOrigin{datav1alpha1.UIHostOrigin(kit.URL)},
+		Capabilities: []datav1alpha1.UICapability{"status"},
+	}
+	scheme := runtime.NewScheme()
+	if err := datav1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product).Build()
+	server := httptest.NewTLSServer(registry.NewHandlerWithOptions(reader, registry.HandlerOptions{
+		DiscoveryEnabled: func(context.Context) bool { return true },
+	}))
+	t.Cleanup(server.Close)
+	browser := contractBrowser(t)
+	page := browser.MustPage().
+		Timeout(15 * time.Second).
+		MustNavigate(server.URL + "?product=products%2Fharbour").
+		MustWaitLoad()
+	page.MustElement("#export-descriptor").MustWaitVisible()
+	wire := page.MustEval(`async () => {
+		const response = await fetch('/api/v2/products/products/harbour');
+		if (!response.ok) throw new Error('Fixture descriptor was rejected: '+response.status);
+		return await response.text();
+	}`).Str()
+	if len(wire) < 60000 || len(wire) > 65536 {
+		t.Fatalf("fixture must be an accepted near-limit descriptor, got %d bytes", len(wire))
+	}
+	page.MustEval(`() => {
+		const create = URL.createObjectURL.bind(URL);
+		URL.createObjectURL = blob => { window.exportedDescriptor = blob; return create(blob); };
+		const click = HTMLAnchorElement.prototype.click;
+		HTMLAnchorElement.prototype.click = function() {
+			if (this.download) { window.exportedFilename = this.download; return; }
+			return click.call(this);
+		};
+	}`)
+	page.MustElement("#export-descriptor").MustClick()
+	download := page.MustEval(`async () => await window.exportedDescriptor.text()`).Str()
+	if page.MustEval(`() => window.exportedFilename`).Str() != "products-harbour.json" {
+		t.Fatal("export did not produce a named descriptor download")
+	}
+	var actual, expected map[string]any
+	if err := json.Unmarshal([]byte(wire), &expected); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(download), &actual); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := descriptorJSON(t, actual), descriptorJSON(t, expected); got != want {
+		t.Fatal("download changed public descriptor metadata")
+	}
+	kitPage := browser.MustPage().Timeout(15 * time.Second).MustNavigate(kit.URL).MustWaitLoad()
+	kitPage.MustEval(`text => {
+		document.querySelector('#descriptor').value = text;
+		document.querySelector('#descriptor-form').requestSubmit();
+	}`, download)
+	kitPage.MustElement("#kit-status").
+		MustWait(`() => this.dataset.state==='ready' || this.dataset.state==='invalid'`)
+	if kitPage.MustEval(`() => document.querySelector('#kit-status').dataset.state`).
+		Str() !=
+		"ready" {
+		t.Fatalf(
+			"actual %d-byte API descriptor exported as %d bytes and failed offline import: %s",
+			len(wire),
+			len(download),
+			kitPage.MustElement("#kit-status").MustText(),
+		)
+	}
+	if len(download) > 65536 {
+		t.Fatalf("download exceeded the public contract: %d bytes", len(download))
 	}
 }
