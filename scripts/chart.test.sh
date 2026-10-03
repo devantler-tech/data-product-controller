@@ -66,6 +66,7 @@ namespace_lease_rules=$(
 [ "$namespace_lease_rules" = '1' ] || fail 'Role must grant Lease access in the release namespace'
 assert_contains "$default_render" 'kind: RoleBinding'
 
+# assert_leader_events checks the controller's exact release-local Event grant.
 assert_leader_events() {
 	rendered=$1
 	expected_namespace=$2
