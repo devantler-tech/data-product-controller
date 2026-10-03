@@ -26,11 +26,11 @@ func TestLifecyclePhasePreservesTimeAcrossDateImplementations(t *testing.T) {
 			command := exec.CommandContext(t.Context(), "bash", "-c", `
 source tests/source/source-lifecycle.sh
 date() {
-  case "$1" in
-    +%s.%N) printf '%s\n' "$FRACTIONAL" ;;
-    +%s) printf '%s\n' "$SECONDS_VALUE" ;;
-    *) return 91 ;;
-  esac
+	case "$1" in
+		+%s.%N) printf '%s\n' "$FRACTIONAL" ;;
+		+%s) printf '%s\n' "$SECONDS_VALUE" ;;
+		*) return 91 ;;
+	esac
 }
 lifecycle_phase`)
 			command.Dir = root
