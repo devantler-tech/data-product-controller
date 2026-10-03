@@ -23,12 +23,12 @@ contract_matrix_run() {
 	contract_matrix_retention_capture
 
 	local phase
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	docker exec "$source_container" /fixture control contract-down
 	lifecycle_wait 'contract outage withdraws readiness with the connector otherwise healthy' 240 contract_readiness False ContractProbeNotReady
 	lifecycle_wait 'management records a fresh contract outage' 90 lifecycle_metrics contract-probe 0 "$phase"
 	probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	docker exec "$source_container" /fixture control contract-up
 	lifecycle_wait 'independent contract recovery restores selected product readiness' 240 contract_readiness True ContractsReady
 	lifecycle_wait 'management records fresh contract recovery' 90 lifecycle_metrics contract-probe 1 "$phase"
@@ -72,7 +72,7 @@ contract_disabled_probe() {
 contract_matrix_rollback_check() {
 	lifecycle_begin 'contract reachability after installed rollback' 120 || return 1
 	local phase
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	lifecycle_wait 'rollback retains a complete independent probe rollout' 90 lifecycle_rollout dpc-contract-probe full
 	lifecycle_wait 'rollback restores selected contract readiness' 90 contract_readiness True ContractsReady
 	probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'

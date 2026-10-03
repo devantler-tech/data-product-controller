@@ -62,12 +62,14 @@ uses it without credentials:
 
 ```text
 /fixture metrics --url http://dpc-http-source-metrics:8081/metrics \
-  --kind http-source --ready 1 --since <phase-start-unix-second> --timeout 10s
+  --kind http-source --ready 1 --since <phase-start-unix-timestamp> --timeout 10s
 ```
 
 Use `--kind contract-probe` for the independent probe's management Service. The
 command requires the matching readiness gauge and completed-observation timestamp,
-with the timestamp strictly newer than the phase start. Missing, duplicate, labeled,
+with the timestamp strictly newer than the phase start, preserving fractional seconds.
+The coordinator validates GNU date's nanosecond output; on BSD date it conservatively
+uses the next whole second, which can require another probe cycle. Missing, duplicate, labeled,
 nonfinite, future or stale observations fail. Response reads are limited to 256 KiB
 and each metric line to 8 KiB. Requests reject redirects, ambient proxies, embedded
 credentials and query parameters; HTTPS retains certificate verification. Neither

@@ -27,6 +27,19 @@ lifecycle_wait() {
 	wait_for "$description" "$timeout" "$@"
 }
 
+lifecycle_phase() {
+	local timestamp seconds
+	timestamp=$(date +%s.%N) || return 1
+	if [[ "$timestamp" =~ ^[1-9][0-9]{0,10}\.[0-9]{9}$ ]]; then
+		printf '%s\n' "$timestamp"
+	else
+		# BSD date does not expand %N. A future whole-second boundary is conservative.
+		seconds=$(date +%s) || return 1
+		[[ "$seconds" =~ ^[1-9][0-9]{0,10}$ ]] || return 1
+		printf '%s\n' "$((seconds + 1))"
+	fi
+}
+
 lifecycle_metrics() {
 	local kind=$1 ready=$2 since=$3 address
 	case "$kind" in
@@ -71,20 +84,20 @@ source_lifecycle_run() {
 		--url http://dpc-http-source/api/data --want-error --timeout 5s
 	probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	docker exec "$source_container" /fixture control down
 	lifecycle_wait 'source outage reaches conditions and the selected registry product' 240 readiness False false
 	lifecycle_wait 'management reports a fresh source outage' 90 lifecycle_metrics http-source 0 "$phase"
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	docker exec "$source_container" /fixture control healthy
 	lifecycle_wait 'source recovery reaches the selected product' 240 readiness True true
 	lifecycle_wait 'management reports fresh source recovery' 90 lifecycle_metrics http-source 1 "$phase"
 
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	docker exec "$source_container" /fixture control rotated
 	lifecycle_wait 'rotated upstream credential rejects the projected old token' 240 readiness False false
 	lifecycle_wait 'management records the rejected old token' 90 lifecycle_metrics http-source 0 "$phase"
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	source_secret fixture-token-b
 	lifecycle_wait 'projected credential rotation recovers the source' 300 readiness True true
 	probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
@@ -112,7 +125,7 @@ source_lifecycle_run() {
 source_lifecycle_rollback_check() {
 	lifecycle_begin 'HTTP source after installed rollback' 120 || return 1
 	local phase
-	phase=$(date +%s)
+	phase=$(lifecycle_phase)
 	lifecycle_wait 'rollback preserves a complete connector rollout' 90 lifecycle_rollout dpc-http-source full
 	lifecycle_wait 'rollback restores the selected product' 90 readiness True true
 	probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'

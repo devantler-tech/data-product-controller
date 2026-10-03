@@ -9,8 +9,8 @@ for command in ksail docker kubectl helm jq yq openssl cosign timeout; do
 	}
 done
 helm_version=$(helm version --short)
-[[ $helm_version =~ ^v3\.(1[2-9]|[2-9][0-9])\. ]] || {
-	echo 'source acceptance requires Helm 3.12 or newer within major version 3 for executable post-rendering' >&2
+[[ $helm_version =~ ^v3\.(1[3-9]|[2-9][0-9])\. ]] || {
+	echo 'source acceptance requires Helm 3.13 or newer within major version 3 for executable post-rendering and release metadata' >&2
 	exit 1
 }
 

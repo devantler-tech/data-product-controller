@@ -55,6 +55,46 @@ func TestMetricsRequiresFreshCompletedObservation(t *testing.T) {
 	}
 }
 
+// TestMetricsPreservesFractionalPhaseBoundary rejects an earlier sample from the same second.
+func TestMetricsPreservesFractionalPhaseBoundary(t *testing.T) {
+	for _, tc := range []struct {
+		name, timestamp string
+		wantError       bool
+	}{
+		{"later in same second", "100.75", false},
+		{"earlier in same second", "100.25", true},
+		{"exact fractional boundary", "100.5", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					_, _ = io.WriteString(
+						w,
+						"contract_probe_ready 1\ncontract_probe_last_observation_timestamp_seconds "+tc.timestamp+"\n",
+					)
+				}),
+			)
+			t.Cleanup(server.Close)
+			err := metrics(
+				t.Context(),
+				[]string{
+					"--url",
+					server.URL,
+					"--kind",
+					"contract-probe",
+					"--ready",
+					"1",
+					"--since",
+					"100.5",
+				},
+			)
+			if (err != nil) != tc.wantError {
+				t.Fatalf("fractional observation accepted=%v, want=%v", err == nil, !tc.wantError)
+			}
+		})
+	}
+}
+
 // TestContractMetricsSelectsItsOwnSeries prevents another workload's metrics from proving contract health.
 func TestContractMetricsSelectsItsOwnSeries(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -96,6 +136,8 @@ func TestMetricsRejectsInvalidConfigurationWithoutRequests(t *testing.T) {
 		{"--url", server.URL, "--kind", "unknown", "--ready", "1", "--since", "100"},
 		{"--url", server.URL, "--kind", "http-source", "--ready", "2", "--since", "100"},
 		{"--url", server.URL, "--kind", "http-source", "--ready", "1", "--since", "0"},
+		{"--url", server.URL, "--kind", "http-source", "--ready", "1", "--since", "NaN"},
+		{"--url", server.URL, "--kind", "http-source", "--ready", "1", "--since", "+Inf"},
 		{"--url", server.URL, "--kind", "http-source", "--ready", "1", "--since", "100", "--timeout", "0s"},
 	} {
 		if err := metrics(t.Context(), args); err == nil {

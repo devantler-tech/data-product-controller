@@ -22,7 +22,7 @@ func metrics(ctx context.Context, args []string) error {
 	address := flags.String("url", "", "Management metrics endpoint")
 	kind := flags.String("kind", "", "http-source or contract-probe")
 	ready := flags.Int("ready", -1, "Expected readiness gauge: zero or one")
-	since := flags.Int64("since", 0, "Observation must be newer than this Unix second")
+	since := flags.Float64("since", 0, "Observation must be newer than this Unix timestamp")
 	timeout := flags.Duration("timeout", 10*time.Second, "Bounded request timeout")
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 {
 		return errors.New("invalid metrics options")
@@ -32,7 +32,8 @@ func metrics(ctx context.Context, args []string) error {
 		endpoint.RawQuery != "" || endpoint.ForceQuery || endpoint.Fragment != "" ||
 		(endpoint.Scheme != "http" && endpoint.Scheme != "https") ||
 		(*kind != "http-source" && *kind != "contract-probe") ||
-		(*ready != 0 && *ready != 1) || *since <= 0 || *timeout <= 0 || *timeout > time.Minute {
+		(*ready != 0 && *ready != 1) || *since <= 0 || math.IsNaN(*since) || math.IsInf(*since, 0) ||
+		*timeout <= 0 || *timeout > time.Minute {
 		return errors.New("invalid metrics configuration")
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
@@ -66,7 +67,7 @@ func metrics(ctx context.Context, args []string) error {
 }
 
 // completedMetrics selects exact unlabeled gauges without accepting duplicates or nonfinite values.
-func completedMetrics(body, prefix string, ready int, since int64) error {
+func completedMetrics(body, prefix string, ready int, since float64) error {
 	readyName, timestampName := prefix+"_ready", prefix+"_last_observation_timestamp_seconds"
 	values := make(map[string]float64, 2)
 	scanner := bufio.NewScanner(strings.NewReader(body))
@@ -96,7 +97,7 @@ func completedMetrics(body, prefix string, ready int, since int64) error {
 	if scanner.Err() != nil || len(values) != 2 {
 		return errors.New("incomplete observation metrics")
 	}
-	if values[readyName] != float64(ready) || values[timestampName] <= float64(since) ||
+	if values[readyName] != float64(ready) || values[timestampName] <= since ||
 		values[timestampName] > float64(time.Now().Unix()+1) {
 		return errors.New("completed observation does not match this phase")
 	}
