@@ -39,6 +39,33 @@ private. Platform owns these resources and their rollout.
 grants. Invalid boolean values fail startup. The host retains the restricted iframe
 and content policy described in the [portable UI contract](ui-contract.md).
 
+`REGISTRY_DISCOVERY_ENABLED` separately defaults off and uses the
+`registry-discovery` OpenFeature flag for offline descriptor import. With this
+flag and `UI_CONTRACT_ENABLED` enabled, the kit accepts a downloaded public
+`data-product-descriptor/v1` `DataProduct` JSON file or a pasted complete
+descriptor. Choose one file or pasted document, then select **Import and open**.
+The existing manifest form remains available with discovery disabled.
+
+An imported descriptor must fit within 64 KiB of UTF-8 JSON, with public strings
+bounded to 16 KiB and arrays to 1,024 entries. It must contain the versioned
+identity, owner, outputs, readiness generations and four health dimensions. A
+ready health dimension must describe the current generation; an independently
+unobserved or disabled dimension does not override the aggregate readiness snapshot. A
+portable UI additionally needs the existing complete UI manifest and exact
+publisher-approved HTTPS host origin. The host retains the protocol's 16 KiB
+manifest, title, capability and origin bounds. V2 still requires the separate
+appearance flag, and both import forms use the same explicit presentation grants
+and opaque iframe sandbox.
+
+The visible reminder treats imported readiness as a saved metadata snapshot,
+not fresh authorization or a guarantee of current availability. Access remains
+the publisher's decision. A not-ready, stale-generation, unsupported, malformed
+or oversized import closes the previous interface before rejection and does not
+navigate a replacement. Close or a newer selection also cancels the effect of a
+pending local file read. The kit reads only the selected local JSON; it does not
+fetch descriptor URLs, health endpoints, schemas, contracts, owner links or data,
+and it does not send the descriptor or credentials to the embedded UI.
+
 `GET /healthz` always returns `200` with the three-byte body `ok` followed by a newline,
 including when the UI is disabled. `HEAD` returns the same headers without a body.
 The endpoint rejects query parameters, request bodies and other methods. It reports

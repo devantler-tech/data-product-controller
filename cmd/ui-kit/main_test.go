@@ -115,6 +115,46 @@ func TestUIKitHelpPreservesDiscoverableOptions(t *testing.T) {
 	}
 }
 
+// TestUIKitDescriptorGate catches an enabled command dropping the offline handoff release flag.
+func TestUIKitDescriptorGate(t *testing.T) {
+	for _, value := range []string{"", "false", "true"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("REGISTRY_DISCOVERY_ENABLED", value)
+			address := availableAddress(t)
+			startHost(t, []string{"--http-behind-gateway", "--listen-address=" + address}, "true")
+			client := &http.Client{Timeout: time.Second}
+			waitForHost(t, client, "http://"+address+"/healthz")
+			status, body, _ := hostRequest(t, client, http.MethodGet, "http://"+address+"/", "")
+			if status != http.StatusOK ||
+				strings.Contains(body, `data-discovery-enabled="true"`) != (value == "true") {
+				t.Fatal("command did not publish its explicit offline descriptor release state")
+			}
+		})
+	}
+}
+
+// TestUIKitRejectsInvalidDescriptorFlag catches accepting a typo as an activated or ignored release flag.
+func TestUIKitRejectsInvalidDescriptorFlag(t *testing.T) {
+	t.Setenv("REGISTRY_DISCOVERY_ENABLED", "invalid")
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	command := hostCommand(
+		t,
+		ctx,
+		[]string{"--http-behind-gateway", "--listen-address=" + availableAddress(t)},
+		"true",
+	)
+	output, err := command.CombinedOutput()
+	if err == nil || ctx.Err() != nil ||
+		!strings.Contains(string(output), "REGISTRY_DISCOVERY_ENABLED") {
+		t.Fatalf(
+			"invalid descriptor flag did not fail before serving: err=%v output=%s",
+			err,
+			output,
+		)
+	}
+}
+
 // TestUIKitRejectsAmbiguousTransport catches implicit wildcard binding and mixed TLS/plaintext options.
 func TestUIKitRejectsAmbiguousTransport(t *testing.T) {
 	for _, tc := range []struct {

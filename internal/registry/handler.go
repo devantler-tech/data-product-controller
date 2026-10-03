@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sort"
+	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"github.com/devantler-tech/data-product-controller/internal/uibundle"
@@ -22,6 +23,7 @@ var uiFiles embed.FS
 type HandlerOptions struct {
 	ContractEnabled   func(context.Context) bool
 	AppearanceEnabled func(context.Context) bool
+	DiscoveryEnabled  func(context.Context) bool
 }
 
 // NewHandler builds the registry API and UI with optional presentation grants disabled.
@@ -53,10 +55,15 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 	server := &server{
 		reader: reader, contractEnabled: options.ContractEnabled,
 		appearanceEnabled: options.AppearanceEnabled, bundle: bundle, bundleErr: bundleErr,
+		discoveryEnabled: options.DiscoveryEnabled,
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/products", server.listProducts)
 	mux.HandleFunc("GET /api/v1/ui-config", server.uiConfig)
+	mux.HandleFunc("GET /api/v2/products", server.discoveryProducts)
+	mux.HandleFunc("GET /api/v2/products/{namespace}/{name}", server.discoveryProduct)
+	mux.HandleFunc("GET /api/v2/schema", server.discoverySchema)
+	mux.HandleFunc("GET /api/v2/", http.NotFound)
 	mux.HandleFunc("GET /", server.registryUI)
 	mux.HandleFunc("GET /assets/{asset}", server.registryAsset)
 
@@ -71,10 +78,12 @@ func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 	_ = json.NewEncoder(writer).Encode(struct {
 		UIContractEnabled   bool `json:"uiContractEnabled"`
 		UIAppearanceEnabled bool `json:"uiAppearanceEnabled"`
+		DiscoveryEnabled    bool `json:"discoveryEnabled"`
 	}{
 		UIContractEnabled: contractEnabled,
 		UIAppearanceEnabled: contractEnabled &&
 			s.appearanceEnabled != nil && s.appearanceEnabled(request.Context()),
+		DiscoveryEnabled: s.discoveryEnabled != nil && s.discoveryEnabled(request.Context()),
 	})
 }
 
@@ -116,6 +125,7 @@ type server struct {
 	reader            client.Reader
 	contractEnabled   func(context.Context) bool
 	appearanceEnabled func(context.Context) bool
+	discoveryEnabled  func(context.Context) bool
 }
 
 type productCollection struct {
@@ -146,10 +156,24 @@ type readinessDescriptor struct {
 }
 
 func (s *server) listProducts(writer http.ResponseWriter, request *http.Request) {
+	ctx, cancel := context.WithTimeout(request.Context(), 5*time.Second)
+	defer cancel()
 	products := &datav1alpha1.DataProductList{}
-	if err := s.reader.List(request.Context(), products); err != nil {
+	if err := s.reader.List(ctx, products, client.Limit(100)); err != nil {
 		http.Error(writer, "Unable to read data products.", http.StatusInternalServerError)
-
+		return
+	}
+	if ctx.Err() != nil {
+		http.Error(writer, "Unable to read data products.", http.StatusInternalServerError)
+		return
+	}
+	if len(products.Items) > 100 || products.Continue != "" {
+		discoveryFailure(
+			writer,
+			http.StatusRequestEntityTooLarge,
+			"collection-too-large",
+			"The legacy inventory is too large. Use paged discovery when enabled.",
+		)
 		return
 	}
 
@@ -165,10 +189,17 @@ func (s *server) listProducts(writer http.ResponseWriter, request *http.Request)
 		descriptors = append(descriptors, descriptorFor(&products.Items[index]))
 	}
 
-	writer.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(writer).Encode(productCollection{Products: descriptors}); err != nil {
-		http.Error(writer, "Unable to encode data products.", http.StatusInternalServerError)
+	data, err := json.Marshal(productCollection{Products: descriptors})
+	if err != nil || len(data) > maxDiscoveryResponseBytes {
+		discoveryFailure(
+			writer,
+			http.StatusRequestEntityTooLarge,
+			"collection-too-large",
+			"The legacy inventory exceeds the response bound.",
+		)
+		return
 	}
+	writeDiscoveryJSON(writer, data)
 }
 
 // descriptorFor projects published metadata while withholding readiness and lineage from stale generations.

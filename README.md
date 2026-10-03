@@ -18,6 +18,7 @@ The current foundation provides:
 - default-off connector Deployment observation, with full current-generation availability included in product and registry readiness;
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
+- default-off [bounded discovery](docs/registry-discovery.md) with a versioned descriptor schema, exact product lookup, namespace-scoped pages, public health dimensions, shared product links and offline descriptor handoff;
 - a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
 - a default-off [offline DSP catalog exporter](docs/dsp-catalog.md) that combines DCAT snapshots with explicit provider services, transfer formats and offers;
 - a registry workspace that renders product descriptors and embeds product UIs in a restricted sandbox;

@@ -17,6 +17,9 @@ uiAppearance:
   # Independent operator grant for v2 theme hints; also requires uiContract.
   enabled: false
 
+registryDiscovery:
+  enabled: false
+
 provisionedSources:
   enabled: false
 

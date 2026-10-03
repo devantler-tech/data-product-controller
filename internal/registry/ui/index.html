@@ -34,6 +34,11 @@
           <p id="product-count" aria-live="polite">Loading…</p>
         </div>
         <div class="filters">
+          <form id="catalog-scope" hidden>
+            <label for="namespace-filter">Namespace</label>
+            <input id="namespace-filter" type="text" placeholder="All namespaces" maxlength="63" autocomplete="off" />
+            <button type="submit" class="text-button">Apply namespace</button>
+          </form>
           <label for="product-search">Search products</label>
           <input
             id="product-search"
@@ -55,6 +60,8 @@
           Clear filters
         </button>
         <div id="data-product-grid" class="product-grid"></div>
+        <p id="discovery-scope" class="status" hidden></p>
+        <button id="load-more" class="text-button" type="button" hidden>Load more products</button>
         <noscript
           >Enable JavaScript to browse products. The product list is also
           available at
@@ -86,6 +93,16 @@
             </div>
           </dl>
           <p id="readiness-detail" hidden></p>
+          <p id="selection-status" role="status" hidden></p>
+          <div id="descriptor-actions" class="descriptor-actions" hidden>
+            <a id="product-link">Product link</a>
+            <button id="export-descriptor" type="button" class="text-button">Save descriptor</button>
+          </div>
+          <section id="health-detail" aria-labelledby="health-title" hidden>
+            <h3 id="health-title">Readiness checks</h3>
+            <p id="health-generation" class="status"></p>
+            <ul id="product-health"></ul>
+          </section>
           <section
             id="interfaces-detail"
             aria-labelledby="interfaces-title"

@@ -101,10 +101,18 @@ func run(args []string, getenv func(string) string) error {
 	if err != nil {
 		return err
 	}
+	discoveryEnabled, err := config.RegistryDiscoveryEnabled(getenv("REGISTRY_DISCOVERY_ENABLED"))
+	if err != nil {
+		return err
+	}
 	client, err := featureflag.NewClient(
 		"ui-kit",
 		featureflag.NewProvider(
-			map[string]bool{"ui-contract": enabled, "ui-appearance": appearanceEnabled},
+			map[string]bool{
+				"ui-contract":        enabled,
+				"ui-appearance":      appearanceEnabled,
+				"registry-discovery": discoveryEnabled,
+			},
 		),
 	)
 	if err != nil {
@@ -112,10 +120,11 @@ func run(args []string, getenv func(string) string) error {
 	}
 	handler := http.NewServeMux()
 	handler.HandleFunc("/healthz", health)
-	handler.Handle("/", web.KitHandlerWithAppearance(
-		func() bool { return featureflag.Enabled(context.Background(), client, "ui-contract") },
-		func() bool { return featureflag.Enabled(context.Background(), client, "ui-appearance") },
-	))
+	handler.Handle("/", web.KitHandlerWithOptions(web.KitOptions{
+		ContractEnabled:   func() bool { return featureflag.Enabled(context.Background(), client, "ui-contract") },
+		AppearanceEnabled: func() bool { return featureflag.Enabled(context.Background(), client, "ui-appearance") },
+		DiscoveryEnabled:  func() bool { return featureflag.Enabled(context.Background(), client, "registry-discovery") },
+	}))
 	server := &http.Server{
 		Addr:              options.address,
 		Handler:           handler,

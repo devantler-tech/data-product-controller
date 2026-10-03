@@ -67,8 +67,8 @@ func TestUIContractHostConfiguration(t *testing.T) {
 		if err := json.Unmarshal(response.Body.Bytes(), &configuration); err != nil {
 			t.Fatal(err)
 		}
-		if len(configuration) != 2 || configuration["uiContractEnabled"] != contractEnabled ||
-			configuration["uiAppearanceEnabled"] ||
+		if len(configuration) != 3 || configuration["uiContractEnabled"] != contractEnabled ||
+			configuration["uiAppearanceEnabled"] || configuration["discoveryEnabled"] ||
 			response.Header().Get("Cache-Control") != "no-store" {
 			t.Fatal("configuration does not reflect the current release flag")
 		}

@@ -32,9 +32,10 @@ const contractReadinessFlag = "contract-readiness"
 const compositionFlag = "composition"
 
 const (
-	dcatCatalogFlag  = "dcat-catalog"
-	uiContractFlag   = "ui-contract"
-	uiAppearanceFlag = "ui-appearance"
+	dcatCatalogFlag       = "dcat-catalog"
+	uiContractFlag        = "ui-contract"
+	uiAppearanceFlag      = "ui-appearance"
+	registryDiscoveryFlag = "registry-discovery"
 )
 
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
@@ -126,6 +127,13 @@ func main() {
 		setupLog.Error(err, "invalid UI appearance configuration")
 		os.Exit(1)
 	}
+	registryDiscoveryEnabled, err := config.RegistryDiscoveryEnabled(
+		os.Getenv("REGISTRY_DISCOVERY_ENABLED"),
+	)
+	if err != nil {
+		setupLog.Error(err, "invalid registry discovery configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			provisionedSourcesFlag: sourcesEnabled,
@@ -136,6 +144,7 @@ func main() {
 			dcatCatalogFlag:        dcatCatalogEnabled,
 			uiContractFlag:         uiContractEnabled,
 			uiAppearanceFlag:       uiAppearanceEnabled,
+			registryDiscoveryFlag:  registryDiscoveryEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -205,6 +214,9 @@ func main() {
 	registryHandler := registry.NewHandlerWithOptions(
 		controllerManager.GetAPIReader(),
 		registry.HandlerOptions{
+			DiscoveryEnabled: func(ctx context.Context) bool {
+				return featureflag.Enabled(ctx, flagClient, registryDiscoveryFlag)
+			},
 			ContractEnabled: func(ctx context.Context) bool {
 				return featureflag.Enabled(ctx, flagClient, uiContractFlag)
 			},

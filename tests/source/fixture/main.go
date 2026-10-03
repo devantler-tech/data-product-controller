@@ -46,6 +46,8 @@ func run(ctx context.Context, args []string) error {
 		return probe(ctx, args[1:])
 	case "metrics":
 		return metrics(ctx, args[1:])
+	case "discovery":
+		return discovery(ctx, args[1:])
 	default:
 		return errors.New("unknown fixture command")
 	}

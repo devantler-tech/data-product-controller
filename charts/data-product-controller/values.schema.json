@@ -2,6 +2,11 @@
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "registryDiscovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "enabled": { "type": "boolean" } }
+    },
     "engineProviders": {
       "type": "object",
       "additionalProperties": false,

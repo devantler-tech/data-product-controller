@@ -20,9 +20,24 @@ func KitHandler(enabled func() bool) http.Handler {
 
 // KitHandlerWithAppearance advertises an independently default-off appearance grant without network requests.
 func KitHandlerWithAppearance(enabled, appearanceEnabled func() bool) http.Handler {
+	return KitHandlerWithOptions(
+		KitOptions{ContractEnabled: enabled, AppearanceEnabled: appearanceEnabled},
+	)
+}
+
+// KitOptions holds independently default-off presentation and offline discovery release gates.
+type KitOptions struct {
+	ContractEnabled   func() bool
+	AppearanceEnabled func() bool
+	DiscoveryEnabled  func() bool
+}
+
+// KitHandlerWithOptions enables offline descriptor handoff without introducing registry or network access.
+func KitHandlerWithOptions(options KitOptions) http.Handler {
 	files := http.FileServerFS(Assets)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !enabled() || (r.Method != http.MethodGet && r.Method != http.MethodHead) {
+		if options.ContractEnabled == nil || !options.ContractEnabled() ||
+			(r.Method != http.MethodGet && r.Method != http.MethodHead) {
 			http.NotFound(w, r)
 			return
 		}
@@ -37,16 +52,14 @@ func KitHandlerWithAppearance(enabled, appearanceEnabled func() bool) http.Handl
 				http.Error(w, "kit unavailable", http.StatusInternalServerError)
 				return
 			}
-			if appearanceEnabled != nil && appearanceEnabled() {
-				page = []byte(
-					strings.Replace(
-						string(page),
-						"<body>",
-						`<body data-appearance-enabled="true">`,
-						1,
-					),
-				)
+			body := "<body"
+			if options.AppearanceEnabled != nil && options.AppearanceEnabled() {
+				body += ` data-appearance-enabled="true"`
 			}
+			if options.DiscoveryEnabled != nil && options.DiscoveryEnabled() {
+				body += ` data-discovery-enabled="true"`
+			}
+			page = []byte(strings.Replace(string(page), "<body>", body+">", 1))
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
 			if r.Method == http.MethodGet {
