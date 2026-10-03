@@ -11,11 +11,8 @@ import (
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -269,18 +266,7 @@ func cnpgFixture(t *testing.T) (*unstructured.Unstructured, *metav1.PartialObjec
 // cnpgReader exercises real HTTP encoding and metadata negotiation with fixed fixture API mappings.
 func cnpgReader(t *testing.T, host string) client.Reader {
 	t.Helper()
-	mapper := meta.NewDefaultRESTMapper(
-		[]schema.GroupVersion{{Group: "postgresql.cnpg.io", Version: "v1"}, {Version: "v1"}},
-	)
-	mapper.Add(
-		schema.GroupVersionKind{Group: "postgresql.cnpg.io", Version: "v1", Kind: "Cluster"},
-		meta.RESTScopeNamespace,
-	)
-	mapper.Add(schema.GroupVersionKind{Version: "v1", Kind: "Secret"}, meta.RESTScopeNamespace)
-	reader, err := client.New(
-		&rest.Config{Host: host},
-		client.Options{Scheme: runtime.NewScheme(), Mapper: mapper},
-	)
+	reader, err := NewEngineReader(&rest.Config{Host: host})
 	if err != nil {
 		t.Fatal(err)
 	}

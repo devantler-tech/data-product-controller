@@ -4,6 +4,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
@@ -69,6 +70,9 @@ func NewEngineReader(config *rest.Config) (client.Reader, error) {
 	)
 	bounded := rest.CopyConfig(config)
 	bounded.Timeout = 5 * time.Second
+	bounded.Wrap(func(next http.RoundTripper) http.RoundTripper {
+		return metadataOnlyTransport{next: next}
+	})
 	reader, err := client.New(bounded, client.Options{Scheme: runtime.NewScheme(), Mapper: mapper})
 	if err != nil {
 		return nil, fmt.Errorf("create engine provider reader: %w", err)
