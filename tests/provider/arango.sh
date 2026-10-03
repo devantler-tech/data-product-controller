@@ -23,7 +23,9 @@ source "$repo_root/tests/provider/common.sh"
 # database_ready requires the real operator to report its initialized Single member ready.
 database_ready() {
 	kube get arangodeployment lineage -o json | jq -e '
-    .status.phase == "Running" and .status.bootstrapInitialized == true and
+		.status.phase == "Running" and
+		any(.status.conditions[]?; .type == "BootstrapCompleted" and .status == "True") and
+		any(.status.conditions[]?; .type == "BootstrapSucceded" and .status == "True") and
     (.status.members.single | length == 1) and
     any(.status.conditions[]?; .type == "Ready" and .status == "True") and
     any(.status.members.single[0].conditions[]?; .type == "Ready" and .status == "True")' >/dev/null
@@ -127,12 +129,12 @@ server_digest=$(platform_digest 'arangodb@sha256:4bc086d5050ca7ea11c6d00a36d8b91
 operator_digest=$(platform_digest 'arangodb/kube-arangodb@sha256:f579e339ab083998f648351293a5d55dd81b8a96849b0bc8f03379f65610cfa7' "$test_dir/operator-index.json")
 bounded kubectl --request-timeout=0 -n products rollout status deployment/arango-arango-operator --timeout="$(remaining)s"
 wait_for 'real operator creates a ready authenticated Single server' database_ready
-kube get arangodeployment lineage -o json | jq '{uid:.metadata.uid,phase:.status.phase,accepted:.status.acceptedSpecVersion,applied:.status.appliedVersion,currentImage:.status.currentImage}'
+kube get arangodeployment lineage -o json | jq '{uid:.metadata.uid,phase:.status.phase,accepted:.status.acceptedSpecVersion,applied:.status.appliedVersion,currentImage:.status."current-image"}'
 kube get pods -o json | jq '[.items[] | {name:.metadata.name,uid:.metadata.uid,images:[.status.containerStatuses[]? | {name,imageID}]}]'
 kubectl --request-timeout=15s get node "$control_node" -o json | jq -e \
 	'.status.nodeInfo.architecture == "amd64" and .status.nodeInfo.operatingSystem == "linux"' >/dev/null
 require_pinned_image app=graph-database server \
-	'arangodb:3.12.12@sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf' "$server_digest"
+	'docker.io/library/arangodb@sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf' "$server_digest"
 require_pinned_image app.kubernetes.io/name=kube-arangodb operator \
 	'arangodb/kube-arangodb:1.4.5@sha256:f579e339ab083998f648351293a5d55dd81b8a96849b0bc8f03379f65610cfa7' "$operator_digest"
 kubectl --request-timeout=15s version -o json | jq '.serverVersion'
