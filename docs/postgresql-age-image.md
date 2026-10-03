@@ -64,6 +64,9 @@ consumer does not establish a read-only publication.
 The required CI image job starts an actual PostgreSQL process with AGE preloaded, checks the
 extension version and executes a two-hop Cypher traversal through an authenticated reader.
 SQL and Cypher mutation denials require SQLSTATE `42501`; successful reads bracket those denials.
+The independent owner checks the effective server preload and installed extension separately.
+Acceptance then restarts without preload and requires that check to fail while a reader's
+connection-local load and Cypher query still succeed. Readers gain no server-settings privilege.
 The container runs as UID 26 with a read-only root, bounded memory/CPU, temporary storage and no
 external network. The complete fixture is in `tests/provider/age-image-bootstrap.sh`.
 

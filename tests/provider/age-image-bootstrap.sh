@@ -27,6 +27,7 @@ fi
 admin() { psql -X -q -v ON_ERROR_STOP=1 -h /tmp -U postgres -d postgres "$@"; }
 [[ $(admin -At -c 'SHOW shared_preload_libraries') == age ]]
 admin -f /acceptance/age-image.sql >/dev/null
+[[ $(admin -At -f /acceptance/age-runtime.sql) == t ]]
 export PGPASSWORD=synthetic-age-reader
 # reader runs authenticated TCP queries through the restricted AGE reader role.
 reader() { psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -U age_reader -d postgres "$@"; }
@@ -57,3 +58,12 @@ for mutation in write update delete; do
 done
 [[ $(reader -At -f /acceptance/age-image-reader.sql) == 1 ]]
 echo 'PASS: preloaded AGE returns persistent two-hop lineage through an authenticated read-only role'
+
+# A connection-local LOAD still works without preloading. The independent
+# owner's runtime assertion must distinguish that state from the supported profile.
+pg_ctl -D "$PGDATA" -m fast -w stop >/dev/null
+pg_ctl -D "$PGDATA" -l /tmp/postgres.log -w -t 30 start \
+	-o '-c listen_addresses=127.0.0.1 -c unix_socket_directories=/tmp -c shared_preload_libraries= -c max_connections=20 -c shared_buffers=32MB' >/dev/null
+[[ $(admin -At -f /acceptance/age-runtime.sql) == f ]]
+[[ $(reader -At -f /acceptance/age-image-reader.sql) == 1 ]]
+echo 'PASS: the owner detects missing server preload even when connection-local Cypher reads succeed'
