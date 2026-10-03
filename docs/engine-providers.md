@@ -76,7 +76,9 @@ CloudNativePG Cluster. Document uses JSONB; Graph uses the [owned PostgreSQL / A
 Both require the native Cluster readiness checks, an exact supported immutable image in
 `spec.imageName`, and the same currently running image reported in `status.image`. Catalog
 indirection cannot establish this profile. Document also supports the upstream minimal PostgreSQL
-17.11 Trixie index. Graph requires the owned AGE 1.7.0 profile and `age` in `shared_preload_libraries`.
+17.11 Trixie index. Graph requires the owned AGE 1.7.0 profile and `age` in the operator's
+`spec.postgresql.shared_preload_libraries` array. A free-form parameter or invented status
+field does not satisfy the declared preload profile.
 The controller neither initializes the extension nor verifies its installation by connecting.
 
 Choose the hybrid provider for PostgreSQL storage and operating conventions, with these explicit
