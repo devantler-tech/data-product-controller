@@ -32,22 +32,22 @@ jq -n --arg digest "$digest" '{metadata:{status:"deployed",revision:7,chart:"dat
 cp "$work/good.json" "$HELM_TEST_RELEASE"
 helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"
 for mutation in '.metadata.status="pending-upgrade"' '.metadata.version="1.2.4"' '.metadata.appVersion="1.2.4"' '.values.image.digest="latest"' '.values.image.repository="unapproved.example/controller"' '.metadata.chart="other"' '.metadata.revision=0'; do
-  jq "$mutation" "$work/good.json" >"$HELM_TEST_RELEASE"
-  if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
-    echo 'installed release identity accepted drift' >&2
-    exit 1
-  fi
+	jq "$mutation" "$work/good.json" >"$HELM_TEST_RELEASE"
+	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
+		echo 'installed release identity accepted drift' >&2
+		exit 1
+	fi
 done
 cp "$work/good.json" "$HELM_TEST_RELEASE"
 export CHANGE_REVISION=true
 if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
-  echo 'installed identity accepted a release changed during readback' >&2
-  exit 1
+	echo 'installed identity accepted a release changed during readback' >&2
+	exit 1
 fi
 unset CHANGE_REVISION
 printf '{}\n' >"$HELM_TEST_RELEASE"
 if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
-  echo 'installed release identity accepted incomplete response' >&2
-  exit 1
+	echo 'installed release identity accepted incomplete response' >&2
+	exit 1
 fi
 echo 'installed Helm identity behavior tests passed'

@@ -89,29 +89,29 @@ EOF
 chmod +x "$work/bin/"*
 export PATH="$work/bin:$PATH"
 base=(--tag v1.2.3 --source-sha "$TEST_SHA" --image-digest "$TEST_IMAGE_DIGEST"
-  --chart-digest "$TEST_CHART_DIGEST" --publisher-sha bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-  --platform linux/amd64)
+	--chart-digest "$TEST_CHART_DIGEST" --publisher-sha bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+	--platform linux/amd64)
 run_verify() {
-  rm -rf "$work/result"
-  bash "$root/scripts/verify-release-artifacts.sh" "${base[@]}" --output-dir "$work/result" "$@" >"$work/output" 2>"$work/error"
+	rm -rf "$work/result"
+	bash "$root/scripts/verify-release-artifacts.sh" "${base[@]}" --output-dir "$work/result" "$@" >"$work/output" 2>"$work/error"
 }
 fail() {
-  echo "release artifact verification test: $1" >&2
-  cat "$work/error" >&2
-  exit 1
+	echo "release artifact verification test: $1" >&2
+	cat "$work/error" >&2
+	exit 1
 }
 # Exercise our verifier; only registry/signer boundaries are replaced, archive parsing remains real.
 run_verify || fail 'a complete verified release was rejected'
 jq -e --arg runtime "$TEST_RUNTIME_DIGEST" '.complete == true and .runtimeDigest == $runtime and .platform == "linux/amd64"' "$work/result/release.json" >/dev/null || fail 'missing verified platform identity'
 "$REAL_HELM" show chart "$work/result/release-chart.tgz" | yq '.version == "1.2.3"' - | grep -Fx true >/dev/null
 reject() {
-  if run_verify "$@"; then fail 'unverified or mismatched identity produced success'; fi
-  [[ ! -f "$work/result/release.json" ]] || fail 'failed verification left a completeness record'
+	if run_verify "$@"; then fail 'unverified or mismatched identity produced success'; fi
+	[[ ! -f "$work/result/release.json" ]] || fail 'failed verification left a completeness record'
 }
 for var in IMAGE_VERIFY_EXIT CHART_VERIFY_EXIT IMAGE_PULL_EXIT PULL_EXIT TIMEOUT_EXIT; do
-  export "$var=42"
-  reject
-  unset "$var"
+	export "$var=42"
+	reject
+	unset "$var"
 done
 export REVISION=ffffffffffffffffffffffffffffffffffffffff
 reject

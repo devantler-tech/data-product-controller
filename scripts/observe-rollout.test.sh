@@ -98,48 +98,48 @@ chmod +x "$test_dir/bin/kubectl"
 export PATH="$test_dir/bin:$PATH"
 
 run_observer() {
-  local scenario=$1 expected=$2
-  export OBSERVER_CASE=$scenario
-  local output="$test_dir/$scenario.out" status=0 invocation_timeout=1
-  case "$scenario" in ready | typed_inventory | foreign_inventory | index_runtime | pullable_runtime | reconfigured | recreated | revised | product_recreated | product_changed | product_failed) invocation_timeout=5 ;; hung | slow_snapshot) invocation_timeout=2 ;; esac
-  bash "$repo_root/scripts/observe-rollout.sh" \
-    --kubeconfig "$test_dir/kubeconfig" --context fixture --namespace products \
-    --product export --deployment dpc:controller --condition Ready --condition ConnectorReady \
-    --image "$OBSERVER_IMAGE" --runtime-digest "$runtime" --timeout "$invocation_timeout" \
-    --evidence-dir "$test_dir/evidence-$scenario" >"$output" 2>"$test_dir/$scenario.err" || status=$?
-  if [[ $expected == success ]]; then
-    [[ $status == 0 ]] || {
-      printf 'FAIL %s: expected complete rollout, exit %s\n' "$scenario" "$status"
-      cat "$output"
-      exit 1
-    }
-    jq -e '.complete == true and .products == 1 and .deployments == 1 and .pods == 2' "$output" >/dev/null
-    [[ -s "$test_dir/evidence-$scenario/product-0-final.json" && -s "$test_dir/evidence-$scenario/deployment-0-final.json" ]]
-    if grep -Rq DO_NOT_RETAIN "$test_dir/evidence-$scenario" "$output" "$test_dir/$scenario.err"; then
-      printf 'FAIL %s: private fields retained\n' "$scenario"
-      exit 1
-    fi
-    [[ $(stat -c '%a' "$test_dir/evidence-$scenario" 2>/dev/null || stat -f '%Lp' "$test_dir/evidence-$scenario") == 700 ]]
-    local evidence
-    for evidence in "$test_dir/evidence-$scenario"/*; do
-      [[ $(stat -c '%a' "$evidence" 2>/dev/null || stat -f '%Lp' "$evidence") == 600 ]]
-    done
-  else
-    [[ $status != 0 ]] || {
-      printf 'FAIL %s: incomplete rollout passed\n' "$scenario"
-      exit 1
-    }
-    jq -e '.complete == false and (.failure | type == "string")' "$output" >/dev/null
-    case "$scenario" in
-    reconfigured | recreated | revised | product_recreated | product_changed | product_failed) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
-    hung | slow_snapshot) jq -e '.failure == "deadline_exceeded"' "$output" >/dev/null ;;
-    esac
-    if grep -Rq DO_NOT_RETAIN "$test_dir/evidence-$scenario" "$output" "$test_dir/$scenario.err"; then
-      printf 'FAIL %s: private failure output retained\n' "$scenario"
-      exit 1
-    fi
-  fi
-  printf 'PASS %s\n' "$scenario"
+	local scenario=$1 expected=$2
+	export OBSERVER_CASE=$scenario
+	local output="$test_dir/$scenario.out" status=0 invocation_timeout=1
+	case "$scenario" in ready | typed_inventory | foreign_inventory | index_runtime | pullable_runtime | reconfigured | recreated | revised | product_recreated | product_changed | product_failed) invocation_timeout=5 ;; hung | slow_snapshot) invocation_timeout=2 ;; esac
+	bash "$repo_root/scripts/observe-rollout.sh" \
+		--kubeconfig "$test_dir/kubeconfig" --context fixture --namespace products \
+		--product export --deployment dpc:controller --condition Ready --condition ConnectorReady \
+		--image "$OBSERVER_IMAGE" --runtime-digest "$runtime" --timeout "$invocation_timeout" \
+		--evidence-dir "$test_dir/evidence-$scenario" >"$output" 2>"$test_dir/$scenario.err" || status=$?
+	if [[ $expected == success ]]; then
+		[[ $status == 0 ]] || {
+			printf 'FAIL %s: expected complete rollout, exit %s\n' "$scenario" "$status"
+			cat "$output"
+			exit 1
+		}
+		jq -e '.complete == true and .products == 1 and .deployments == 1 and .pods == 2' "$output" >/dev/null
+		[[ -s "$test_dir/evidence-$scenario/product-0-final.json" && -s "$test_dir/evidence-$scenario/deployment-0-final.json" ]]
+		if grep -Rq DO_NOT_RETAIN "$test_dir/evidence-$scenario" "$output" "$test_dir/$scenario.err"; then
+			printf 'FAIL %s: private fields retained\n' "$scenario"
+			exit 1
+		fi
+		[[ $(stat -c '%a' "$test_dir/evidence-$scenario" 2>/dev/null || stat -f '%Lp' "$test_dir/evidence-$scenario") == 700 ]]
+		local evidence
+		for evidence in "$test_dir/evidence-$scenario"/*; do
+			[[ $(stat -c '%a' "$evidence" 2>/dev/null || stat -f '%Lp' "$evidence") == 600 ]]
+		done
+	else
+		[[ $status != 0 ]] || {
+			printf 'FAIL %s: incomplete rollout passed\n' "$scenario"
+			exit 1
+		}
+		jq -e '.complete == false and (.failure | type == "string")' "$output" >/dev/null
+		case "$scenario" in
+		reconfigured | recreated | revised | product_recreated | product_changed | product_failed) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
+		hung | slow_snapshot) jq -e '.failure == "deadline_exceeded"' "$output" >/dev/null ;;
+		esac
+		if grep -Rq DO_NOT_RETAIN "$test_dir/evidence-$scenario" "$output" "$test_dir/$scenario.err"; then
+			printf 'FAIL %s: private failure output retained\n' "$scenario"
+			exit 1
+		fi
+	fi
+	printf 'PASS %s\n' "$scenario"
 }
 
 run_observer ready success
@@ -148,24 +148,24 @@ run_observer foreign_inventory success
 run_observer index_runtime success
 run_observer pullable_runtime success
 for scenario in wrong_inventory wrong_pod_item wrong_rs_item extra_response invalid_running stale_product duplicate_condition missing_condition zero_replicas stale_deployment partial_replicas missing_runtime wrong_runtime garbage_runtime wrong_container wrong_image unready_pod duplicate_pod_ready terminating_pod foreign_pod old_pods extra_old_pod missing_rs duplicate_rs stale_rs foreign_rs empty_pods forbidden empty reconfigured recreated revised product_recreated product_changed product_failed; do
-  run_observer "$scenario" failure
+	run_observer "$scenario" failure
 done
 started=$(date +%s)
 run_observer hung failure
 [[ $(($(date +%s) - started)) -le 3 ]] || {
-  printf 'FAIL hung: invocation deadline was not enforced\n'
-  exit 1
+	printf 'FAIL hung: invocation deadline was not enforced\n'
+	exit 1
 }
 read -r hung_pid <"$test_dir/hung-read.pid"
 if kill -0 "$hung_pid" 2>/dev/null; then
-  kill -KILL "$hung_pid" 2>/dev/null || true
-  printf 'FAIL hung: Kubernetes read survived the invocation deadline\n'
-  exit 1
+	kill -KILL "$hung_pid" 2>/dev/null || true
+	printf 'FAIL hung: Kubernetes read survived the invocation deadline\n'
+	exit 1
 fi
 started=$(date +%s)
 run_observer slow_snapshot failure
 [[ $(($(date +%s) - started)) -le 3 ]] || {
-  printf 'FAIL slow_snapshot: call sequence reset the deadline\n'
-  exit 1
+	printf 'FAIL slow_snapshot: call sequence reset the deadline\n'
+	exit 1
 }
 printf 'Rollout observer behavioral tests passed.\n'

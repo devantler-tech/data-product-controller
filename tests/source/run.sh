@@ -62,7 +62,10 @@ wait_for() {
 			return 1
 		fi
 		if "$@" >"$test_dir/wait.log" 2>&1; then
-			((SECONDS < deadline)) || { echo "timed out: $description" >&2; return 1; }
+			((SECONDS < deadline)) || {
+				echo "timed out: $description" >&2
+				return 1
+			}
 			echo "PASS: $description"
 			return 0
 		fi
@@ -156,7 +159,10 @@ ksail project init --name "$cluster_name" --distribution Vanilla --provider Dock
 cluster_started=true
 ksail cluster create --config "$cluster_config" --distribution-config "$test_dir/cluster/kind.yaml"
 cluster_context=$(kubectl config current-context)
-[[ -n "$cluster_context" ]] || { echo 'owned fixture context missing' >&2; exit 1; }
+[[ -n "$cluster_context" ]] || {
+	echo 'owned fixture context missing' >&2
+	exit 1
+}
 kubectl --request-timeout=0 -n kube-system rollout status daemonset/cilium --timeout=180s
 [[ -z "$(kubectl --request-timeout=15s -n kube-system get daemonset kindnet --ignore-not-found -o name)" ]] || {
 	echo 'unexpected default Kind CNI alongside Cilium' >&2
