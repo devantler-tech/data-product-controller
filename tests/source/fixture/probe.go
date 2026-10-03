@@ -55,12 +55,21 @@ func probe(ctx context.Context, args []string) error {
 		"",
 		"Optional exact registry readiness reason",
 	)
+	registryAbsent := flags.String(
+		"registry-absent",
+		"",
+		"Exact namespace/name that must be absent",
+	)
 	timeout := flags.Duration("timeout", 10*time.Second, "Bounded request timeout")
 	wantError := flags.Bool("want-error", false, "Require a transport failure")
 	if err := flags.Parse(args); err != nil || flags.NArg() != 0 {
 		return errors.New("invalid probe options")
 	}
 	registryConfigured := *registryProduct != "" || *registryReady != "" || *registryReason != ""
+	if *registryAbsent != "" &&
+		(registryConfigured || *wantError || !registryIdentity(*registryAbsent)) {
+		return errors.New("invalid registry absence configuration")
+	}
 	if registryConfigured && (*wantError || strings.Count(*registryProduct, "/") != 1 ||
 		strings.HasPrefix(*registryProduct, "/") || strings.HasSuffix(*registryProduct, "/") ||
 		len(*registryProduct) > 512 || (*registryReady != "true" && *registryReady != "false") || len(*registryReason) > 256) {
@@ -115,7 +124,46 @@ func probe(ctx context.Context, args []string) error {
 			return err
 		}
 	}
+	if *registryAbsent != "" {
+		if err := verifyRegistryAbsent(body, *registryAbsent); err != nil {
+			return err
+		}
+	}
 	fmt.Printf("probe passed: status=%d\n", response.StatusCode)
+	return nil
+}
+
+func registryIdentity(identity string) bool {
+	return len(identity) <= 512 && strings.Count(identity, "/") == 1 &&
+		!strings.HasPrefix(identity, "/") && !strings.HasSuffix(identity, "/")
+}
+
+func verifyRegistryAbsent(body []byte, identity string) error {
+	if err := registryJSON(body); err != nil {
+		return err
+	}
+	var response struct {
+		Products *[]struct {
+			Namespace string `json:"namespace"`
+			Name      string `json:"name"`
+		} `json:"products"`
+	}
+	if err := json.Unmarshal(
+		body,
+		&response,
+	); err != nil || response.Products == nil ||
+		len(*response.Products) > 256 {
+		return errors.New("registry absence response unavailable or invalid")
+	}
+	for _, product := range *response.Products {
+		if product.Namespace == "" || product.Name == "" ||
+			!registryIdentity(product.Namespace+"/"+product.Name) {
+			return errors.New("registry product identity unavailable")
+		}
+		if product.Namespace+"/"+product.Name == identity {
+			return errors.New("registry product remains present")
+		}
+	}
 	return nil
 }
 
