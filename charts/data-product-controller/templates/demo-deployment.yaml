@@ -53,7 +53,7 @@ spec:
             {{- end }}
             {{- if and .Values.uiContract.enabled .Values.route.enabled }}
             - name: UI_HOST_ORIGINS
-              value: {{ printf "https://%s" .Values.route.host | quote }}
+              value: {{ include "data-product-controller.uiHostOrigins" . | fromJsonArray | join "," | quote }}
             {{- end }}
           ports:
             - name: http

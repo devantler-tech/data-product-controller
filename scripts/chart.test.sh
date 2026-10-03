@@ -158,6 +158,7 @@ sh "$repo_root/scripts/connector-chart.test.sh"
 sh "$repo_root/scripts/contract-chart.test.sh"
 sh "$repo_root/scripts/composition-chart.test.sh"
 sh "$repo_root/scripts/ui-contract-chart.test.sh"
+sh "$repo_root/scripts/ui-host-origins-chart.test.sh"
 sh "$repo_root/scripts/engine-provider-chart.test.sh"
 
 optional_render=$(helm template data-product-controller "$chart" \
