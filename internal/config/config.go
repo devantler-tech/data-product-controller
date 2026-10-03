@@ -45,6 +45,11 @@ func UIAppearanceEnabled(value string) (bool, error) {
 	return featureEnabled("UI_APPEARANCE_ENABLED", value)
 }
 
+// RegistryDiscoveryEnabled parses the default-off portable inventory and descriptor release gate.
+func RegistryDiscoveryEnabled(value string) (bool, error) {
+	return featureEnabled("REGISTRY_DISCOVERY_ENABLED", value)
+}
+
 // UIHostOrigins validates publisher-owned HTTPS origins without accepting wildcards or URL components.
 func UIHostOrigins(value string) ([]string, error) {
 	if value == "" {

@@ -46,6 +46,17 @@ let inventoryLoaded = false;
 let selectedKey = "";
 let disposeSurface = () => {};
 let selection = 0;
+let discoveryEnabled = false;
+let continuation = "";
+let catalogNamespace = "";
+let inventoryComplete = false;
+let pageFailure = "";
+let inventoryRequest = 0;
+let selectedDescriptor = null;
+const more = document.querySelector("#load-more");
+const scope = document.querySelector("#discovery-scope");
+const namespace = document.querySelector("#namespace-filter");
+const selectionStatus = document.querySelector("#selection-status");
 applyAppearance();
 systemAppearance.addEventListener("change", applyAppearance);
 appearance.addEventListener("change", () => {
@@ -81,6 +92,12 @@ function showDetails(product) {
   const readiness = document.querySelector("#readiness-detail");
   readiness.hidden = product.ready;
   readiness.textContent = `${product.readiness.reason}: ${product.readiness.message}`;
+  showHealth(product);
+  document.querySelector("#descriptor-actions").hidden = !discoveryEnabled;
+  if (discoveryEnabled) {
+    document.querySelector("#product-link").href = productURL(product).href;
+    selectedDescriptor = product;
+  }
   const list = document.querySelector("#product-interfaces");
   list.replaceChildren();
   document.querySelector("#interfaces-detail").hidden =
@@ -108,6 +125,114 @@ function showDetails(product) {
       item.append(link);
     }
     list.append(item);
+  }
+}
+
+/** Health is a point-in-time observation; absent or stale checks never appear healthy. */
+function showHealth(product) {
+  const section = document.querySelector("#health-detail");
+  section.hidden = !discoveryEnabled || !product.health;
+  const list = document.querySelector("#product-health");
+  list.replaceChildren();
+  if (section.hidden) return;
+  document.querySelector("#health-generation").textContent =
+    `Product generation ${product.generation}. Readiness observed at generation ${product.observedGeneration}.`;
+  const labels = {source: "Source", connector: "Connector", contracts: "Contracts", composition: "Composition"};
+  const states = {ready: "Ready", "not-ready": "Not ready", stale: "Stale", unobserved: "Unobserved", disabled: "Disabled", "not-applicable": "Not applicable"};
+  for (const [key, label] of Object.entries(labels)) {
+    const check = product.health[key];
+    const item = document.createElement("li");
+    const name = document.createElement("strong");
+    name.textContent = `${label} · ${states[check?.state] || "Unobserved"}`;
+    const detail = document.createElement("span");
+    detail.textContent = check
+      ? `${check.message} Observed generation ${check.observedGeneration}; current generation ${check.generation}.`
+      : "No observation is available.";
+    item.append(name, detail);
+    list.append(item);
+  }
+}
+
+/** A product link contains catalog identity only, never a publisher URL or session. */
+function productURL(product) {
+  const url = new URL(location.href);
+  url.searchParams.set("product", `${product.namespace}/${product.name}`);
+  return url;
+}
+
+/** Match the bounded Kubernetes DNS subdomain identity used by exact lookup. */
+function validProductName(value) {
+  return typeof value === "string" && value.length <= 253 &&
+    /^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9](?:[-a-z0-9]*[a-z0-9])?)*$/.test(value);
+}
+
+/** Validate route identities before making any exact-name request. */
+function routeKey() {
+  const parameters = new URLSearchParams(location.search);
+  const value = parameters.get("product");
+  if (value === null) return null;
+  if (parameters.getAll("product").length !== 1) return false;
+  const components = value.split("/");
+  return components.length === 2 &&
+    /^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?$/.test(components[0]) &&
+    validProductName(components[1]) ? value : false;
+}
+
+/** Revoke the current frame and hide descriptors before a new navigation or refresh. */
+function clearSelection() {
+  ++selection;
+  selectedKey = "";
+  selectedDescriptor = null;
+  disposeSurface();
+  disposeSurface = () => {};
+  frame.removeAttribute("src");
+  frame.hidden = true;
+  empty.hidden = true;
+  contractStatus.hidden = true;
+  selectionStatus.hidden = true;
+  for (const id of ["product-metadata", "readiness-detail", "interfaces-detail", "composition-detail", "health-detail", "descriptor-actions"])
+    document.getElementById(id).hidden = true;
+  document.querySelectorAll(".product-card").forEach(card => card.setAttribute("aria-pressed", "false"));
+  interactionTitle.textContent = "Select a product";
+  interactionDescription.textContent = "Choose a product to view its details and data.";
+}
+
+/** Re-read a linked product; cached cards never authorize an iframe navigation. */
+async function navigateProduct(key, push = false) {
+  clearSelection();
+  const selected = selection;
+  if (push && key) {
+    const [namespace, name] = key.split("/");
+    const url = productURL({namespace, name});
+    if (url.href !== location.href) history.pushState(null, "", url);
+  }
+  if (key === null) return;
+  selectionStatus.hidden = false;
+  if (key === false) {
+    selectionStatus.textContent = "This product link is invalid. Select a product from the catalog.";
+    return;
+  }
+  selectionStatus.textContent = "Loading selected product…";
+  const [namespace, name] = key.split("/");
+  try {
+    const response = await fetch(`/api/v2/products/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`, {
+      cache: "no-store", credentials: "same-origin", signal: AbortSignal.timeout(10000),
+    });
+    if (selected !== selection) return;
+    if (!response.ok) {
+      if (response.status === 404) throw new Error("This product is no longer available. Select another product.");
+      throw new Error("Could not load the selected product. Open its link again or select it to retry.");
+    }
+    const product = await response.json();
+    if (selected !== selection) return;
+    if (product.apiVersion !== "data-product-descriptor/v1" || `${product.namespace}/${product.name}` !== key)
+      throw new Error("The registry returned an invalid product descriptor.");
+    selectionStatus.hidden = true;
+    await selectProduct(product);
+  } catch (error) {
+    if (selected !== selection) return;
+    selectionStatus.hidden = false;
+    selectionStatus.textContent = error.message;
   }
 }
 
@@ -148,6 +273,26 @@ function showLineage(product) {
       ? `${edge.version || "Version unobserved"} · ${edge.owner?.name || "Owner unobserved"} · ${edge.reason}`
       : "Not observed";
     item.append(title, detail);
+    const targetNamespace = ref.namespace || product.namespace;
+    if (discoveryEnabled && edge?.ready === true && edge.reason === "InputReady" &&
+        product.health?.composition?.state === "ready" &&
+        product.health.composition.observedGeneration === product.generation &&
+        product.health.composition.generation === product.generation &&
+        ref.name === input.productRef.name && ref.output === input.productRef.output &&
+        targetNamespace === (input.productRef.namespace || product.namespace) &&
+        targetNamespace === product.namespace &&
+        validProductName(ref.name)) {
+      const link = document.createElement("a");
+      link.className = "lineage-link";
+      link.textContent = "Open upstream product";
+      link.href = productURL({namespace: targetNamespace, name: ref.name}).href;
+      link.addEventListener("click", event => {
+        if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        navigateProduct(`${targetNamespace}/${ref.name}`, true);
+      });
+      item.append(link);
+    }
     if (input.contract) {
       const requirement = document.createElement("span");
       requirement.textContent = `Requires ${input.contract.protocol} from ${input.contract.minimumVersion} within the same major; major zero requires an exact match.`;
@@ -167,7 +312,7 @@ async function selectProduct(product, button) {
   frame.hidden = true;
   contractStatus.hidden = true;
   document.querySelectorAll(".product-card").forEach((card) => {
-    card.setAttribute("aria-pressed", String(card === button));
+    card.setAttribute("aria-pressed", String(card.dataset.key === selectedKey));
   });
 
   interactionTitle.textContent = product.displayName;
@@ -237,6 +382,7 @@ function productCard(product) {
     String(selectedKey === `${product.namespace}/${product.name}`),
   );
   button.dataset.ready = String(product.ready);
+  button.dataset.key = `${product.namespace}/${product.name}`;
 
   const copy = document.createElement("span");
   const name = document.createElement("span");
@@ -257,7 +403,9 @@ function productCard(product) {
   summary.append(owner, readiness);
 
   button.append(copy, summary);
-  button.addEventListener("click", () => selectProduct(product, button));
+  button.addEventListener("click", () => discoveryEnabled
+    ? navigateProduct(button.dataset.key, true)
+    : selectProduct(product, button));
   return button;
 }
 
@@ -287,41 +435,48 @@ function filterProducts() {
       ? total
       : `${filtered.length} of ${total}`;
   clearFilters.hidden = !term && readinessFilter.value === "all";
+  scope.hidden = !discoveryEnabled;
+  scope.textContent = !inventoryComplete
+    ? `Search covers ${products.length} loaded ${products.length === 1 ? "product" : "products"}. ${continuation ? "More products are available." : "Discovery is incomplete. Refresh products to restart."}`
+    : "All products in this namespace scope are loaded.";
   status.textContent = !products.length
-    ? "No products have been published."
+    ? !inventoryComplete ? "No products on this page. Discovery is incomplete." : "No products have been published in this scope."
     : !filtered.length
-      ? "No products match these filters. Clear filters to see all products."
-      : "";
+      ? !inventoryComplete
+        ? "No products match among loaded products. Load more or clear filters."
+        : "No products match these filters. Clear filters to see all products."
+      : pageFailure;
+  if (pageFailure && !status.textContent.includes(pageFailure))
+    status.textContent += ` ${pageFailure}`;
 }
 
 /** Refresh invalidates the selected surface before re-reading readiness; failures remain retryable. */
 async function loadProducts() {
+  const request = ++inventoryRequest;
   refresh.disabled = true;
-  ++selection;
-  selectedKey = "";
-  disposeSurface();
-  disposeSurface = () => {};
-  frame.removeAttribute("src");
-  frame.hidden = true;
-  empty.hidden = true;
-  contractStatus.hidden = true;
-  for (const id of [
-    "product-metadata",
-    "readiness-detail",
-    "interfaces-detail",
-    "composition-detail",
-  ])
-    document.getElementById(id).hidden = true;
-  interactionTitle.textContent = "Select a product";
-  interactionDescription.textContent =
-    "Choose a product to view its details and data.";
+  clearSelection();
+  continuation = "";
+  inventoryComplete = false;
+  pageFailure = "";
+  more.hidden = true;
+  more.disabled = false;
+  catalogNamespace = namespace.value.trim();
   grid.replaceChildren();
   products = [];
   inventoryLoaded = false;
   count.textContent = "Loading…";
   status.textContent = "Loading products…";
   try {
-    const response = await fetch("/api/v1/products", {
+    const configurationResponse = await fetch("/api/v1/ui-config", {cache: "no-store", signal: AbortSignal.timeout(5000)});
+    const configuration = configurationResponse.ok ? await configurationResponse.json() : {};
+    if (request !== inventoryRequest) return;
+    discoveryEnabled = configuration.discoveryEnabled === true;
+    document.querySelector("#catalog-scope").hidden = !discoveryEnabled;
+    if (discoveryEnabled) navigateProduct(routeKey());
+    const query = new URLSearchParams({limit: "50"});
+    if (catalogNamespace) query.set("namespace", catalogNamespace);
+    const endpoint = discoveryEnabled ? `/api/v2/products?${query}` : "/api/v1/products";
+    const response = await fetch(endpoint, {
       headers: { Accept: "application/json" },
       cache: "no-store",
       signal: AbortSignal.timeout(10000),
@@ -331,24 +486,91 @@ async function loadProducts() {
     }
 
     const collection = await response.json();
-    if (!Array.isArray(collection.products))
+    if (request !== inventoryRequest) return;
+    if (!Array.isArray(collection.products) ||
+        (discoveryEnabled && collection.apiVersion !== "data-product-discovery/v1"))
       throw new Error("Invalid product inventory");
     products = collection.products;
+    continuation = discoveryEnabled ? collection.continue || "" : "";
+    inventoryComplete = !continuation;
+    more.hidden = !continuation;
     inventoryLoaded = true;
     filterProducts();
   } catch (error) {
+    if (request !== inventoryRequest) return;
     count.textContent = "Unavailable";
     status.textContent =
       "Could not load products. Use Refresh products to retry.";
     console.error(error);
   } finally {
-    refresh.disabled = false;
+    if (request === inventoryRequest) refresh.disabled = false;
   }
+}
+
+/** Load one explicit page; a failed page retains its cursor and all already loaded cards. */
+async function loadMore() {
+  if (!continuation || more.disabled) return;
+  const request = inventoryRequest;
+  const query = new URLSearchParams({limit: "50", continue: continuation});
+  if (catalogNamespace) query.set("namespace", catalogNamespace);
+  more.disabled = true;
+  try {
+    const response = await fetch(`/api/v2/products?${query}`, {cache: "no-store", signal: AbortSignal.timeout(10000)});
+    if (request !== inventoryRequest) return;
+    if (!response.ok) {
+      if (response.status === 410) {
+        continuation = "";
+        more.hidden = true;
+        throw new Error("The catalog page expired. Use Refresh products to restart discovery.");
+      }
+      throw new Error("Could not load more products. Use Load more products to retry.");
+    }
+    const collection = await response.json();
+    if (request !== inventoryRequest) return;
+    if (collection.apiVersion !== "data-product-discovery/v1" || !Array.isArray(collection.products))
+      throw new Error("The registry returned an invalid catalog page. Use Refresh products to restart.");
+    products = [...new Map([...products, ...collection.products].map(product => [`${product.namespace}/${product.name}`, product])).values()];
+    continuation = collection.continue || "";
+    inventoryComplete = !continuation;
+    pageFailure = "";
+    more.hidden = !continuation;
+    filterProducts();
+  } catch (error) {
+    if (request === inventoryRequest) {
+      pageFailure = error.message;
+      filterProducts();
+    }
+  } finally {
+    if (request === inventoryRequest) more.disabled = false;
+  }
+}
+
+/** Download only the observed public descriptor, with its snapshot semantics unchanged. */
+function saveDescriptor() {
+  if (!discoveryEnabled || !selectedDescriptor) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(selectedDescriptor, null, 2)], {type: "application/json"}));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${selectedDescriptor.namespace}-${selectedDescriptor.name}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 search.addEventListener("input", filterProducts);
 readinessFilter.addEventListener("change", filterProducts);
 refresh.addEventListener("click", loadProducts);
+more.addEventListener("click", loadMore);
+document.querySelector("#export-descriptor").addEventListener("click", saveDescriptor);
+document.querySelector("#catalog-scope").addEventListener("submit", event => {
+  event.preventDefault();
+  const value = namespace.value.trim();
+  if (value && !/^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?$/.test(value)) {
+    status.textContent = "Enter a valid namespace or leave it empty for all namespaces.";
+    return;
+  }
+  loadProducts();
+});
+addEventListener("popstate", () => { if (discoveryEnabled) navigateProduct(routeKey()); });
 clearFilters.addEventListener("click", () => {
   search.value = "";
   readinessFilter.value = "all";

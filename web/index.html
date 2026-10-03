@@ -64,6 +64,27 @@
           ><button id="close" type="button">Close interface</button>
         </div>
       </form>
+      <section id="descriptor-import" hidden aria-labelledby="descriptor-heading">
+        <h2 id="descriptor-heading">Open a downloaded descriptor</h2>
+        <p id="descriptor-help">
+          Import public <code>data-product-descriptor/v1</code> JSON from a
+          local file or paste it below (up to 64 KiB). The presentation grants
+          above apply. This host does not fetch descriptor, contract or data URLs.
+        </p>
+        <form id="descriptor-form">
+          <label>Descriptor JSON file
+            <input id="descriptor-file" type="file" accept=".json,application/json" aria-describedby="descriptor-help" />
+          </label>
+          <label>Or paste a complete descriptor
+            <textarea id="descriptor" rows="8" maxlength="65536" spellcheck="false" aria-describedby="descriptor-help"></textarea>
+          </label>
+          <button id="import-descriptor" type="submit">Import and open</button>
+        </form>
+      </section>
+      <p id="descriptor-snapshot" class="note" hidden>
+        Imported readiness is a saved metadata snapshot, not fresh authorization
+        or a guarantee of current availability. Access remains the publisher’s decision.
+      </p>
       <p id="kit-status" role="status" aria-live="polite">
         Paste a manifest to begin.
       </p>
@@ -81,6 +102,7 @@
       </p>
     </main>
     <script src="ui-contract.js" defer></script>
+    <script src="descriptor.js" defer></script>
     <script src="kit.js" defer></script>
   </body>
 </html>

@@ -17,9 +17,11 @@ cycle_lineage_unready() {
 
 kube apply -f "$repo_root/docs/examples/composition.yaml"
 wait_for 'required input contracts fail closed while composition is disabled' 120 composition_ready CompositionFeatureDisabled False
-kube set env deployment/dpc COMPOSITION_ENABLED=true
+probe --url http://dpc/api/v2/products --want-status 404
+kube set env deployment/dpc COMPOSITION_ENABLED=true REGISTRY_DISCOVERY_ENABLED=true
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 wait_for 'three products reach compatible composition readiness' 120 composition_ready DependenciesReady True
+source "$repo_root/tests/source/registry-discovery.sh"
 wait_for 'public registry exposes verified composition' 120 probe --url http://dpc/api/v1/products --contains '"composition":{"reason":"CompositionVerified"'
 probe --url http://dpc/api/v1/products --contains '"productID":"urn:example:harbour"'
 echo 'PASS: public registry exposes observed producer lineage'
@@ -77,9 +79,10 @@ wait_for 'producer deletion reaches consumer readiness' 120 composition_ready De
 kube apply -f "$repo_root/docs/examples/composition.yaml"
 wait_for 'producer recreation recovers composition' 120 composition_ready DependenciesReady True
 
-kube set env deployment/dpc COMPOSITION_ENABLED=false
+kube set env deployment/dpc COMPOSITION_ENABLED=false REGISTRY_DISCOVERY_ENABLED=false
 kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 wait_for 'disabling composition invalidates required contracts after rollout' 120 composition_ready CompositionFeatureDisabled False
+probe --url http://dpc/api/v2/products --want-status 404
 lineage_count=$(kube get dataproduct coastal-summary -o json | jq '.status.inputs // [] | length')
 [[ "$lineage_count" == 0 ]] || {
 	echo 'disabled composition retained lineage' >&2

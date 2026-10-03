@@ -174,4 +174,10 @@ optional_render=$(helm template data-product-controller "$chart" \
 	--set contractProbe.monitorPodLabels.app=monitor)
 assert_nonroot_containers "$optional_render" 4 optional
 
+discovery_flag=$(printf '%s' "$default_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "REGISTRY_DISCOVERY_ENABLED") | .value' -)
+[ "$discovery_flag" = 'false' ] || fail 'registry discovery must default off'
+discovery_render=$(helm template data-product-controller "$chart" --namespace discovery-system --set registryDiscovery.enabled=true)
+discovery_flag=$(printf '%s' "$discovery_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "REGISTRY_DISCOVERY_ENABLED") | .value' -)
+[ "$discovery_flag" = 'true' ] || fail 'registry discovery must be explicitly enableable'
+
 printf '%s\n' 'chart behavior tests passed'
