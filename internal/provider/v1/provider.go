@@ -98,6 +98,12 @@ func (r *Registry) Observe(
 		defer cancel()
 		selected = &CloudNativePG{Reader: r.Reader}
 	case source.Engine != nil && source.Engine.APIVersion == "engine-provider/v1" &&
+		(source.Engine.Type == "document" || source.Engine.Type == "graph") && source.Engine.Provider == "cnpg-hybrid" && source.Adapter == "cnpg-hybrid/v1":
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		selected = &CloudNativePGHybrid{Reader: r.Reader}
+	case source.Engine != nil && source.Engine.APIVersion == "engine-provider/v1" &&
 		source.Engine.Type == "document" && source.Engine.Provider == "native" && source.Adapter == "percona-mongodb/v1":
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, 5*time.Second)

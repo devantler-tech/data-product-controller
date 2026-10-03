@@ -53,6 +53,27 @@ func TestEngineSchema(t *testing.T) {
 			t.Fatalf("supported Graph scalar schema rejected: %v", err)
 		}
 	})
+	for _, model := range []string{"document", "graph"} {
+		t.Run("hybrid "+model+" fields are preserved", func(t *testing.T) {
+			err := validate.AgainstSchema(&source, map[string]any{
+				"adapter": "cnpg-hybrid/v1",
+				"engine": map[string]any{
+					"apiVersion": "engine-provider/v1",
+					"type":       model,
+					"provider":   "cnpg-hybrid",
+				},
+				"resourceRef": map[string]any{
+					"apiVersion": "postgresql.cnpg.io/v1",
+					"kind":       "Cluster",
+					"name":       "catalog",
+				},
+				"connectionSecretRef": map[string]any{"name": "catalog-reader"},
+			}, strfmt.Default)
+			if err != nil {
+				t.Fatalf("supported hybrid scalar schema rejected: %v", err)
+			}
+		})
+	}
 	for _, tc := range []struct {
 		name, version, kind, provider string
 		valid                         bool

@@ -1,0 +1,56 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: warehouse
+  namespace: products
+spec:
+  instances: 1
+  imageName: __AGE_IMAGE_DIGEST__
+  enableSuperuserAccess: false
+  storage:
+    size: 1Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 1, memory: 512Mi }
+  postgresql:
+    shared_preload_libraries: [age]
+    parameters:
+      max_connections: "30"
+      shared_buffers: 64MB
+      ssl_min_protocol_version: TLSv1.3
+    pg_hba:
+      - hostnossl all all all reject
+  bootstrap:
+    initdb:
+      database: catalog
+      owner: sql_reader
+      postInitApplicationSQLRefs:
+        configMapRefs:
+          - name: postgres-bootstrap
+            key: bootstrap.sql
+  managed:
+    roles:
+      - name: document_reader
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        replication: false
+        passwordSecret: { name: warehouse-document-reader }
+      - name: graph_reader
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        replication: false
+        passwordSecret: { name: warehouse-graph-reader }
+      - name: catalog_writer
+        ensure: present
+        login: true
+        superuser: false
+        createdb: false
+        createrole: false
+        replication: false
+        passwordSecret: { name: warehouse-writer }

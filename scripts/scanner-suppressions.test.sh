@@ -69,7 +69,10 @@ expected_checkov_allowlist=$(
 		'tests/source/consumer.yaml:Pod/consumer CKV_K8S_43' \
 		'tests/provider/workloads.yaml:Deployment/document-query CKV_K8S_43' \
 		'tests/provider/workloads.yaml:Pod/document-writer CKV_K8S_43' \
-		'tests/provider/workloads.yaml:Pod/document-consumer CKV_K8S_43' |
+		'tests/provider/workloads.yaml:Pod/document-consumer CKV_K8S_43' \
+		'tests/provider/postgres-workloads.yaml:Deployment/postgres-query CKV_K8S_43' \
+		'tests/provider/postgres-workloads.yaml:Pod/postgres-writer CKV_K8S_43' \
+		'tests/provider/postgres-workloads.yaml:Pod/postgres-consumer CKV_K8S_43' |
 		sort
 )
 [ "$actual_checkov_allowlist" = "$expected_checkov_allowlist" ] ||
@@ -94,6 +97,7 @@ expected_trivy_allowlist=$(
 		'KSV-0013 deploy/deployment.yaml' \
 		'KSV-0113 docs/examples/document-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/graph-provider-observer-rbac.yaml' \
+		'KSV-0113 docs/examples/hybrid-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/sql-provider-observer-rbac.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/controller-deployment.yaml' \
 		'KSV-0125 charts/data-product-controller/templates/demo-deployment.yaml' \
@@ -128,5 +132,6 @@ check_observer_grants() {
 check_observer_grants sql '[[["postgresql.cnpg.io"],["clusters"],["warehouse"],["get"]],[[""],["secrets"],["warehouse-app"],["get"]]]'
 check_observer_grants document '[[["psmdb.percona.com"],["perconaservermongodbs"],["documents"],["get"]],[[""],["secrets"],["documents-reader"],["get"]]]'
 check_observer_grants graph '[[["database.arangodb.com"],["arangodeployments"],["lineage"],["get"]],[[""],["secrets"],["lineage-reader"],["get"]]]'
+check_observer_grants hybrid '[[["postgresql.cnpg.io"],["clusters"],["warehouse"],["get"]],[[""],["secrets"],["warehouse-document-reader","warehouse-graph-reader"],["get"]]]'
 
 printf '%s\n' 'scanner suppression tests passed'

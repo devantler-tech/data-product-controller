@@ -116,6 +116,11 @@ The required native Graph job runs `bash tests/provider/arango.sh` against the r
 pinned ArangoDB operator. It requires authenticated traversal, specific authorization denials
 and retained member recovery with operator-written readiness. See `docs/real-graph-acceptance.md`.
 
+The required PostgreSQL model job runs `bash tests/provider/postgres.sh` with the pinned
+CloudNativePG operator and signed owned AGE image. It exercises native SQL, hybrid JSONB and
+hybrid Graph queries, exact grant denials, password rotation and retained database lifecycle.
+See `docs/real-postgresql-acceptance.md`.
+
 API type or marker changes require deep-copy code, CRDs, and RBAC to be regenerated with controller-tools v0.21.0. Distribute the generated CRD to the chart and release artifact; all three copies must remain identical:
 
 ```bash

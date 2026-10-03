@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-query-ingress
+  namespace: products
+spec:
+  podSelector:
+    matchLabels: { provider-query: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: postgres-consumer }
+      ports: [{ protocol: TCP, port: 8443 }]

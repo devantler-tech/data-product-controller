@@ -21,8 +21,10 @@ to one adapter and resource API. The runtime resolver repeats that check before 
 | `sql` / `native`      | `cnpg/v1`            | `postgresql.cnpg.io/v1` `Cluster`             | Operator-generated `<cluster>-app` Secret, owned by the current Cluster UID                     |
 | `document` / `native` | `percona-mongodb/v1` | `psmdb.percona.com/v1` `PerconaServerMongoDB` | Explicit custom-user password Secret, published with the current source UID                     |
 | `graph` / `native`    | `arangodb/v1`        | `database.arangodb.com/v1` `ArangoDeployment` | Independently published read-only application password, with v1 metadata and current source UID |
+| `document` / `cnpg-hybrid` | `cnpg-hybrid/v1` | `postgresql.cnpg.io/v1` `Cluster` | Dedicated JSONB reader publication, current source UID and generation |
+| `graph` / `cnpg-hybrid` | `cnpg-hybrid/v1` | `postgresql.cnpg.io/v1` `Cluster` | Dedicated AGE reader publication, current source UID and generation |
 
-`cnpg-hybrid` selections are rejected until their adapters and admission rules are delivered.
+SQL uses the native adapter; a SQL hybrid selection is unsupported.
 Unknown versions, contradictory adapters and other resource APIs are rejected at admission. SQL
 requires its generated application Secret name; Document and Graph publication receive additional runtime
 checks against the externally owned source. Existing untyped Crossplane products retain their contract.
@@ -66,6 +68,59 @@ CloudNativePG may omit observed generations. In that case the observer cannot es
 reflects the latest spec. Control-plane readiness and Secret ownership do not prove Secret contents,
 database authentication, query availability, backups or extension support. The registry publishes
 neither source references nor credentials.
+
+## PostgreSQL hybrid observation contract
+
+The [hybrid products](examples/hybrid-provider-product.yaml) refer to an independently operated
+CloudNativePG Cluster. Document uses JSONB; Graph uses the [owned PostgreSQL / AGE image](postgresql-age-image.md).
+Both require the native Cluster readiness checks, an exact supported immutable image in
+`spec.imageName`, and the same currently running image reported in `status.image`. Catalog
+indirection cannot establish this profile. Document also supports the upstream minimal PostgreSQL
+17.11 Trixie index. Graph requires the owned AGE 1.7.0 profile and `age` in `shared_preload_libraries`.
+The controller neither initializes the extension nor verifies its installation by connecting.
+
+Choose the hybrid provider for PostgreSQL storage and operating conventions, with these explicit
+capability differences:
+
+| Model | Hybrid query capability | Native provider difference |
+|---|---|---|
+| Document | JSONB values in PostgreSQL tables, with a publisher-selected schema, table and column | It does not provide MongoDB wire-protocol compatibility, MongoDB operators or native document command semantics |
+| Graph | AGE Cypher over graph tables in the selected PostgreSQL database | It does not expose ArangoDB AQL or its native graph/document APIs |
+| Lifecycle | Both models share the independently operated CNPG source, storage and failure domain | Dedicated native engines have their own operators, configuration and source lifecycle |
+
+Query contracts describe each independent application interface; selecting a model does not make
+native and hybrid query languages interchangeable. AGE requires supported preload configuration,
+extension initialization in the selected database and a planned restart for existing sources.
+The [owned image guide](postgresql-age-image.md) describes those steps. Real acceptance verifies
+both query languages and reader roles; metadata-only observation cannot establish them.
+
+Use dedicated reader Secrets. Bootstrap-owner, superuser, replication, server, CA and client
+credential names are rejected before any reads. An independent publisher verifies application
+queries and effective read-only grants, then adds metadata and the current Cluster owner reference:
+
+```yaml
+metadata:
+  annotations:
+    data.devantler.tech/cnpg-hybrid-publication: v1
+    data.devantler.tech/cnpg-hybrid-access: read-only
+    data.devantler.tech/cnpg-hybrid-source-generation: "3"
+    data.devantler.tech/cnpg-hybrid-database: catalog
+    data.devantler.tech/cnpg-hybrid-user: document_reader
+    data.devantler.tech/cnpg-hybrid-capability: jsonb/v1
+    data.devantler.tech/cnpg-hybrid-schema: public
+    data.devantler.tech/cnpg-hybrid-table: documents
+    data.devantler.tech/cnpg-hybrid-column: payload
+```
+
+For Graph, use capability `age/1.7.0` and `data.devantler.tech/cnpg-hybrid-graph: lineage`.
+Identifiers contain 1–63 lowercase ASCII letters, digits or underscores and start with a letter.
+Privileged PostgreSQL and CNPG users are unsupported. A changed Cluster generation requires a fresh
+publication after query verification; recreation also requires the new source UID. Rotation at the
+same publication name uses the application workload's projected password without a controller restart.
+
+The [hybrid observer Role](examples/hybrid-provider-observer-rbac.yaml) grants only the named Cluster
+and dedicated publication GETs. Metadata declares publisher intent; it does not prove Secret contents,
+effective privileges, query health, graph existence, backups or PostgreSQL extension compatibility.
 
 ## Grant narrow observation access
 
