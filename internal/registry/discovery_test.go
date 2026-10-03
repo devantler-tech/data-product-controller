@@ -196,6 +196,72 @@ func TestDiscoveryPaginationScopesAndBindsCursor(t *testing.T) {
 	}
 }
 
+// TestDiscoveryContinuesPastRejectedProducts prevents one publisher from blocking later native pages.
+func TestDiscoveryContinuesPastRejectedProducts(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name   string
+		mutate func(*datav1alpha1.DataProduct)
+		status int
+	}{
+		{"invalid", func(p *datav1alpha1.DataProduct) { p.Spec.Outputs[0].URL = "https://[fe80::1%25eth0]/data" }, http.StatusUnprocessableEntity},
+		{"oversized", func(p *datav1alpha1.DataProduct) { p.Spec.Description = strings.Repeat("x", 16385) }, http.StatusRequestEntityTooLarge},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			rejected := registryProduct()
+			test.mutate(rejected)
+			reader := discoveryReader{
+				list: func(_ context.Context, out client.ObjectList, opts ...client.ListOption) error {
+					options := (&client.ListOptions{}).ApplyOptions(opts)
+					page := discoveryProductList(t, out)
+					if options.Continue == "" {
+						page.Items = []datav1alpha1.DataProduct{*rejected}
+						page.Continue = "next-native-page"
+					} else {
+						if options.Continue != "next-native-page" {
+							t.Fatal("native continuation changed")
+						}
+						page.Items = []datav1alpha1.DataProduct{*registryProduct()}
+					}
+					return nil
+				},
+				get: func(_ context.Context, _ client.ObjectKey, out client.Object, _ ...client.GetOption) error {
+					rejected.DeepCopyInto(discoveryProductObject(t, out))
+					return nil
+				},
+			}
+			first := discoveryRequest(t, discoveryHandler(reader, true), "/api/v2/products?limit=1")
+			var page struct {
+				Products []json.RawMessage `json:"products"`
+				Continue string            `json:"continue"`
+				Rejected int               `json:"rejected"`
+			}
+			if first.Code != http.StatusOK || json.Unmarshal(first.Body.Bytes(), &page) != nil ||
+				len(page.Products) != 0 || page.Rejected != 1 || page.Continue == "" {
+				t.Fatalf("rejected item blocked discovery: %d %s", first.Code, first.Body.String())
+			}
+			second := discoveryRequest(
+				t,
+				discoveryHandler(reader, true),
+				"/api/v2/products?limit=1&continue="+url.QueryEscape(page.Continue),
+			)
+			if second.Code != http.StatusOK || json.Unmarshal(second.Body.Bytes(), &page) != nil ||
+				len(page.Products) != 1 || page.Rejected != 0 || page.Continue != "" {
+				t.Fatalf("later product was unreachable: %d %s", second.Code, second.Body.String())
+			}
+			exact := discoveryRequest(
+				t,
+				discoveryHandler(reader, true),
+				"/api/v2/products/products/customer-catalog",
+			)
+			if exact.Code != test.status {
+				t.Fatalf("exact invalid metadata status=%d, want %d", exact.Code, test.status)
+			}
+		})
+	}
+}
+
 // TestDiscoveryRejectsInvalidQueriesBeforeReads keeps malformed scope and unsupported selectors out of the Kubernetes request.
 func TestDiscoveryRejectsInvalidQueriesBeforeReads(t *testing.T) {
 	t.Parallel()

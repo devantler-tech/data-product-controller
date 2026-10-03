@@ -154,8 +154,8 @@
       "additionalProperties": false,
       "required": ["url", "title"],
       "properties": {
-        "url": { "$ref": "#/$defs/https" },
-        "title": { "$ref": "#/$defs/text" },
+        "url": { "$ref": "#/$defs/https", "maxLength": 2048 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
         "contract": {
           "type": "object",
           "additionalProperties": false,

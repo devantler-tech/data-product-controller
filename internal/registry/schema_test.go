@@ -82,9 +82,13 @@ func TestDiscoveryPublishedSchemasValidateActualResponses(t *testing.T) {
 			for _, mutate := range []func(map[string]any){
 				func(d map[string]any) { d["name"] = "a..b" },
 				func(d map[string]any) { d["name"] = "a.-b" },
-				func(d map[string]any) { d["documentationUrl"] = "https://user:password@example.test/docs" },
+				func(d map[string]any) {
+					invalid := url.URL{Scheme: "https", Host: "example.test", Path: "/docs", User: url.UserPassword("user", "private-sentinel")}
+					d["documentationUrl"] = invalid.String()
+				},
 				func(d map[string]any) { d["documentationUrl"] = "https://example.test/docs#fragment" },
 				func(d map[string]any) { d["documentationUrl"] = "https://example.test/docs\\tail" },
+				func(d map[string]any) { d["documentationUrl"] = "https://[fe80::1%25eth0]/docs" },
 				func(d map[string]any) { d["generation"] = float64(9007199254740992) },
 			} {
 				var invalid map[string]any
@@ -110,6 +114,7 @@ func schemaFixtureProduct() *datav1alpha1.DataProduct {
 	product.Generation = 3
 	product.Status.Conditions[0].ObservedGeneration = 3
 	product.Spec.DocumentationURL = "https://example.test/docs"
+	product.Spec.Description = " " // Nonempty public text is valid even when it has no visible glyphs.
 	reference := datav1alpha1.ProductReference{
 		Name:      strings.Repeat("a", 60) + ".upstream",
 		Namespace: "products",
@@ -256,6 +261,14 @@ func TestDiscoveryRejectsInvalidPublicMetadata(t *testing.T) {
 			p.Spec.Outputs[0].ContractURL = "https://example.test/contract#fragment"
 		}},
 		{"backslash-url", func(p *datav1alpha1.DataProduct) { p.Spec.UI.URL = "https://example.test/path\\tail" }},
+		{"zoned-ipv6-url", func(p *datav1alpha1.DataProduct) {
+			p.Spec.Outputs[0].URL = "https://[fe80::1%25eth0]/data"
+		}},
+		{"numeric-host-url", func(p *datav1alpha1.DataProduct) { p.Spec.Outputs[0].URL = "https://service.123/data" }},
+		{"blank-ui-title", func(p *datav1alpha1.DataProduct) { p.Spec.UI.Title = " " }},
+		{"long-ui-title", func(p *datav1alpha1.DataProduct) { p.Spec.UI.Title = strings.Repeat("x", 201) }},
+		{"long-utf16-ui-title", func(p *datav1alpha1.DataProduct) { p.Spec.UI.Title = strings.Repeat("🌊", 101) }},
+		{"long-ui-url", func(p *datav1alpha1.DataProduct) { p.Spec.UI.URL = "https://example.test/" + strings.Repeat("x", 2048) }},
 		{"unsafe-generation", func(p *datav1alpha1.DataProduct) { p.Generation = 9007199254740992 }},
 		{"unsafe-observation", func(p *datav1alpha1.DataProduct) { p.Status.Conditions[0].ObservedGeneration = 9007199254740992 }},
 		{"negative-observation", func(p *datav1alpha1.DataProduct) { p.Status.Conditions[0].ObservedGeneration = -1 }},
@@ -274,9 +287,11 @@ func TestDiscoveryRejectsInvalidPublicMetadata(t *testing.T) {
 				},
 			}
 			got := discoveryRequest(t, discoveryHandler(reader, true), "/api/v2/products")
-			if got.Code != http.StatusUnprocessableEntity ||
+			var page discoveryPage
+			if got.Code != http.StatusOK || json.Unmarshal(got.Body.Bytes(), &page) != nil ||
+				page.Rejected != 1 || len(page.Products) != 0 ||
 				strings.Contains(got.Body.String(), "private-sentinel") ||
-				strings.Contains(got.Body.String(), `"products"`) {
+				strings.Contains(got.Body.String(), "customer-catalog") {
 				t.Fatalf("invalid public metadata published: status=%d", got.Code)
 			}
 		})

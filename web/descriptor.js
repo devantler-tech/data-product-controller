@@ -15,7 +15,7 @@
 
   function text(value, required = true) {
     if (typeof value !== "string" || encoder.encode(value).length > 16384 ||
-        (required && !value.trim()))
+        (required && value.length === 0))
       throw new Error("Descriptor text must be bounded public strings (up to 16 KiB each).");
   }
 

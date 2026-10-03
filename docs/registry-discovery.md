@@ -33,6 +33,7 @@ is filtering, **not** tenant authorization; no new RBAC is granted by this featu
 {
   "apiVersion": "data-product-discovery/v1",
   "products": [],
+  "rejected": 0,
   "continue": ""
 }
 ```
@@ -48,6 +49,12 @@ namespace and limit. Continue until its value is empty; an empty product array w
 a nonempty continuation is not the end of the inventory. The API preserves native
 Kubernetes snapshot ordering and does not sort each page or fabricate an exact total.
 An exact lookup is a newer independent read, not part of an earlier list snapshot.
+`rejected` counts products on this page whose public metadata is invalid or exceeds
+descriptor bounds. They are omitted without exposing their metadata, and continuation
+is preserved. Sum this count across loaded pages and display omissions alongside search
+results; an exhausted cursor with omissions is not a complete usable catalog. Ask the
+publisher to correct the metadata. Exact lookup still returns an explicit `422` or `413`
+for an invalid or oversized descriptor.
 
 Continuations are bounded base64url-encoded tuples containing the namespace, limit
 and the native Kubernetes continuation. They work across registry replicas and
@@ -108,11 +115,13 @@ Every inventory read has a five-second deadline and a maximum native page size o
 strings are limited to 16 KiB of UTF-8 and port/lineage arrays to 1,024 entries.
 The entire encoded page is limited to 2 MiB. The native continuation is limited to
 8 KiB and the wrapped cursor to 16 KiB. Success is buffered before any descriptor
-bytes are written. Oversized metadata or pages return `413`, never a truncated success;
-reduce the page limit or the publisher's metadata as applicable.
+bytes are written. Invalid or oversized individual descriptors increment the page's
+`rejected` count; valid later products remain discoverable. An oversized aggregate page
+returns `413`, never a truncated success; reduce the page limit. An exact lookup of an
+oversized descriptor returns `413`; its publisher must reduce the metadata.
 The v2 projection also validates required metadata, canonical product/port identities,
 the protocol vocabulary and public HTTPS links before encoding. Embedded credentials,
-fragments, backslashes and malformed hosts are rejected with `422`; optional empty
+fragments, backslashes, zoned IPv6 addresses and malformed hosts are rejected; optional empty
 fields are omitted according to the existing descriptor types. These v2 checks do not
 change the legacy v1 projection.
 
@@ -139,6 +148,9 @@ schema requires a network fetch. JSON Schema counts string characters; consumers
 also enforce the documented UTF-8 byte bounds and total encoded size before parsing.
 UI URL, origin and capability validation still belongs to the existing UI contract;
 schema validation alone grants no permission to mount a product surface.
+Publication retains that contract's 2,048-character UI URL, nonblank title of at most
+200 UTF-16 units, and 16-KiB encoded UI manifest limits. Numeric final host labels must
+be canonical IP addresses so Go and browser consumers interpret the same destinations.
 
 Consumers reject unsupported `apiVersion` and `kind` values. The v1 schema enumerates
 its accepted fields; incompatible shape changes require a new descriptor version.

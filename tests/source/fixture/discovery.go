@@ -74,9 +74,11 @@ func discovery(ctx context.Context, args []string) error {
 			APIVersion string            `json:"apiVersion"`
 			Products   []json.RawMessage `json:"products"`
 			Continue   string            `json:"continue"`
+			Rejected   *int              `json:"rejected"`
 		}
 		if json.Unmarshal(body, &page) != nil || page.APIVersion != "data-product-discovery/v1" ||
 			page.Products == nil ||
+			page.Rejected == nil || *page.Rejected != 0 ||
 			len(page.Products) > 1 ||
 			len(page.Continue) > 16<<10 {
 			return errors.New("invalid bounded discovery page")

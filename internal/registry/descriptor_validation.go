@@ -1,12 +1,14 @@
 package registry
 
 import (
+	"encoding/json"
 	"net/netip"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf16"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"github.com/devantler-tech/data-product-controller/internal/config"
@@ -125,11 +127,20 @@ func validPublicHTTPS(value string) bool {
 		parsed.Opaque != "" {
 		return false
 	}
-	if _, err := netip.ParseAddr(
-		parsed.Hostname(),
-	); err != nil &&
-		!validProductName(parsed.Hostname()) {
+	address, addressError := netip.ParseAddr(parsed.Hostname())
+	if addressError == nil && address.Zone() != "" {
 		return false
+	}
+	if addressError != nil && !validProductName(parsed.Hostname()) {
+		return false
+	}
+	if addressError != nil {
+		labels := strings.Split(parsed.Hostname(), ".")
+		last := labels[len(labels)-1]
+		// Browser URL parsers treat numeric final labels as IPv4 candidates, not DNS names.
+		if strings.Trim(last, "0123456789") == "" || strings.HasPrefix(last, "0x") {
+			return false
+		}
 	}
 	if strings.HasSuffix(parsed.Host, ":") {
 		return false
@@ -145,7 +156,17 @@ func validPublicHTTPS(value string) bool {
 
 // validPublicUI retains publisher origin and protocol limits without granting host capabilities.
 func validPublicUI(ui datav1alpha1.ProductUI) bool {
-	if ui.Title == "" || !validPublicHTTPS(ui.URL) {
+	title := strings.TrimFunc(ui.Title, func(char rune) bool {
+		return unicode.IsSpace(char) || char == '\ufeff'
+	})
+	if title == "" ||
+		len(utf16.Encode([]rune(ui.Title))) > 200 ||
+		len(ui.URL) > 2048 ||
+		!validPublicHTTPS(ui.URL) {
+		return false
+	}
+	manifest, err := json.Marshal(ui)
+	if err != nil || len(manifest) > 16<<10 {
 		return false
 	}
 	if ui.Contract == nil {

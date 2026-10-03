@@ -78,10 +78,10 @@ func discoveryFixture(t *testing.T) (*httptest.Server, *atomic.Bool, *atomic.Int
 					return
 				}
 				_ = json.NewEncoder(w).
-					Encode(map[string]any{"apiVersion": "data-product-discovery/v1", "products": []any{first, second}, "continue": ""})
+					Encode(map[string]any{"apiVersion": "data-product-discovery/v1", "products": []any{first, second}, "continue": "", "rejected": 0})
 			} else {
 				_ = json.NewEncoder(w).
-					Encode(map[string]any{"apiVersion": "data-product-discovery/v1", "products": []any{first}, "continue": "second-page"})
+					Encode(map[string]any{"apiVersion": "data-product-discovery/v1", "products": []any{first}, "continue": "second-page", "rejected": 0})
 			}
 		case r.URL.Path == "/api/v2/products/products/summary":
 			_ = json.NewEncoder(w).Encode(first)
@@ -99,6 +99,61 @@ func discoveryFixture(t *testing.T) (*httptest.Server, *atomic.Bool, *atomic.Int
 	}))
 	t.Cleanup(server.Close)
 	return server, unavailable, catalogStatus
+}
+
+// TestDiscoveryReportsRejectedProducts keeps omitted metadata visible after paging and filtering.
+func TestDiscoveryReportsRejectedProducts(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := datav1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	assets := registry.NewHandler(fake.NewClientBuilder().WithScheme(scheme).Build())
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/api/v1/ui-config":
+			_ = json.NewEncoder(w).Encode(map[string]any{"discoveryEnabled": true})
+		case "/api/v2/products":
+			page := map[string]any{
+				"apiVersion": "data-product-discovery/v1",
+				"products":   []any{},
+				"rejected":   1,
+				"continue":   "next-page",
+			}
+			if r.URL.Query().Get("continue") != "" {
+				page["products"] = []any{discoveryProduct("harbour")}
+				page["rejected"] = 0
+				page["continue"] = ""
+			}
+			_ = json.NewEncoder(w).Encode(page)
+		default:
+			assets.ServeHTTP(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	page := contractBrowser(
+		t,
+	).MustPage().
+		Timeout(15 * time.Second).
+		MustNavigate(server.URL).
+		MustWaitLoad()
+	page.MustElement("#load-more").MustWaitVisible()
+	if !strings.Contains(page.MustElement("#discovery-scope").MustText(), "1 product omitted") {
+		t.Fatal("rejected product was not reported on the first empty page")
+	}
+	page.MustElement("#load-more").MustClick()
+	page.MustElement(".product-card").MustWaitVisible()
+	page.MustElement("#product-search").MustInput("missing")
+	scope := page.MustElement("#discovery-scope").MustText()
+	if !strings.Contains(scope, "1 product omitted") || strings.Contains(scope, "All products") {
+		t.Fatalf("filtered catalog hid the omitted product: %s", scope)
+	}
+	if strings.Contains(
+		page.MustElement("#registry-status").MustText(),
+		"No products have been published",
+	) {
+		t.Fatal("rejected metadata was presented as an unpublished inventory")
+	}
 }
 
 // TestDiscoveryExpiredPageAndListOutage keeps incomplete discovery honest while exact links remain usable.
@@ -306,6 +361,19 @@ func TestDiscoveryHealthAndLineage(t *testing.T) {
 
 // TestDiscoveryExportFitsOfflineImport keeps the actual downloaded document within the shared wire limit.
 func TestDiscoveryExportFitsOfflineImport(t *testing.T) {
+	for _, test := range []struct{ name, description string }{
+		{"near-limit", strings.Repeat("d", 16000)},
+		{"whitespace-description", " "},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			assertDiscoveryExportImports(t, test.description)
+		})
+	}
+}
+
+// assertDiscoveryExportImports imports actual downloaded API bytes into an independent host.
+func assertDiscoveryExportImports(t *testing.T, description string) {
+	t.Helper()
 	productServer := httptest.NewTLSServer(
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
@@ -324,7 +392,7 @@ func TestDiscoveryExportFitsOfflineImport(t *testing.T) {
 	t.Cleanup(kit.Close)
 	product := workspaceProduct(productServer.URL)
 	product.Spec.Name = strings.Repeat("n", 16000)
-	product.Spec.Description = strings.Repeat("d", 16000)
+	product.Spec.Description = description
 	product.Spec.Owner.Name = strings.Repeat("o", 16000)
 	product.Spec.Outputs = make([]datav1alpha1.OutputPort, 100)
 	for index := range product.Spec.Outputs {
@@ -358,7 +426,7 @@ func TestDiscoveryExportFitsOfflineImport(t *testing.T) {
 		if (!response.ok) throw new Error('Fixture descriptor was rejected: '+response.status);
 		return await response.text();
 	}`).Str()
-	if len(wire) < 60000 || len(wire) > 65536 {
+	if (len(description) > 1 && len(wire) < 60000) || len(wire) > 65536 {
 		t.Fatalf("fixture must be an accepted near-limit descriptor, got %d bytes", len(wire))
 	}
 	page.MustEval(`() => {

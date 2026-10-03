@@ -11,7 +11,7 @@ import (
 
 // TestDiscoveryTraversal requires a portable continuation, exact identities and complete discovery.
 func TestDiscoveryTraversal(t *testing.T) {
-	for _, fault := range []string{"", "duplicate", "unsupported", "missing"} {
+	for _, fault := range []string{"", "duplicate", "unsupported", "missing", "rejected", "missing-rejected"} {
 		t.Run(fault, func(t *testing.T) {
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				descriptor := func(name string) map[string]any {
@@ -71,8 +71,19 @@ func TestDiscoveryTraversal(t *testing.T) {
 				if fault == "unsupported" {
 					version = "unrecognized"
 				}
-				_ = json.NewEncoder(w).
-					Encode(map[string]any{"apiVersion": version, "products": []any{descriptor(name)}, "continue": token})
+				page := map[string]any{
+					"apiVersion": version,
+					"products":   []any{descriptor(name)},
+					"continue":   token,
+					"rejected":   0,
+				}
+				if fault == "rejected" {
+					page["rejected"] = 1
+				}
+				if fault == "missing-rejected" {
+					delete(page, "rejected")
+				}
+				_ = json.NewEncoder(w).Encode(page)
 			})
 			first := httptest.NewServer(handler)
 			defer first.Close()

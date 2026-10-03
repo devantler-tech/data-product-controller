@@ -5,9 +5,15 @@
   "description": "One native Kubernetes inventory snapshot page. Maximum encoded UTF-8 size is 2097152 bytes. Continue until the opaque continuation is empty; an expired snapshot requires a complete restart.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["apiVersion", "products", "continue"],
+  "required": ["apiVersion", "products", "continue", "rejected"],
   "properties": {
     "apiVersion": { "const": "data-product-discovery/v1" },
+    "rejected": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Products omitted from this native page because public metadata is invalid or exceeds descriptor bounds. Continue traversal even when products is empty."
+    },
     "products": {
       "type": "array",
       "maxItems": 100,

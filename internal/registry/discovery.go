@@ -30,6 +30,7 @@ type discoveryPage struct {
 	APIVersion string            `json:"apiVersion"`
 	Products   []json.RawMessage `json:"products"`
 	Continue   string            `json:"continue"`
+	Rejected   int               `json:"rejected"`
 }
 
 type discoveryQuery struct {
@@ -116,8 +117,8 @@ func (s *server) discoveryProducts(writer http.ResponseWriter, request *http.Req
 		}
 		data, err := encodePortableDescriptor(product)
 		if err != nil {
-			descriptorFailure(writer, err)
-			return
+			page.Rejected++
+			continue
 		}
 		retained += len(data)
 		if retained > maxDiscoveryResponseBytes {

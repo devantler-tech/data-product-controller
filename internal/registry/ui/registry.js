@@ -50,6 +50,7 @@ let discoveryEnabled = false;
 let continuation = "";
 let catalogNamespace = "";
 let inventoryComplete = false;
+let rejectedProducts = 0;
 let pageFailure = "";
 let inventoryRequest = 0;
 let selectedDescriptor = null;
@@ -438,9 +439,11 @@ function filterProducts() {
   scope.hidden = !discoveryEnabled;
   scope.textContent = !inventoryComplete
     ? `Search covers ${products.length} loaded ${products.length === 1 ? "product" : "products"}. ${continuation ? "More products are available." : "Discovery is incomplete. Refresh products to restart."}`
-    : "All products in this namespace scope are loaded.";
+    : rejectedProducts ? "Discovery finished for this namespace scope." : "All products in this namespace scope are loaded.";
+  if (rejectedProducts)
+    scope.textContent += ` ${rejectedProducts} ${rejectedProducts === 1 ? "product omitted" : "products omitted"}: public metadata is invalid or too large. Ask the publisher to correct it.`;
   status.textContent = !products.length
-    ? !inventoryComplete ? "No products on this page. Discovery is incomplete." : "No products have been published in this scope."
+    ? !inventoryComplete ? "No products on this page. Discovery is incomplete." : rejectedProducts ? "No valid product descriptors are available in this scope." : "No products have been published in this scope."
     : !filtered.length
       ? !inventoryComplete
         ? "No products match among loaded products. Load more or clear filters."
@@ -450,6 +453,14 @@ function filterProducts() {
     status.textContent += ` ${pageFailure}`;
 }
 
+/** Validate the page's bounded omission indicator before committing inventory state. */
+function validDiscoveryPage(collection) {
+  return collection.apiVersion === "data-product-discovery/v1" && Array.isArray(collection.products) &&
+    Number.isInteger(collection.rejected) && collection.rejected >= 0 &&
+    collection.rejected <= 100 && collection.products.length + collection.rejected <= 100 &&
+    typeof collection.continue === "string";
+}
+
 /** Refresh invalidates the selected surface before re-reading readiness; failures remain retryable. */
 async function loadProducts() {
   const request = ++inventoryRequest;
@@ -457,6 +468,7 @@ async function loadProducts() {
   clearSelection();
   continuation = "";
   inventoryComplete = false;
+  rejectedProducts = 0;
   pageFailure = "";
   more.hidden = true;
   more.disabled = false;
@@ -488,9 +500,10 @@ async function loadProducts() {
     const collection = await response.json();
     if (request !== inventoryRequest) return;
     if (!Array.isArray(collection.products) ||
-        (discoveryEnabled && collection.apiVersion !== "data-product-discovery/v1"))
+        (discoveryEnabled && !validDiscoveryPage(collection)))
       throw new Error("Invalid product inventory");
     products = collection.products;
+    rejectedProducts = discoveryEnabled ? collection.rejected : 0;
     continuation = discoveryEnabled ? collection.continue || "" : "";
     inventoryComplete = !continuation;
     more.hidden = !continuation;
@@ -527,9 +540,10 @@ async function loadMore() {
     }
     const collection = await response.json();
     if (request !== inventoryRequest) return;
-    if (collection.apiVersion !== "data-product-discovery/v1" || !Array.isArray(collection.products))
+    if (!validDiscoveryPage(collection))
       throw new Error("The registry returned an invalid catalog page. Use Refresh products to restart.");
     products = [...new Map([...products, ...collection.products].map(product => [`${product.namespace}/${product.name}`, product])).values()];
+    rejectedProducts += collection.rejected;
     continuation = collection.continue || "";
     inventoryComplete = !continuation;
     pageFailure = "";
