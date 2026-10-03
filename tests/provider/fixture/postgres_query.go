@@ -17,7 +17,10 @@ type postgresRecord struct {
 }
 
 // postgresQueryHandler exposes only one fixed read contract for its declared model.
-func postgresQueryHandler(model string, read func(context.Context) ([]postgresRecord, error)) http.Handler {
+func postgresQueryHandler(
+	model string,
+	read func(context.Context) ([]postgresRecord, error),
+) http.Handler {
 	path, field := postgresQueryRoute(model)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -87,15 +90,34 @@ func postgresOpenAPI(model, path, field string) map[string]any {
 		properties["value"] = map[string]any{"type": "string", "maxLength": 128}
 	}
 	return map[string]any{
-		"openapi": "3.1.0", "info": map[string]string{"title": "PostgreSQL " + model + " catalog", "version": "1.0.0"},
-		"paths": map[string]any{path: map[string]any{"get": map[string]any{"responses": map[string]any{
-			"200": map[string]any{"description": "Retained catalog records", "content": map[string]any{"application/json": map[string]any{"schema": map[string]any{
-				"type": "object", "required": []string{field}, "properties": map[string]any{field: map[string]any{
-					"type": "array", "maxItems": 2, "items": map[string]any{"type": "object", "required": required, "properties": properties},
-				}},
-			}}}},
-			"503": map[string]string{"description": "Source unavailable"},
-		}}}},
+		"openapi": "3.1.0",
+		"info": map[string]string{
+			"title":   "PostgreSQL " + model + " catalog",
+			"version": "1.0.0",
+		},
+		"paths": map[string]any{
+			path: map[string]any{"get": map[string]any{"responses": map[string]any{
+				"200": map[string]any{
+					"description": "Retained catalog records",
+					"content": map[string]any{
+						"application/json": map[string]any{"schema": map[string]any{
+							"type":     "object",
+							"required": []string{field},
+							"properties": map[string]any{field: map[string]any{
+								"type":     "array",
+								"maxItems": 2,
+								"items": map[string]any{
+									"type":       "object",
+									"required":   required,
+									"properties": properties,
+								},
+							}},
+						}},
+					},
+				},
+				"503": map[string]string{"description": "Source unavailable"},
+			}}},
+		},
 	}
 }
 

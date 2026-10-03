@@ -18,17 +18,28 @@ func TestPostgresConnectionIgnoresAmbientCredentials(t *testing.T) {
 		t.Setenv(key, value)
 	}
 	path := filepath.Join(t.TempDir(), "password")
-	if err := os.WriteFile(path, []byte("projected-first"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("projected-first"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	config, err := postgresConfig("document", path, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if config.Host != "warehouse-rw.products.svc.cluster.local" || config.Database != "catalog" || config.User != "document_reader" || config.Password != "projected-first" || config.Port != 5432 || len(config.Fallbacks) != 0 || len(config.RuntimeParams) != 1 || config.RuntimeParams["application_name"] != "provider-fixture" || config.ValidateConnect != nil || config.SSLNegotiation != "postgres" || config.MinProtocolVersion != "3.0" || config.MaxProtocolVersion != "3.0" || config.ChannelBinding != "prefer" {
+	if config.Host != "warehouse-rw.products.svc.cluster.local" || config.Database != "catalog" ||
+		config.User != "document_reader" ||
+		config.Password != "projected-first" ||
+		config.Port != 5432 ||
+		len(config.Fallbacks) != 0 ||
+		len(config.RuntimeParams) != 1 ||
+		config.RuntimeParams["application_name"] != "provider-fixture" ||
+		config.ValidateConnect != nil ||
+		config.SSLNegotiation != "postgres" ||
+		config.MinProtocolVersion != "3.0" ||
+		config.MaxProtocolVersion != "3.0" ||
+		config.ChannelBinding != "prefer" {
 		t.Fatal("ambient configuration changed the fixed reader connection")
 	}
-	if err := os.WriteFile(path, []byte("projected-second"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("projected-second"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	config, err = postgresConfig("document", path, nil)
@@ -40,7 +51,7 @@ func TestPostgresConnectionIgnoresAmbientCredentials(t *testing.T) {
 // TestPostgresConnectionRejectsAmbientService prevents loading an external libpq profile.
 func TestPostgresConnectionRejectsAmbientService(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "password")
-	if err := os.WriteFile(path, []byte("projected"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("projected"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, key := range []string{"PGSERVICE", "PGSERVICEFILE"} {
@@ -57,7 +68,7 @@ func TestPostgresConnectionRejectsAmbientService(t *testing.T) {
 // TestPostgresConnectionRejectsInvalidModelAndProjection rejects unknown models and unavailable password projections.
 func TestPostgresConnectionRejectsInvalidModelAndProjection(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "password")
-	if err := os.WriteFile(path, nil, 0600); err != nil {
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, model := range []string{"sql", "document", "graph", "postgres", "writer"} {
@@ -65,7 +76,7 @@ func TestPostgresConnectionRejectsInvalidModelAndProjection(t *testing.T) {
 			t.Fatal("empty credential projection accepted")
 		}
 	}
-	if err := os.WriteFile(path, []byte("projected"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("projected"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, model := range []string{"postgres", "writer", ""} {

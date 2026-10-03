@@ -174,6 +174,21 @@ func hybridCurrentOwner(
 
 var hybridIdentifier = regexp.MustCompile(`^[a-z][a-z0-9_]{0,62}$`)
 
+// hybridAGEPreload checks declared operator configuration; effective preloading is verified independently.
+func hybridAGEPreload(cluster *unstructured.Unstructured) bool {
+	libraries, declared, err := unstructured.NestedStringSlice(cluster.Object,
+		"spec", "postgresql", "shared_preload_libraries")
+	if err != nil || !declared {
+		return false
+	}
+	for _, library := range libraries {
+		if library == "age" {
+			return true
+		}
+	}
+	return false
+}
+
 // hybridPublication validates bounded publisher intent, not the live database's effective grants.
 func hybridPublication(annotations map[string]string, generation int64, engine string) bool {
 	const prefix = "data.devantler.tech/cnpg-hybrid-"

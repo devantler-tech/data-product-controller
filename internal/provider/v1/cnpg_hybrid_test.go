@@ -79,13 +79,25 @@ func TestHybridDocumentObservation(t *testing.T) {
 			unstructured.RemoveNestedField(c.Object, "status", "image")
 		}},
 		{name: "mutable image", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
-			_ = unstructured.SetNestedField(c.Object, "ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie", "spec", "imageName")
+			setHybridImage(t, c, "ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie")
 		}},
 		{name: "external image", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
-			_ = unstructured.SetNestedField(c.Object, "example.invalid/postgresql@sha256:"+strings.Repeat("a", 64), "spec", "imageName")
+			setHybridImage(t, c, "example.invalid/postgresql@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712")
+		}},
+		{name: "different release digest", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			setHybridImage(t, c, "ghcr.io/cloudnative-pg/postgresql@sha256:"+strings.Repeat("a", 64))
+		}},
+		{name: "wrong tag with authentic digest", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			setHybridImage(t, c, "ghcr.io/cloudnative-pg/postgresql:17.12-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712")
+		}},
+		{name: "untagged supported digest", reason: "SourceReady", secretReads: 1, mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			setHybridImage(t, c, "ghcr.io/cloudnative-pg/postgresql@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712")
 		}},
 		{name: "catalog indirection", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			_ = unstructured.SetNestedField(c.Object, map[string]any{"name": "mutable-catalog", "major": int64(17)}, "spec", "imageCatalogRef")
+		}},
+		{name: "null catalog declaration", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, nil, "spec", "imageCatalogRef")
 		}},
 		{name: "unready source", reason: "SourceNotReady", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			_ = unstructured.SetNestedField(c.Object, int64(0), "status", "readyInstances")
@@ -170,6 +182,16 @@ func TestHybridDocumentObservation(t *testing.T) {
 				t.Fatalf("reads: Cluster=%d Secret=%d", clusterReads.Load(), secretReads.Load())
 			}
 		})
+	}
+}
+
+// setHybridImage keeps desired and reported images equal so allow-list tests reach the profile check.
+func setHybridImage(t *testing.T, cluster *unstructured.Unstructured, image string) {
+	t.Helper()
+	for _, path := range [][]string{{"spec", "imageName"}, {"status", "image"}} {
+		if err := unstructured.SetNestedField(cluster.Object, image, path...); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

@@ -26,34 +26,50 @@ func TestPostgresQueryContract(t *testing.T) {
 		} {
 			t.Run(model.name+tc.method+tc.suffix+fmt.Sprint(tc.fail), func(t *testing.T) {
 				calls := 0
-				handler := postgresQueryHandler(model.name, func(ctx context.Context) ([]postgresRecord, error) {
-					calls++
-					deadline, ok := ctx.Deadline()
-					if !ok || time.Until(deadline) > 5*time.Second {
-						t.Error("PostgreSQL read has no five-second deadline")
-					}
-					if tc.fail {
-						return nil, errors.New("credential-and-record-sentinel")
-					}
-					return []postgresRecord{{ID: "retained", Value: "persistent-row"}}, nil
-				})
+				handler := postgresQueryHandler(
+					model.name,
+					func(ctx context.Context) ([]postgresRecord, error) {
+						calls++
+						deadline, ok := ctx.Deadline()
+						if !ok || time.Until(deadline) > 5*time.Second {
+							t.Error("PostgreSQL read has no five-second deadline")
+						}
+						if tc.fail {
+							return nil, errors.New("credential-and-record-sentinel")
+						}
+						return []postgresRecord{{ID: "retained", Value: "persistent-row"}}, nil
+					},
+				)
 				response := httptest.NewRecorder()
-				handler.ServeHTTP(response, httptest.NewRequest(tc.method, model.path+tc.suffix, nil))
+				handler.ServeHTTP(
+					response,
+					httptest.NewRequest(tc.method, model.path+tc.suffix, nil),
+				)
 				if response.Code != tc.status || calls != tc.reads {
-					t.Fatalf("status=%d reads=%d, want %d/%d", response.Code, calls, tc.status, tc.reads)
+					t.Fatalf(
+						"status=%d reads=%d, want %d/%d",
+						response.Code,
+						calls,
+						tc.status,
+						tc.reads,
+					)
 				}
 				if strings.Contains(response.Body.String(), "credential-and-record-sentinel") {
 					t.Fatal("backend failure escaped through the query contract")
 				}
-				if tc.status == 200 && (!strings.Contains(response.Body.String(), `"`+model.field+`":`) || response.Header().Get("Cache-Control") != "no-store") {
+				if tc.status == 200 &&
+					(!strings.Contains(response.Body.String(), `"`+model.field+`":`) || response.Header().Get("Cache-Control") != "no-store") {
 					t.Fatal("declared response model or cache policy lost")
 				}
 			})
 		}
-		handler := postgresQueryHandler(model.name, func(context.Context) ([]postgresRecord, error) {
-			t.Fatal("contract request read the database")
-			return nil, nil
-		})
+		handler := postgresQueryHandler(
+			model.name,
+			func(context.Context) ([]postgresRecord, error) {
+				t.Fatal("contract request read the database")
+				return nil, nil
+			},
+		)
 		for _, path := range []string{"/openapi.json", "/healthz", "/unpublished"} {
 			response := httptest.NewRecorder()
 			handler.ServeHTTP(response, httptest.NewRequest("GET", path, nil))
@@ -64,7 +80,8 @@ func TestPostgresQueryContract(t *testing.T) {
 			if response.Code != want {
 				t.Fatalf("%s=%d, want %d", path, response.Code, want)
 			}
-			if path == "/openapi.json" && (!strings.Contains(response.Body.String(), `"openapi":"3.1.0"`) || !strings.Contains(response.Body.String(), `"`+model.path+`"`)) {
+			if path == "/openapi.json" &&
+				(!strings.Contains(response.Body.String(), `"openapi":"3.1.0"`) || !strings.Contains(response.Body.String(), `"`+model.path+`"`)) {
 				t.Fatal("standard published query contract missing")
 			}
 		}

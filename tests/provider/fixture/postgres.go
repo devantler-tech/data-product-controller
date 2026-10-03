@@ -23,7 +23,11 @@ const postgresHost = "warehouse-rw.products.svc.cluster.local"
 
 // postgresConfig discards ambient connection settings and rereads the current password projection.
 func postgresConfig(model, passwordPath string, roots *x509.CertPool) (*pgx.ConnConfig, error) {
-	users := map[string]string{"sql": "sql_reader", "document": "document_reader", "graph": "graph_reader"}
+	users := map[string]string{
+		"sql":      "sql_reader",
+		"document": "document_reader",
+		"graph":    "graph_reader",
+	}
 	user, supported := users[model]
 	password, err := os.ReadFile(passwordPath)
 	if !supported || err != nil || len(password) == 0 || len(password) > 4096 ||
@@ -32,7 +36,9 @@ func postgresConfig(model, passwordPath string, roots *x509.CertPool) (*pgx.Conn
 	}
 	// Pin parser-only options too: TLS and password overrides happen after parsing,
 	// so the parser must not first read ambient certificates, passfiles or services.
-	config, err := pgx.ParseConfig("host=warehouse-rw.products.svc.cluster.local port=5432 dbname=catalog user=reader password=unused-projected-password sslmode=disable sslrootcert='' sslcert='' sslkey='' sslpassword='' sslsni=1 sslnegotiation=postgres connect_timeout=3 target_session_attrs=any min_protocol_version=3.0 max_protocol_version=3.0 channel_binding=prefer require_auth=''")
+	config, err := pgx.ParseConfig(
+		"host=warehouse-rw.products.svc.cluster.local port=5432 dbname=catalog user=reader password=unused-projected-password sslmode=disable sslrootcert='' sslcert='' sslkey='' sslpassword='' sslsni=1 sslnegotiation=postgres connect_timeout=3 target_session_attrs=any min_protocol_version=3.0 max_protocol_version=3.0 channel_binding=prefer require_auth=''",
+	)
 	if err != nil {
 		return nil, errors.New("connection configuration unavailable")
 	}
@@ -41,7 +47,11 @@ func postgresConfig(model, passwordPath string, roots *x509.CertPool) (*pgx.Conn
 	config.ConnectTimeout = 3 * time.Second
 	config.Fallbacks = nil
 	config.RuntimeParams = map[string]string{"application_name": "provider-fixture"}
-	config.TLSConfig = &tls.Config{RootCAs: roots, ServerName: postgresHost, MinVersion: tls.VersionTLS13}
+	config.TLSConfig = &tls.Config{
+		RootCAs:    roots,
+		ServerName: postgresHost,
+		MinVersion: tls.VersionTLS13,
+	}
 	return config, nil
 }
 
@@ -76,7 +86,11 @@ func readPostgres(ctx context.Context, model string) ([]postgresRecord, error) {
 }
 
 // postgresRecords returns bounded SQL, filtered JSONB or actual two-hop AGE records.
-func postgresRecords(ctx context.Context, connection *pgx.Conn, model string) ([]postgresRecord, error) {
+func postgresRecords(
+	ctx context.Context,
+	connection *pgx.Conn,
+	model string,
+) ([]postgresRecord, error) {
 	queries := map[string]string{
 		"sql":      `SELECT id, value FROM public.catalog_rows WHERE id='retained' ORDER BY id LIMIT 2`,
 		"document": `SELECT id, payload->>'value' FROM public.documents WHERE payload @> '{"published":true}'::jsonb ORDER BY id LIMIT 2`,
@@ -87,7 +101,10 @@ func postgresRecords(ctx context.Context, connection *pgx.Conn, model string) ([
 		return nil, errors.New("unsupported query model")
 	}
 	if model == "graph" {
-		if _, err := connection.Exec(ctx, `LOAD '$libdir/plugins/age'; SET search_path=ag_catalog,public`); err != nil {
+		if _, err := connection.Exec(
+			ctx,
+			`LOAD '$libdir/plugins/age'; SET search_path=ag_catalog,public`,
+		); err != nil {
 			return nil, err
 		}
 	}
@@ -159,11 +176,28 @@ func postgresAssertion(model, mode string) error {
 		return errors.New("unsupported database assertion")
 	}
 	mutations := map[string][]string{
-		"sql":      {`INSERT INTO public.catalog_rows VALUES ('forbidden','denied')`, `UPDATE public.catalog_rows SET value='changed' WHERE id='retained'`, `DELETE FROM public.catalog_rows WHERE id='retained'`},
-		"document": {`INSERT INTO public.documents VALUES ('forbidden','{}')`, `UPDATE public.documents SET payload='{}' WHERE id='retained'`, `DELETE FROM public.documents WHERE id='retained'`},
-		"graph":    {`SELECT * FROM ag_catalog.cypher('lineage', $$ CREATE (:product {id:'forbidden'}) $$) AS (node ag_catalog.agtype)`, `SELECT * FROM ag_catalog.cypher('lineage', $$ MATCH (n:product {id:'middle'}) SET n.id='changed' RETURN n $$) AS (node ag_catalog.agtype)`, `SELECT * FROM ag_catalog.cypher('lineage', $$ MATCH (n:product {id:'target'}) DETACH DELETE n $$) AS (node ag_catalog.agtype)`},
+		"sql": {
+			`INSERT INTO public.catalog_rows VALUES ('forbidden','denied')`,
+			`UPDATE public.catalog_rows SET value='changed' WHERE id='retained'`,
+			`DELETE FROM public.catalog_rows WHERE id='retained'`,
+		},
+		"document": {
+			`INSERT INTO public.documents VALUES ('forbidden','{}')`,
+			`UPDATE public.documents SET payload='{}' WHERE id='retained'`,
+			`DELETE FROM public.documents WHERE id='retained'`,
+		},
+		"graph": {
+			`SELECT * FROM ag_catalog.cypher('lineage', $$ CREATE (:product {id:'forbidden'}) $$) AS (node ag_catalog.agtype)`,
+			`SELECT * FROM ag_catalog.cypher('lineage', $$ MATCH (n:product {id:'middle'}) SET n.id='changed' RETURN n $$) AS (node ag_catalog.agtype)`,
+			`SELECT * FROM ag_catalog.cypher('lineage', $$ MATCH (n:product {id:'target'}) DETACH DELETE n $$) AS (node ag_catalog.agtype)`,
+		},
 	}
-	attempts := append(mutations[model], `CREATE ROLE forbidden SUPERUSER`, `CREATE SCHEMA forbidden`, `SET ROLE catalog_writer`)
+	attempts := append(
+		mutations[model],
+		`CREATE ROLE forbidden SUPERUSER`,
+		`CREATE SCHEMA forbidden`,
+		`SET ROLE catalog_writer`,
+	)
 	for i, query := range attempts {
 		_, err := connection.Exec(ctx, query)
 		if !postgresWriteDenied(err) {
@@ -203,16 +237,31 @@ func postgresSeed(model string) error {
 	defer closePostgres(connection)
 	switch model {
 	case "sql":
-		_, err = connection.Exec(ctx, `INSERT INTO public.catalog_rows VALUES ('retained','persistent-row') ON CONFLICT(id) DO UPDATE SET value=excluded.value`)
+		_, err = connection.Exec(
+			ctx,
+			`INSERT INTO public.catalog_rows VALUES ('retained','persistent-row') ON CONFLICT(id) DO UPDATE SET value=excluded.value`,
+		)
 	case "document":
-		_, err = connection.Exec(ctx, `INSERT INTO public.documents VALUES ('retained','{"published":true,"value":"persistent-jsonb"}'), ('excluded','{"published":false,"value":"private-excluded-record"}') ON CONFLICT(id) DO UPDATE SET payload=excluded.payload`)
+		_, err = connection.Exec(
+			ctx,
+			`INSERT INTO public.documents VALUES ('retained','{"published":true,"value":"persistent-jsonb"}'), ('excluded','{"published":false,"value":"private-excluded-record"}') ON CONFLICT(id) DO UPDATE SET payload=excluded.payload`,
+		)
 	case "graph":
-		_, err = connection.Exec(ctx, `LOAD '$libdir/plugins/age'; SET search_path=ag_catalog,public`)
+		_, err = connection.Exec(
+			ctx,
+			`LOAD '$libdir/plugins/age'; SET search_path=ag_catalog,public`,
+		)
 		if err == nil {
-			_, err = connection.Exec(ctx, `SELECT * FROM ag_catalog.cypher('lineage', $$ MATCH (n:product) DETACH DELETE n $$) AS (node ag_catalog.agtype)`)
+			_, err = connection.Exec(
+				ctx,
+				`SELECT * FROM ag_catalog.cypher('lineage', $$ MATCH (n:product) DETACH DELETE n $$) AS (node ag_catalog.agtype)`,
+			)
 		}
 		if err == nil {
-			_, err = connection.Exec(ctx, `SELECT * FROM ag_catalog.cypher('lineage', $$ CREATE (:product {id:'source'})-[:feeds]->(:product {id:'middle'})-[:feeds]->(:product {id:'target'}) $$) AS (node ag_catalog.agtype)`)
+			_, err = connection.Exec(
+				ctx,
+				`SELECT * FROM ag_catalog.cypher('lineage', $$ CREATE (:product {id:'source'})-[:feeds]->(:product {id:'middle'})-[:feeds]->(:product {id:'target'}) $$) AS (node ag_catalog.agtype)`,
+			)
 		}
 	default:
 		return errors.New("unsupported seed model")
@@ -239,8 +288,14 @@ func postgresProbe(model string) error {
 	}
 	transport := probeTransport(ca)
 	defer transport.CloseIdleConnections()
-	client := &http.Client{Transport: transport, Timeout: 8 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	response, err := client.Get("https://postgres-query-" + model + ".products.svc.cluster.local:8443" + path)
+	client := &http.Client{
+		Transport:     transport,
+		Timeout:       8 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	response, err := client.Get(
+		"https://postgres-query-" + model + ".products.svc.cluster.local:8443" + path,
+	)
 	if err != nil {
 		if mode == "denied" && networkDenial(err) {
 			return nil
@@ -270,13 +325,15 @@ func postgresProbe(model string) error {
 			Paths   map[string]json.RawMessage `json:"paths"`
 		}
 		queryPath, _ := postgresQueryRoute(model)
-		if json.Unmarshal(body, &contract) != nil || contract.OpenAPI != "3.1.0" || contract.Paths[queryPath] == nil {
+		if json.Unmarshal(body, &contract) != nil || contract.OpenAPI != "3.1.0" ||
+			contract.Paths[queryPath] == nil {
 			return errors.New("model contract unavailable")
 		}
 		return nil
 	}
 	var result map[string][]postgresRecord
-	if json.Unmarshal(body, &result) != nil || len(result) != 1 || !reflect.DeepEqual(result[field], postgresExpected(model)) {
+	if json.Unmarshal(body, &result) != nil || len(result) != 1 ||
+		!reflect.DeepEqual(result[field], postgresExpected(model)) {
 		return errors.New("query did not return retained model records")
 	}
 	return nil
@@ -301,7 +358,19 @@ func postgresRun(mode string) error {
 	case "postgres-probe":
 		return postgresProbe(model)
 	case "postgres-serve":
-		server := &http.Server{Addr: ":8443", Handler: postgresQueryHandler(model, func(ctx context.Context) ([]postgresRecord, error) { return readPostgres(ctx, model) }), ReadHeaderTimeout: 3 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 8 * time.Second, IdleTimeout: 10 * time.Second, MaxHeaderBytes: 8192, TLSConfig: &tls.Config{MinVersion: tls.VersionTLS13}}
+		server := &http.Server{
+			Addr: ":8443",
+			Handler: postgresQueryHandler(
+				model,
+				func(ctx context.Context) ([]postgresRecord, error) { return readPostgres(ctx, model) },
+			),
+			ReadHeaderTimeout: 3 * time.Second,
+			ReadTimeout:       5 * time.Second,
+			WriteTimeout:      8 * time.Second,
+			IdleTimeout:       10 * time.Second,
+			MaxHeaderBytes:    8192,
+			TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS13},
+		}
 		ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 		defer stop()
 		go func() {

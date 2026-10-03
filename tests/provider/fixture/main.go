@@ -238,7 +238,12 @@ func run() error {
 		return errors.New("fixture mode required")
 	}
 	switch os.Args[1] {
-	case "postgres-serve", "postgres-read", "postgres-privileges", "postgres-stale-password", "postgres-seed", "postgres-probe":
+	case "postgres-serve",
+		"postgres-read",
+		"postgres-privileges",
+		"postgres-stale-password",
+		"postgres-seed",
+		"postgres-probe":
 		return postgresRun(os.Args[1])
 	case "serve":
 		handler := queryHandler(readDocuments)
