@@ -130,12 +130,14 @@ The [Graph product](examples/graph-provider-product.yaml) selects `arangodb/v1`.
 and OpenAPI document describe a separately operated workload; DPC does not create that workload
 or send AQL queries. Install the ArangoDB operator independently, using the
 [1.4.5 API](https://github.com/arangodb/kube-arangodb/tree/c8ddcb3ff018436f5641607e778b4960cf1794b9/pkg/apis/deployment/v1).
-The initial resource profile requires `spec.mode: Single`, explicit `spec.single.count: 1`,
-enabled authentication and the original image reference `arangodb:3.12.12`. The verified release
-index `sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf`
-is also accepted with that tag or without a tag, using `arangodb` or
-`docker.io/library/arangodb`. Other digests, registries, image repositories and contradictory tags are
-unsupported. Single mode provides no high availability.
+The real-provider acceptance profile requires `spec.mode: Single`, explicit `spec.single.count: 1`,
+enabled authentication and the verified release index
+`sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf`.
+The index is accepted with the `3.12.12` tag or without a tag, using `arangodb` or
+`docker.io/library/arangodb`. The original tag-only declaration `arangodb:3.12.12` retains its
+previous non-enterprise binary-metadata requirement; it does not identify the immutable profile
+tested here. Other digests, registries, image repositories and contradictory tags are unsupported.
+Single mode provides no high availability.
 
 The live typed specification checksum must match both `status.acceptedSpecVersion` and
 `status.appliedVersion`. DPC does not apply defaults before hashing: the operator hashes the raw
