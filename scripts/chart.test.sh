@@ -88,12 +88,23 @@ assert_leader_events() {
 	event_role_name=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | select(.rules[].resources[] == "events") | .metadata.name' -)
 	binding_role=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .roleRef.kind + ":" + .roleRef.name' -)
 	[ "$binding_role" = "Role:$event_role_name" ] || fail 'leader-election RoleBinding must reference the Event role'
-	event_binding=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .subjects[] | select(.kind == "ServiceAccount") | .namespace' -)
-	[ "$event_binding" = "$expected_namespace" ] || fail 'leader-election Event binding must be release-local'
+	workload_service_account=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.serviceAccountName' -)
+	event_subject_count=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .subjects | length' -)
+	[ "$event_subject_count" = '1' ] || fail 'leader-election RoleBinding must bind only the controller ServiceAccount'
+	event_binding=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .subjects[0] | .kind + ":" + .namespace + ":" + .name' -)
+	[ "$event_binding" = "ServiceAccount:$expected_namespace:$workload_service_account" ] || fail 'leader-election RoleBinding must bind only the controller ServiceAccount'
 }
 assert_leader_events "$default_render" data-product-system
 alternate_namespace_render=$(helm template data-product-controller "$chart" --namespace alternate-products)
 assert_leader_events "$alternate_namespace_render" alternate-products
+extra_subject_render=$(printf '%s' "$default_render" | yq ea '(select(.kind == "RoleBinding").subjects) += [{"kind": "User", "name": "other-user"}]' -)
+if (assert_leader_events "$extra_subject_render" data-product-system) >/dev/null 2>&1; then
+	fail 'leader-election RoleBinding must reject additional subjects'
+fi
+wrong_account_render=$(printf '%s' "$default_render" | yq ea '(select(.kind == "RoleBinding").subjects[0].name) = "other-account"' -)
+if (assert_leader_events "$wrong_account_render" data-product-system) >/dev/null 2>&1; then
+	fail 'leader-election RoleBinding must reject another ServiceAccount'
+fi
 
 controller_uid=$(
 	printf '%s' "$default_render" |
