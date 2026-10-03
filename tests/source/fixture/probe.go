@@ -120,6 +120,9 @@ func probe(ctx context.Context, args []string) error {
 }
 
 func verifyRegistryProduct(body []byte, identity string, ready bool, reason string) error {
+	if err := registryJSON(body); err != nil {
+		return err
+	}
 	var response struct {
 		Products *[]struct {
 			Namespace string `json:"namespace"`

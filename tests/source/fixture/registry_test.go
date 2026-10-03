@@ -21,6 +21,9 @@ func TestProbeSelectsExactRegistryProduct(t *testing.T) {
 		{"wrong reason", `{"products":[{"namespace":"products","name":"existing-export","ready":true,"readiness":{"reason":"OldReady"}}]}`, true},
 		{"malformed", `{"products":`, true},
 		{"trailing document", `{"products":[]} {"ready":true}`, true},
+		{"duplicate inventory", `{"products":[],"products":[{"namespace":"products","name":"existing-export","ready":true}]}`, true},
+		{"duplicate readiness", `{"products":[{"namespace":"products","name":"existing-export","ready":false,"ready":true}]}`, true},
+		{"case variant readiness", `{"products":[{"namespace":"products","name":"existing-export","ready":false,"Ready":true}]}`, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			server := httptest.NewServer(
