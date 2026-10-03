@@ -66,6 +66,35 @@ namespace_lease_rules=$(
 [ "$namespace_lease_rules" = '1' ] || fail 'Role must grant Lease access in the release namespace'
 assert_contains "$default_render" 'kind: RoleBinding'
 
+assert_leader_events() {
+	rendered=$1
+	expected_namespace=$2
+	event_role=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | select(.rules[].resources[] == "events") | .metadata.namespace' -)
+	[ "$event_role" = "$expected_namespace" ] || fail 'leader-election Event access must be release-local'
+	event_groups=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | .rules[] | select(.resources[] == "events") | .apiGroups | join(",")' -)
+	[ -z "$event_groups" ] || fail 'leader-election Events must use only the core API group'
+	event_group_count=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | .rules[] | select(.resources[] == "events") | .apiGroups | length' -)
+	[ "$event_group_count" = '1' ] || fail 'leader-election Events must use exactly one API group'
+	event_resource_count=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | .rules[] | select(.resources[] == "events") | .resources | length' -)
+	[ "$event_resource_count" = '1' ] || fail 'leader-election Event rule must not grant other resources'
+	event_verbs=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | .rules[] | select(.resources[] == "events") | .verbs | sort | join(",")' -)
+	[ "$event_verbs" = 'create,patch' ] || fail 'leader-election Events must grant create and patch only'
+	cluster_events=$(printf '%s' "$rendered" | yq ea '[select(.kind == "ClusterRole") | .rules[] | select(.resources[] | test("^(events|\\*)$"))] | length' -)
+	[ "$cluster_events" = '0' ] || fail 'ClusterRole must not grant Event or wildcard access'
+	wildcard_rules=$(printf '%s' "$rendered" | yq ea '[select(.kind == "Role" or .kind == "ClusterRole") | .rules[] | select((.apiGroups + .resources + .verbs)[] | test("^\\*$"))] | length' -)
+	[ "$wildcard_rules" = '0' ] || fail 'leader-election RBAC must not grant wildcard access'
+	binding_namespace=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .metadata.namespace' -)
+	[ "$binding_namespace" = "$expected_namespace" ] || fail 'leader-election RoleBinding must be release-local'
+	event_role_name=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Role") | select(.rules[].resources[] == "events") | .metadata.name' -)
+	binding_role=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .roleRef.kind + ":" + .roleRef.name' -)
+	[ "$binding_role" = "Role:$event_role_name" ] || fail 'leader-election RoleBinding must reference the Event role'
+	event_binding=$(printf '%s' "$rendered" | yq ea 'select(.kind == "RoleBinding") | .subjects[] | select(.kind == "ServiceAccount") | .namespace' -)
+	[ "$event_binding" = "$expected_namespace" ] || fail 'leader-election Event binding must be release-local'
+}
+assert_leader_events "$default_render" data-product-system
+alternate_namespace_render=$(helm template data-product-controller "$chart" --namespace alternate-products)
+assert_leader_events "$alternate_namespace_render" alternate-products
+
 controller_uid=$(
 	printf '%s' "$default_render" |
 		yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.securityContext.runAsUser' -
