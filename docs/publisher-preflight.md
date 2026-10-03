@@ -38,7 +38,7 @@ or establish live readiness.
 ## Results
 
 | Exit | Meaning                                                                     | Public previews             |
-| ---- | --------------------------------------------------------------------------- | --------------------------- |
+|------|-----------------------------------------------------------------------------|-----------------------------|
 | `0`  | Declarations passed; supplied dependencies were resolved                    | Present                     |
 | `1`  | Invalid declarations, exceeded limits, disabled feature, or command failure | Absent on an invalid report |
 | `2`  | Declarations passed, but a producer is absent from the local bundle         | Absent                      |
