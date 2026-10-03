@@ -193,9 +193,9 @@ rules:
     users: [system:serviceaccount:products:dpc]
     resources:
       - group: psmdb.percona.com
-        resources: [perconaservermongodbs]
+        resources: [perconaservermongodbs, perconaservermongodbs/*]
       - group: ""
-        resources: [secrets]
+        resources: [secrets, secrets/*]
   - level: None
 YAML
 bounded ksail project init --name "$cluster_name" --distribution Vanilla --provider Docker \

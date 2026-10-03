@@ -161,9 +161,9 @@ rules:
     users: [system:serviceaccount:products:dpc]
     resources:
       - group: $source_api_group
-        resources: [$source_resource]
+        resources: [$source_resource, $source_resource/*]
       - group: ""
-        resources: [secrets]
+        resources: [secrets, secrets/*]
   - level: None
 YAML
 	bounded ksail project init --name "$cluster_name" --distribution Vanilla --provider Docker \
