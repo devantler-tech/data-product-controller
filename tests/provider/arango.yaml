@@ -20,8 +20,6 @@ spec:
     type: None
   single:
     count: 1
-    labels:
-      app: graph-database
     resources:
       requests: { cpu: 300m, memory: 512Mi }
       limits: { cpu: "1", memory: 1Gi }

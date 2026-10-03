@@ -22,13 +22,19 @@ source "$repo_root/tests/provider/common.sh"
 
 # database_ready requires the real operator to report its initialized Single member ready.
 database_ready() {
-	kube get arangodeployment lineage -o json | jq -e '
+	local observed
+	observed=$(kube get arangodeployment lineage -o json) || return 1
+	jq -e '
 		.status.phase == "Running" and
 		any(.status.conditions[]?; .type == "BootstrapCompleted" and .status == "True") and
 		any(.status.conditions[]?; .type == "BootstrapSucceded" and .status == "True") and
     (.status.members.single | length == 1) and
     any(.status.conditions[]?; .type == "Ready" and .status == "True") and
-    any(.status.members.single[0].conditions[]?; .type == "Ready" and .status == "True")' >/dev/null
+    any(.status.members.single[0].conditions[]?; .type == "Ready" and .status == "True")' <<<"$observed" >/dev/null && return 0
+	# Preserve useful startup diagnostics without credentials, Secret hashes or messages.
+	jq '{phase:.status.phase,conditions:[.status.conditions[]? | {type,status}],
+    members:[.status.members.single[]? | {phase,conditions:[.conditions[]? | {type,status}]}]}' <<<"$observed"
+	return 1
 }
 # bind_publication binds the independent reader publication to the current source UID.
 bind_publication() {
@@ -121,6 +127,8 @@ kube apply -f "$repo_root/tests/provider/arango.yaml" >/dev/null
 yq '(.. | select(has("app")) | .app) |= sub("document";"graph") |
   .metadata.name |= sub("document";"graph") |
   (.. | select(has("app.kubernetes.io/name")) | ."app.kubernetes.io/name")="kube-arangodb" |
+  with(.. | select(has("matchLabels")) | .matchLabels;
+    with(select(.app == "graph-database"); .app="arangodb" | .arango_deployment="lineage" | .role="single")) |
   (.. | select(has("port") and .port == 27017) | .port) = 8529' \
 	"$repo_root/tests/provider/network-policy.yaml" | kube apply -f - >/dev/null
 
@@ -133,7 +141,7 @@ kube get arangodeployment lineage -o json | jq '{uid:.metadata.uid,phase:.status
 kube get pods -o json | jq '[.items[] | {name:.metadata.name,uid:.metadata.uid,images:[.status.containerStatuses[]? | {name,imageID}]}]'
 kubectl --request-timeout=15s get node "$control_node" -o json | jq -e \
 	'.status.nodeInfo.architecture == "amd64" and .status.nodeInfo.operatingSystem == "linux"' >/dev/null
-require_pinned_image app=graph-database server \
+require_pinned_image app=arangodb,arango_deployment=lineage,role=single server \
 	'docker.io/library/arangodb@sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf' "$server_digest"
 require_pinned_image app.kubernetes.io/name=kube-arangodb operator \
 	'arangodb/kube-arangodb:1.4.5@sha256:f579e339ab083998f648351293a5d55dd81b8a96849b0bc8f03379f65610cfa7' "$operator_digest"
