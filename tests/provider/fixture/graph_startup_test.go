@@ -69,3 +69,47 @@ func TestGraphStartupUsesOperatorConditions(t *testing.T) {
 		})
 	}
 }
+
+// TestGraphBootstrapSecretIncludesUsername protects the operator's username/password Secret contract.
+func TestGraphBootstrapSecretIncludesUsername(t *testing.T) {
+	script, err := os.ReadFile("../arango.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, loop, found := strings.Cut(string(script), "for identity in reader writer root; do\n")
+	if !found {
+		t.Fatal("credential creation loop missing")
+	}
+	loop, _, found = strings.Cut(loop, "\ndone\n")
+	if !found {
+		t.Fatal("credential creation loop incomplete")
+	}
+	directory := t.TempDir()
+	capture := directory + "/arguments"
+	ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "bash", "-c", `set -euo pipefail
+test_dir=$DPC_TEST_DIRECTORY
+kube() { printf '%s\t' "$@" >> "$DPC_TEST_CAPTURE"; printf '\n' >> "$DPC_TEST_CAPTURE"; }
+for identity in reader writer root; do
+`+loop+"\ndone")
+	command.Env = append(os.Environ(), "DPC_TEST_DIRECTORY="+directory, "DPC_TEST_CAPTURE="+capture)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("credential creation failed: %v %s", err, output)
+	}
+	data, err := os.ReadFile(capture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if strings.Contains(line, "\tlineage-root-password\t") {
+			if !strings.Contains(line, "\t--type=kubernetes.io/basic-auth\t") ||
+				!strings.Contains(line, "\t--from-literal=username=root\t") ||
+				!strings.Contains(line, "\t--from-file=password=") {
+				t.Fatal("bootstrap Secret lacks the operator's username/password format")
+			}
+			return
+		}
+	}
+	t.Fatal("root Secret not created")
+}

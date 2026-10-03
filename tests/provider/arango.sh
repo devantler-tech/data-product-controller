@@ -116,7 +116,12 @@ for identity in reader writer root; do
 	printf 'synthetic-graph-%s-original' "$identity" >"$test_dir/$identity-password"
 	name="lineage-$identity"
 	[[ $identity != root ]] || name=lineage-root-password
-	kube create secret generic "$name" --from-file=password="$test_dir/$identity-password" >/dev/null
+	if [[ $identity == root ]]; then
+		kube create secret generic "$name" --type=kubernetes.io/basic-auth \
+			--from-literal=username=root --from-file=password="$test_dir/$identity-password" >/dev/null
+	else
+		kube create secret generic "$name" --from-file=password="$test_dir/$identity-password" >/dev/null
+	fi
 done
 kube create secret generic lineage-stale-reader --from-file=password="$test_dir/reader-password" >/dev/null
 kube annotate secret lineage-reader data.devantler.tech/arango-publication=v1 \
