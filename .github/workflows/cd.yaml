@@ -19,6 +19,14 @@ jobs:
       app-name: data-product-controller
       enable-caller-pin: true
 
+  publish-age:
+    name: Publish signed PostgreSQL AGE image
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@__AGE_PUBLISHER_SHA__
+
   smoke:
     name: Verify published DSP exporter
     needs: publish

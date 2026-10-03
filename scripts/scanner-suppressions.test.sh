@@ -38,12 +38,17 @@ actual_checkov_allowlist=$(
       select(.key | test("^checkov\\.io/skip[0-9]*$")) |
       (filename | sub("^" + strenv(SCANNER_REPO_ROOT) + "/"; "")) + ":" + $resource + " " + (.value | split("=")[0])' \
 			"$repo_root"/deploy/*.yaml "$repo_root"/tests/source/*.yaml "$repo_root"/tests/provider/*.yaml
-		sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/Dockerfile \1/p' "$repo_root/Dockerfile"
+		rg --files -g Dockerfile "$repo_root" | while IFS= read -r dockerfile; do
+			artifact=${dockerfile#"$repo_root"/}
+			sed -n 's/^[[:space:]]*#checkov:skip=\([^:[:space:]]*\).*/\1/p' "$dockerfile" |
+				while IFS= read -r check; do printf '%s %s\n' "$artifact" "$check"; done
+		done
 	} | sort
 )
 expected_checkov_allowlist=$(
 	printf '%s\n' \
 		'Dockerfile CKV_DOCKER_2' \
+		'images/postgresql-age/Dockerfile CKV_DOCKER_2' \
 		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_14' \
 		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_38' \
 		'deploy/deployment.yaml:Deployment/data-product-controller CKV_K8S_43' \
@@ -81,6 +86,7 @@ actual_trivy_allowlist=$(
 expected_trivy_allowlist=$(
 	printf '%s\n' \
 		'DS-0026 Dockerfile' \
+		'DS-0026 images/postgresql-age/Dockerfile' \
 		'KSV-0013 deploy/deployment.yaml' \
 		'KSV-0113 docs/examples/document-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/graph-provider-observer-rbac.yaml' \

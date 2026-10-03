@@ -25,6 +25,10 @@ misconfigurations:
     paths:
       - Dockerfile
     statement: Kubernetes readiness and liveness probes cover both binaries in this multi-entrypoint image.
+  - id: DS-0026
+    paths:
+      - images/postgresql-age/Dockerfile
+    statement: CloudNativePG owns PostgreSQL startup and health probes and overrides the image entrypoint. Image acceptance independently starts the server and requires real authenticated queries and authorization denials.
   - id: KSV-0125
     paths:
       - tests/source/consumer.yaml
