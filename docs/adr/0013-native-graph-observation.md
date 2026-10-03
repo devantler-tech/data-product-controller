@@ -11,9 +11,12 @@ controller a database client or lifecycle owner.
 ## Decision
 
 `engine-provider/v1` Graph/native selects `arangodb/v1` and a same-namespace
-`database.arangodb.com/v1` `ArangoDeployment`. The observation profile uses the operator
-1.4.5 API, the official ArangoDB 3.12.12 Community image and an explicit Single server count
-of one. The upstream typed API computes the checksum of the live specification without
+`database.arangodb.com/v1` `ArangoDeployment`. The observer uses the operator 1.4.5 API and
+accepts the legacy `arangodb:3.12.12` tag declaration with non-enterprise binary metadata,
+as well as the verified official ArangoDB 3.12.12 immutable image index
+`sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf`.
+Real-provider acceptance uses that index and requires its Enterprise binary marker, with
+an explicit Single server count of one. The upstream typed API computes the checksum of the live specification without
 applying defaults. Both accepted and applied versions must match it. Current runtime,
 successful bootstrap and exactly one ready member are required; historical propagation
 and condition timestamps do not establish freshness.
@@ -23,7 +26,8 @@ password Secret. Bootstrap passwords in this operator release are root-only. The
 Secret must carry a current-source owner reference and a bounded `v1` publication declaration
 naming its application user, database, graph and collections. The declaration promises no
 system or wildcard access, read-only access to the application database and the explicitly
-listed collections, and no other collection grants. DPC rejects operator and administrator
+listed collections, no other positive collection grants and explicit `none` grants on all
+other application collections. DPC rejects operator and administrator
 publications and requests only Secret metadata.
 
 The existing default-off source and engine gates apply. Observation uses fixed REST
