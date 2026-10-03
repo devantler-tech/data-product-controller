@@ -18,6 +18,7 @@ export TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export TEST_IMAGE_DIGEST=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 export TEST_CHART_DIGEST=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 export TEST_RUNTIME_DIGEST=sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+export TEST_PULL_MARKER="$work/pulled-platform"
 cat >"$work/bin/cosign" <<'EOF'
 #!/usr/bin/env bash
 set -eu
@@ -61,14 +62,37 @@ case "$1 $2" in
 'pull --platform')
  [[ $3 == linux/amd64 || $3 == linux/arm64 ]] || exit 93
  [[ $4 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" ]] || exit 94
- exit "${IMAGE_PULL_EXIT:-0}" ;;
+ [[ ${IMAGE_PULL_EXIT:-0} == 0 ]] || exit "$IMAGE_PULL_EXIT"
+ printf '%s\n' "$3" >"$TEST_PULL_MARKER" ;;
 'image inspect')
  [[ $3 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" && $4 == --format ]] || exit 90
- printf '%s\n' "${REVISION:-$TEST_SHA}" ;;
+ [[ -f $TEST_PULL_MARKER ]] || exit 95
+ case "$5" in
+ '{{index .Config.Labels "org.opencontainers.image.revision"}}') printf '%s\n' "${REVISION:-$TEST_SHA}" ;;
+ '{{.Os}}/{{.Architecture}}')
+  printf '%s/%s\n' "${RUNTIME_OS:-linux}" "${RUNTIME_ARCH:-amd64}"
+  exit "${RUNTIME_INSPECT_EXIT:-0}" ;;
+ *) exit 96 ;;
+ esac ;;
 'buildx imagetools')
  [[ $3 == inspect && $4 == --raw && $5 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" ]] || exit 91
  if [[ ${MANIFEST_EMPTY:-false} == true ]]; then printf '{}\n'; exit; fi
- printf '{"schemaVersion":2,"mediaType":"application/vnd.oci.image.index.v1+json","manifests":[{"digest":"%s","platform":{"os":"linux","architecture":"amd64"}}]}\n' "${RUNTIME_DIGEST:-$TEST_RUNTIME_DIGEST}" ;;
+ case "${MANIFEST_KIND:-oci-index}" in
+ oci-index) media_type=application/vnd.oci.image.index.v1+json ;;
+ docker-index) media_type=application/vnd.docker.distribution.manifest.list.v2+json ;;
+ oci-manifest) media_type=application/vnd.oci.image.manifest.v1+json ;;
+ docker-manifest) media_type=application/vnd.docker.distribution.manifest.v2+json ;;
+ *) exit 97 ;;
+ esac
+ if [[ ${MANIFEST_KIND:-oci-index} == *-manifest ]]; then
+  config_type=application/vnd.oci.image.config.v1+json
+  if [[ $MANIFEST_KIND == docker-manifest ]]; then config_type=application/vnd.docker.container.image.v1+json; fi
+  printf '{"schemaVersion":2,"mediaType":"%s","config":{"mediaType":"%s","digest":"%s","size":123},"layers":[]}\n' "$media_type" "$config_type" "$TEST_RUNTIME_DIGEST"
+ else
+  descriptor=$(printf '{"digest":"%s","platform":{"os":"%s","architecture":"%s"}}' "${RUNTIME_DIGEST:-$TEST_RUNTIME_DIGEST}" "${MANIFEST_OS:-linux}" "${MANIFEST_ARCH:-amd64}")
+  if [[ ${DUPLICATE_PLATFORM:-false} == true ]]; then descriptor="$descriptor,$descriptor"; fi
+  printf '{"schemaVersion":2,"mediaType":"%s","manifests":[%s]}\n' "$media_type" "$descriptor"
+ fi ;;
 *) exit 92 ;;
 esac
 EOF
@@ -91,10 +115,13 @@ export PATH="$work/bin:$PATH"
 base=(--tag v1.2.3 --source-sha "$TEST_SHA" --image-digest "$TEST_IMAGE_DIGEST"
 	--chart-digest "$TEST_CHART_DIGEST" --publisher-sha bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 	--platform linux/amd64)
+# Run the real verifier with fresh evidence and a recorded platform-specific pull.
 run_verify() {
 	rm -rf "$work/result"
+	rm -f "$TEST_PULL_MARKER"
 	bash "$root/scripts/verify-release-artifacts.sh" "${base[@]}" --output-dir "$work/result" "$@" >"$work/output" 2>"$work/error"
 }
+# Report the failed assertion and the verifier's diagnostic output.
 fail() {
 	echo "release artifact verification test: $1" >&2
 	cat "$work/error" >&2
@@ -104,10 +131,53 @@ fail() {
 run_verify || fail 'a complete verified release was rejected'
 jq -e --arg runtime "$TEST_RUNTIME_DIGEST" '.complete == true and .runtimeDigest == $runtime and .platform == "linux/amd64"' "$work/result/release.json" >/dev/null || fail 'missing verified platform identity'
 "$REAL_HELM" show chart "$work/result/release-chart.tgz" | yq '.version == "1.2.3"' - | grep -Fx true >/dev/null
+# Require verification failure without a release receipt.
 reject() {
 	if run_verify "$@"; then fail 'unverified or mismatched identity produced success'; fi
 	[[ ! -f "$work/result/release.json" ]] || fail 'failed verification left a completeness record'
 }
+# A supported manifest must reach the runtime platform check after its exact pull.
+reject_platform() {
+	local requested=${1:-linux/amd64}
+	reject --platform "$requested"
+	jq -e '.reason == "platform-mismatch"' "$work/output" >/dev/null || fail 'runtime platform was not checked'
+	[[ $(cat "$TEST_PULL_MARKER") == "$requested" ]] || fail 'runtime platform checked before exact pull'
+}
+export RUNTIME_OS=windows
+reject_platform
+unset RUNTIME_OS
+export RUNTIME_ARCH=arm64
+reject_platform
+unset RUNTIME_ARCH
+export RUNTIME_INSPECT_EXIT=42
+reject
+unset RUNTIME_INSPECT_EXIT
+export DUPLICATE_PLATFORM=true
+reject
+unset DUPLICATE_PLATFORM
+export MANIFEST_KIND=docker-index
+run_verify || fail 'a signed Docker platform index was rejected'
+jq -e --arg runtime "$TEST_RUNTIME_DIGEST" '.runtimeDigest == $runtime' "$work/result/release.json" >/dev/null || fail 'Docker index child identity missing'
+export MANIFEST_ARCH=arm64 RUNTIME_ARCH=arm64
+run_verify --platform linux/arm64 || fail 'a signed arm64 platform index was rejected'
+jq -e --arg runtime "$TEST_RUNTIME_DIGEST" '.complete == true and .runtimeDigest == $runtime and .platform == "linux/arm64"' "$work/result/release.json" >/dev/null || fail 'arm64 index child identity missing'
+unset MANIFEST_ARCH RUNTIME_ARCH
+for kind in docker-manifest oci-manifest; do
+	export MANIFEST_KIND="$kind"
+	run_verify || fail "a signed $kind release was rejected"
+	jq -e --arg runtime "$TEST_IMAGE_DIGEST" '.complete == true and .runtimeDigest == $runtime and .platform == "linux/amd64"' "$work/result/release.json" >/dev/null || fail 'single manifest identity changed'
+	[[ $(cat "$TEST_PULL_MARKER") == linux/amd64 ]] || fail 'single manifest was not pulled for the requested platform'
+	export RUNTIME_OS=windows
+	reject_platform
+	unset RUNTIME_OS
+	export RUNTIME_ARCH=arm64
+	reject_platform
+	run_verify --platform linux/arm64 || fail "a signed $kind arm64 release was rejected"
+	jq -e --arg runtime "$TEST_IMAGE_DIGEST" '.complete == true and .runtimeDigest == $runtime and .platform == "linux/arm64"' "$work/result/release.json" >/dev/null || fail 'single manifest arm64 identity missing'
+	unset RUNTIME_ARCH
+	reject_platform linux/arm64
+done
+unset MANIFEST_KIND
 for var in IMAGE_VERIFY_EXIT CHART_VERIFY_EXIT IMAGE_PULL_EXIT PULL_EXIT TIMEOUT_EXIT; do
 	export "$var=42"
 	reject

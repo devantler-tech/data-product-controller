@@ -4,6 +4,7 @@ set -euo pipefail
 umask 077
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 evidence_created=false
+# Remove incomplete receipts and report the failed verification boundary.
 fail() {
 	if [[ $evidence_created == true ]]; then rm -f "$output_dir/release.json"; fi
 	printf '{"complete":false,"reason":"%s"}\n' "$1"
@@ -43,6 +44,7 @@ mkdir "$work/registry" "$work/charts"
 printf '{"auths":{}}\n' >"$work/registry/config.json"
 export DOCKER_CONFIG="$work/registry" HELM_REGISTRY_CONFIG="$work/registry/config.json"
 deadline=$((SECONDS + budget))
+# Apply the shared release deadline to every external verification operation.
 bounded() {
 	local remaining=$((deadline - SECONDS))
 	((remaining > 0)) || return 124
@@ -55,6 +57,7 @@ caller=(--certificate-oidc-issuer "$issuer"
 	--certificate-github-workflow-repository devantler-tech/data-product-controller
 	--certificate-github-workflow-ref "refs/tags/$tag"
 	--certificate-github-workflow-sha "$source_sha")
+# Require one bounded signature result whose entries all bind the expected digest.
 signature_bound() {
 	[[ $(wc -c <"$1") -le 1048576 ]] && bounded jq -se --arg mode signature --arg digest "$2" \
 		-f "$script_dir/verify-release-artifacts.jq" "$1" >/dev/null 2>&1
@@ -70,9 +73,11 @@ signature_bound "$output_dir/chart-signature.json" "$chart_digest" || fail chart
 bounded docker buildx imagetools inspect --raw "$image" >"$output_dir/image-manifest.json" 2>"$output_dir/manifest-read.log" || fail manifest-unverified
 [[ $(wc -c <"$output_dir/image-manifest.json") -le 262144 ]] || fail manifest-bound
 architecture=${platform#linux/}
-runtime_digest=$(bounded jq -ser --arg mode manifest --arg arch "$architecture" \
+runtime_digest=$(bounded jq -ser --arg mode manifest --arg arch "$architecture" --arg digest "$image_digest" \
 	-f "$script_dir/verify-release-artifacts.jq" "$output_dir/image-manifest.json" 2>"$output_dir/manifest-selection.log") || fail platform-unverified
 bounded docker pull --platform "$platform" "$image" >"$output_dir/image-pull.log" 2>&1 || fail image-read-unverified
+runtime_platform=$(bounded docker image inspect "$image" --format '{{.Os}}/{{.Architecture}}' 2>"$output_dir/image-platform.log") || fail platform-unverified
+[[ $runtime_platform == "$platform" ]] || fail platform-mismatch
 revision=$(bounded docker image inspect "$image" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' 2>"$output_dir/image-revision.log") || fail revision-unverified
 [[ $revision == "$source_sha" ]] || fail revision-mismatch
 bounded helm pull "oci://$chart" --destination "$work/charts" >"$output_dir/chart-pull.log" 2>&1 || fail chart-read-unverified

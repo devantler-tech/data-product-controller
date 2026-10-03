@@ -8,7 +8,10 @@ elif $ARGS.named.mode == "manifest" then
        .mediaType == "application/vnd.docker.distribution.manifest.list.v2+json" then
     [.manifests[] | select(.platform.os == "linux" and .platform.architecture == $ARGS.named.arch) | .digest] |
     if length == 1 and (.[0] | test("^sha256:[a-f0-9]{64}$")) then .[0] else error("platform") end
-  else error("release image must declare its platform index") end
+  elif .mediaType == "application/vnd.oci.image.manifest.v1+json" or
+       .mediaType == "application/vnd.docker.distribution.manifest.v2+json" then
+    $ARGS.named.digest
+  else error("unsupported image manifest") end
 elif $ARGS.named.mode == "receipt" then
   {complete:true,tag:$ARGS.named.tag,sourceSHA:$ARGS.named.sha,publisherSHA:$ARGS.named.publisher,
     imageDigest:$ARGS.named.image,chartDigest:$ARGS.named.chart,platform:$ARGS.named.platform,runtimeDigest:$ARGS.named.runtime}
