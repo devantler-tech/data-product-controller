@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: warehouse-hybrid-observer
+  namespace: products
+rules:
+  - apiGroups: [postgresql.cnpg.io]
+    resources: [clusters]
+    resourceNames: [warehouse]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [warehouse-document-reader, warehouse-graph-reader]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: warehouse-hybrid-observer
+  namespace: products
+subjects:
+  - kind: ServiceAccount
+    name: data-product-controller
+    namespace: data-product-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: warehouse-hybrid-observer

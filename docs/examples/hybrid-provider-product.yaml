@@ -1,0 +1,47 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: warehouse-documents
+  namespace: products
+spec:
+  id: urn:example:warehouse-documents
+  name: Published documents
+  description: Published JSONB documents queried from an independently operated PostgreSQL cluster.
+  version: v1.0.0
+  owner: { name: warehouse-team }
+  source:
+    adapter: cnpg-hybrid/v1
+    engine:
+      { apiVersion: engine-provider/v1, type: document, provider: cnpg-hybrid }
+    resourceRef:
+      { apiVersion: postgresql.cnpg.io/v1, kind: Cluster, name: warehouse }
+    connectionSecretRef: { name: warehouse-document-reader }
+  outputs:
+    - name: documents
+      protocol: OpenAPI
+      url: https://documents.example.com/api/documents
+      contractUrl: https://documents.example.com/openapi.json
+---
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: warehouse-lineage
+  namespace: products
+spec:
+  id: urn:example:warehouse-lineage
+  name: Product lineage
+  description: Product lineage traversed with Apache AGE in an independently operated PostgreSQL cluster.
+  version: v1.0.0
+  owner: { name: warehouse-team }
+  source:
+    adapter: cnpg-hybrid/v1
+    engine:
+      { apiVersion: engine-provider/v1, type: graph, provider: cnpg-hybrid }
+    resourceRef:
+      { apiVersion: postgresql.cnpg.io/v1, kind: Cluster, name: warehouse }
+    connectionSecretRef: { name: warehouse-graph-reader }
+  outputs:
+    - name: lineage
+      protocol: OpenAPI
+      url: https://lineage.example.com/api/lineage
+      contractUrl: https://lineage.example.com/openapi.json

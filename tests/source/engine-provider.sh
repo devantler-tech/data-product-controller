@@ -189,8 +189,19 @@ jq 'del(.spec.source.engine) | .spec.source.adapter="crossplane/v1" |
   .spec.source.resourceRef.kind="Database" | .spec.source.connectionSecretRef.name="warehouse-connection"' \
 	"$engine_product_file" | kube apply --dry-run=server -f - >/dev/null
 echo 'PASS: engine admission accepts SQL/native and legacy Crossplane references'
+for hybrid_model in document graph; do
+	jq --arg model "$hybrid_model" '.spec.source.adapter="cnpg-hybrid/v1" |
+      .spec.source.engine.type=$model | .spec.source.engine.provider="cnpg-hybrid" |
+      .spec.source.connectionSecretRef.name="warehouse-reader"' "$engine_product_file" |
+		kube apply --dry-run=server -f - >/dev/null
+done
+echo 'PASS: engine admission accepts deliberately selected Document and Graph hybrid readers'
 engine_reject 'Graph selection with SQL adapter' '.spec.source.engine.type="graph"'
-engine_reject 'unimplemented document/hybrid' '.spec.source.engine.type="document" | .spec.source.engine.provider="cnpg-hybrid"'
+engine_reject 'hybrid selection through SQL adapter' '.spec.source.engine.type="document" | .spec.source.engine.provider="cnpg-hybrid"'
+engine_reject 'unsupported SQL/hybrid selection' '.spec.source.adapter="cnpg-hybrid/v1" | .spec.source.engine.provider="cnpg-hybrid" | .spec.source.connectionSecretRef.name="warehouse-reader"'
+for reserved_suffix in app superuser replication server ca client; do
+	engine_reject "hybrid $reserved_suffix credential publication" ".spec.source.adapter=\"cnpg-hybrid/v1\" | .spec.source.engine.type=\"document\" | .spec.source.engine.provider=\"cnpg-hybrid\" | .spec.source.connectionSecretRef.name=\"warehouse-$reserved_suffix\""
+done
 engine_reject 'unversioned engine selection' '.spec.source.engine.apiVersion="engine-provider/v2"'
 engine_reject 'CNPG without typed selection' 'del(.spec.source.engine)'
 engine_reject 'typed selection through another adapter' '.spec.source.adapter="crossplane/v1"'

@@ -53,7 +53,13 @@ Do not copy instructions into them.
   release index, and matching accepted/current/member image declarations and the actual official binary edition marker. Hash the live spec without defaults;
   require matching accepted/applied versions, runtime readiness and successful bootstrap. Graph
   publication is independently declared through bounded read-only application metadata and current
-  source ownership; root/JWT/operator publications are unsupported. No database client is instantiated.
+  source ownership; root/JWT/operator publications are unsupported. Document and Graph/cnpg-hybrid
+  use `cnpg-hybrid/v1`, a same-namespace CNPG Cluster, an exact supported immutable image matching
+  its reported image, and a dedicated reader publication bound to the current UID and generation.
+  Graph additionally requires declared `age` in CNPG's `shared_preload_libraries`. Reserved
+  operator credentials are rejected before reads. Effective extension loading and read-only grants
+  belong to the independent publisher and real acceptance, not metadata observation. No database
+  client is instantiated.
   Preserve exact-name
   uncached reads, metadata-only Secret negotiation, the five-second observation bound, 30-second
   polling and independent `SourceReady`. See `docs/engine-providers.md`.
@@ -115,6 +121,11 @@ has a separate Go module and must be tested explicitly. See `docs/real-document-
 The required native Graph job runs `bash tests/provider/arango.sh` against the real
 pinned ArangoDB operator. It requires authenticated traversal, specific authorization denials
 and retained member recovery with operator-written readiness. See `docs/real-graph-acceptance.md`.
+
+The required PostgreSQL model job runs `bash tests/provider/postgres.sh` with the pinned
+CloudNativePG operator and signed owned AGE image. It exercises native SQL, hybrid JSONB and
+hybrid Graph queries, exact grant denials, password rotation and retained database lifecycle.
+See `docs/real-postgresql-acceptance.md`.
 
 API type or marker changes require deep-copy code, CRDs, and RBAC to be regenerated with controller-tools v0.21.0. Distribute the generated CRD to the chart and release artifact; all three copies must remain identical:
 

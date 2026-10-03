@@ -305,6 +305,7 @@ spec:
                     - cnpg/v1
                     - percona-mongodb/v1
                     - arangodb/v1
+                    - cnpg-hybrid/v1
                     type: string
                   connectionSecretRef:
                     description: ConnectionSecretRef names the connection contract.
@@ -379,10 +380,10 @@ spec:
                 - resourceRef
                 type: object
                 x-kubernetes-validations:
-                - message: Use untyped crossplane/v1, sql/native with cnpg/v1, document/native
-                    with percona-mongodb/v1, or graph/native with arangodb/v1 and
-                    its supported resource and application publication.
-                  rule: 'has(self.engine) ? (self.engine.provider == ''native'' &&
+                - message: Select a supported native or cnpg-hybrid engine adapter,
+                    resource and application publication. Hybrid requires a dedicated
+                    reader Secret.
+                  rule: 'has(self.engine) ? ((self.engine.provider == ''native'' &&
                     ((self.engine.type == ''sql'' && self.adapter == ''cnpg/v1'' &&
                     self.resourceRef.apiVersion == ''postgresql.cnpg.io/v1'' && self.resourceRef.kind
                     == ''Cluster'' && self.connectionSecretRef.name == self.resourceRef.name
@@ -392,7 +393,14 @@ spec:
                     != ''percona-server-mongodb-users'') || (self.engine.type == ''graph''
                     && self.adapter == ''arangodb/v1'' && self.resourceRef.apiVersion
                     == ''database.arangodb.com/v1'' && self.resourceRef.kind == ''ArangoDeployment'')))
-                    : self.adapter == ''crossplane/v1'''
+                    || (self.engine.provider == ''cnpg-hybrid'' && self.engine.type
+                    in [''document'',''graph''] && self.adapter == ''cnpg-hybrid/v1''
+                    && self.resourceRef.apiVersion == ''postgresql.cnpg.io/v1'' &&
+                    self.resourceRef.kind == ''Cluster'' && !(self.connectionSecretRef.name
+                    in [self.resourceRef.name + ''-app'',self.resourceRef.name + ''-superuser'',self.resourceRef.name
+                    + ''-replication'',self.resourceRef.name + ''-server'',self.resourceRef.name
+                    + ''-ca'',self.resourceRef.name + ''-client'']))) : self.adapter
+                    == ''crossplane/v1'''
               ui:
                 description: UI is an optional independently deployed product interaction
                   surface.
