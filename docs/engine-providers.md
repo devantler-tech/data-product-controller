@@ -81,6 +81,18 @@ indirection cannot establish this profile. Document also supports the upstream m
 field does not satisfy the declared preload profile.
 The controller neither initializes the extension nor verifies its installation by connecting.
 
+The supported immutable profiles are:
+
+- Core JSONB: `ghcr.io/cloudnative-pg/postgresql:17.11-minimal-trixie@sha256:d78e771decf39071aa8bfb96684e8b7e6e5f3c6e00a945404249756db2c6c712`.
+- JSONB or AGE: `ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc1.16.0@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8`.
+
+Each also permits the same repository and digest without a tag. Other tags, digests and
+repositories are unsupported, including newer owned images until their profile is validated.
+Real PostgreSQL acceptance uses CloudNativePG 1.30.1; source observation does not verify the
+installed operator binary. The owned image's v1.16.0 source is
+`04d6ec7b517b59e6d2cffcab484f8a42a711c1ce`, signed by the immutable publisher
+`86f0f95e5ac93ec914f5717f561af878b7d09bf1` under the verification procedure in the image guide.
+
 Choose the hybrid provider for PostgreSQL storage and operating conventions, with these explicit
 capability differences:
 

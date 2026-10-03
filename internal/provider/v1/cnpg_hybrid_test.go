@@ -80,19 +80,19 @@ func TestHybridObservation(t *testing.T) {
 		}},
 		{name: "untagged owned AGE graph", engine: "graph", reason: "SourceReady", secretReads: 1, mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
-			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:c24fab14cdede789cbe4c13a9a218571b75b55826161e4b3283f82c6ea4d3c4f")
+			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8")
 		}},
 		{name: "AGE digest with wrong release tag", engine: "graph", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
-			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age:unverified@sha256:c24fab14cdede789cbe4c13a9a218571b75b55826161e4b3283f82c6ea4d3c4f")
+			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age:unverified@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8")
 		}},
 		{name: "mutable AGE graph image", engine: "graph", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
-			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc0.0.0-age-proof.01a0fdb3.1")
+			setHybridImage(t, c, "ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc1.16.0")
 		}},
 		{name: "foreign AGE repository", engine: "graph", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
-			setHybridImage(t, c, "example.invalid/postgresql-age@sha256:c24fab14cdede789cbe4c13a9a218571b75b55826161e4b3283f82c6ea4d3c4f")
+			setHybridImage(t, c, "example.invalid/postgresql-age@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8")
 		}},
 		{name: "different AGE digest", engine: "graph", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
 			setHybridAGEProfile(t, c, s, "graph")
@@ -249,8 +249,7 @@ func TestHybridObservation(t *testing.T) {
 	}
 }
 
-// setHybridAGEProfile uses the actually signed publication proof during development.
-// The final delivery replaces this pin with the verified stable release artifact.
+// setHybridAGEProfile names the verified stable release independently of the observer's constants.
 func setHybridAGEProfile(
 	t *testing.T,
 	cluster *unstructured.Unstructured,
@@ -261,7 +260,7 @@ func setHybridAGEProfile(
 	setHybridImage(
 		t,
 		cluster,
-		"ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc0.0.0-age-proof.01a0fdb3.1@sha256:c24fab14cdede789cbe4c13a9a218571b75b55826161e4b3283f82c6ea4d3c4f",
+		"ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc1.16.0@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8",
 	)
 	if err := unstructured.SetNestedField(
 		cluster.Object,

@@ -29,11 +29,10 @@ provider_diagnostics() {
 }
 
 # Bound to the anonymously readable, signed artifact produced by the owned AGE release.
-# Resolve these literals from release readback before opening this change for review.
-age_image=__AGE_IMAGE_DIGEST__
-age_source=__AGE_SOURCE_SHA__
-age_release=__AGE_RELEASE_TAG__
-age_publisher=__AGE_PUBLISHER_SHA__
+age_image=ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8
+age_source=04d6ec7b517b59e6d2cffcab484f8a42a711c1ce
+age_release=v1.16.0
+age_publisher=86f0f95e5ac93ec914f5717f561af878b7d09bf1
 operator_image=ghcr.io/cloudnative-pg/cloudnative-pg:1.30.1@sha256:923c267ec29636db3bee20f993d0ec4973fa22998e1adad37da79e4d32b5bc07
 
 # query_model runs the independent consumer assertion for one published data model.

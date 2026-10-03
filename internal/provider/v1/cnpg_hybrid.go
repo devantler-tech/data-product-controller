@@ -155,11 +155,10 @@ func hybridSourceProfile(cluster *unstructured.Unstructured, engine string) bool
 	if image == repository+"@"+digest || image == repository+":17.11-minimal-trixie@"+digest {
 		return engine == "document"
 	}
-	// This signed publication proof is replaced by the verified stable release
-	// artifact before the hybrid delivery is opened for review.
+	// Bind the capability to the anonymously verified v1.16.0 release artifact.
 	const ageRepository = "ghcr.io/devantler-tech/data-product-controller-postgresql-age"
-	const ageDigest = "sha256:c24fab14cdede789cbe4c13a9a218571b75b55826161e4b3283f82c6ea4d3c4f"
-	const ageTag = "17.11-age1.7.0-dpc0.0.0-age-proof.01a0fdb3.1"
+	const ageDigest = "sha256:0b6e2d75d5551586570979d767a28b255953c2ee86820409ad9fe37d91ce3fa8"
+	const ageTag = "17.11-age1.7.0-dpc1.16.0"
 	if image != ageRepository+"@"+ageDigest && image != ageRepository+":"+ageTag+"@"+ageDigest {
 		return false
 	}

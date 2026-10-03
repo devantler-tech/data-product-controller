@@ -234,5 +234,8 @@ cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.
 
 [ADR 0010](docs/adr/0010-versioned-engine-provider-observation.md) defines engine dispatch and admission while preserving delegated source ownership.
 
+[ADR 0017](docs/adr/0017-postgresql-model-publications.md) defines dedicated JSONB and AGE
+publications and the required real PostgreSQL lifecycle acceptance.
+
 The vocabulary is informed by the [Open Data Mesh Data Product Descriptor Specification](https://dpds.opendatamesh.org/), [W3C DCAT 3](https://www.w3.org/TR/vocab-dcat-3/), [OpenAPI](https://spec.openapis.org/oas/), [AsyncAPI](https://www.asyncapi.com/docs/reference/specification/v3.0.0), and the [Eclipse Dataspace Protocol](https://projects.eclipse.org/projects/technology.dataspace-protocol-base).
 This release does not claim full conformance with those standards.
