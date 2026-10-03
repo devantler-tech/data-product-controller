@@ -136,17 +136,28 @@ The [Graph product](examples/graph-provider-product.yaml) selects `arangodb/v1`.
 and OpenAPI document describe a separately operated workload; DPC does not create that workload
 or send AQL queries. Install the ArangoDB operator independently, using the
 [1.4.5 API](https://github.com/arangodb/kube-arangodb/tree/c8ddcb3ff018436f5641607e778b4960cf1794b9/pkg/apis/deployment/v1).
-The initial resource profile requires `spec.mode: Single`, explicit `spec.single.count: 1`,
-`spec.image: arangodb:3.12.12` and enabled authentication. Single mode provides no high availability.
+The real-provider acceptance profile requires `spec.mode: Single`, explicit `spec.single.count: 1`,
+enabled authentication and the verified release index
+`sha256:4bc086d5050ca7ea11c6d00a36d8b910c838bb54ad553f8c1b715769d3499bcf`.
+The index is accepted with the `3.12.12` tag or without a tag, using `arangodb` or
+`docker.io/library/arangodb`. The original tag-only declaration `arangodb:3.12.12` retains its
+previous non-enterprise binary-metadata requirement; it does not identify the immutable profile
+tested here. Other digests, registries, image repositories and contradictory tags are unsupported.
+Single mode provides no high availability.
 
 The live typed specification checksum must match both `status.acceptedSpecVersion` and
 `status.appliedVersion`. DPC does not apply defaults before hashing: the operator hashes the raw
-spec and separately stores defaulted `status.accepted-spec`. The accepted specification must also
-retain the supported image, Single/count-one profile and a resolved authentication Secret;
+spec and separately stores defaulted `status.accepted-spec`. Hashing preserves the pinned
+operator's Kubernetes 0.33 PVC metadata encoding, including a null empty creation timestamp;
+the controller's newer Kubernetes library otherwise omits that field. The accepted specification must also
+retain exactly the declared image, Single/count-one profile and a resolved authentication Secret;
 contradictory status does not establish readiness. `Ready`, `SpecAccepted`, `UpToDate`,
 `BootstrapCompleted` and upstream's misspelled `BootstrapSucceded` conditions must be True.
 Deployment phase must be Running, with exactly one Created and Ready Single member, a modern
-Pod name/UID, and matching reported desired and running image IDs and ArangoDB 3.12.12 Community versions. Update,
+Pod name/UID, matching image declarations and reported desired/running image IDs, and ArangoDB
+3.12.12 versions. The verified official immutable index reports an Enterprise binary marker;
+both current and member observations must match that actual binary profile. The marker does not
+establish license entitlement. Update,
 upgrade, Secret-change, pending update and member-restart states withdraw readiness. Missing,
 unknown, malformed or duplicate conditions cannot establish readiness. Condition hashes,
 transition timestamps, historical SpecPropagated and Pod-spec checksums are not freshness markers.
@@ -154,7 +165,11 @@ transition timestamps, historical SpecPropagated and Pod-spec checksums are not 
 An independent publisher owns application setup and the password Secret. The pinned bootstrap
 validator accepts only root accounts. The publisher must create a dedicated non-administrator
 user, deny `_system` and database wildcard access, grant `ro` on the application database, deny
-collection wildcard access and grant `ro` on every named vertex/edge collection. It publishes the
+collection wildcard access and grant `ro` on every named vertex/edge collection. Assign explicit
+`none` grants to all other application collections. ArangoDB's database `ro` grant otherwise
+supplies read access when no specific collection grant exists; a collection wildcard `none`
+does not override it. The publisher must install a specific denial before adding an unpublished
+collection, and keep system collections outside the published query contract. It publishes the
 password for consumption directly by the query workload. DPC sees only this public metadata:
 
 ```yaml
@@ -175,8 +190,11 @@ metadata:
       uid: <current-source-uid>
 ```
 
-Under v1, `read-only` declares the complete grant profile above, including no other collection
-grants. Identifiers start with an ASCII letter followed by at most 63 ASCII letters, digits,
+Under v1, `read-only` declares this grant profile, including no other positive collection grants
+and explicit denials for unpublished application collections. This is publisher intent, not
+proof that future collections are automatically isolated. See the upstream
+[permission resolution rules](https://docs.arango.ai/arangodb/3.12/operations/administration/user-management/#permission-resolution).
+Identifiers start with an ASCII letter followed by at most 63 ASCII letters, digits,
 underscores or hyphens. Collections form a comma-separated list of 1–64 unique identifiers
 without whitespace or wildcards. Root, operator, internal and backup users are rejected in any
 letter case. System names, unsupported versions and writable declarations are rejected.
@@ -192,8 +210,8 @@ not verify the installed operator binary, immutable running image, credential va
 permissions, graph existence, queries, backups or distribution support. ArangoDB's
 [Community binary terms](https://arangodb.com/community-license/) restrict deployment uses;
 this adapter neither deploys nor licenses the database. Independently verify the applicable
-edition and terms. Real operator and authenticated AQL acceptance remains
-[#157](https://github.com/devantler-tech/data-product-controller/issues/157).
+edition and terms. The required [real Graph acceptance](real-graph-acceptance.md) separately
+exercises the pinned operator and authenticated traversal; its current-head run must pass.
 
 ## Lifecycle and rollout
 
@@ -208,6 +226,8 @@ readiness loss/recovery, publication ownership and retention using synthetic SQL
 It does not install database operators or prove database availability. The separate required
 [real Document acceptance](real-document-acceptance.md) installs Percona and exercises authenticated queries,
 effective privileges, rotation, outage recovery and retained data. Its current-head run must pass;
-synthetic observer results cannot replace that evidence. The remaining real provider matrix is tracked
+synthetic observer results cannot replace that evidence. The required
+[real Graph acceptance](real-graph-acceptance.md) applies the same boundary to ArangoDB traversal,
+effective grants and retained source recovery. The remaining real provider matrix is tracked
 in [#38](https://github.com/devantler-tech/data-product-controller/issues/38), and released deployment
 acceptance is required before retiring the gate in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).

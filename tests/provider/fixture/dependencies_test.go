@@ -19,7 +19,8 @@ func TestProviderAvoidsOpenPGP(t *testing.T) {
 		t.Fatalf("compiled dependency observation failed: %v", err)
 	}
 	for pkg := range strings.SplitSeq(string(output), "\n") {
-		if pkg == "golang.org/x/crypto/openpgp" || strings.HasPrefix(pkg, "golang.org/x/crypto/openpgp/") {
+		if pkg == "golang.org/x/crypto/openpgp" ||
+			strings.HasPrefix(pkg, "golang.org/x/crypto/openpgp/") {
 			t.Fatal("unsafe OpenPGP package invalidates the advisory exception")
 		}
 	}

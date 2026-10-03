@@ -31,14 +31,24 @@ func TestRegistryForwardUsesResolvedPodPort(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
-			if err := os.WriteFile(filepath.Join(dir, "forward.log"), []byte(tt.line+"\n"), 0600); err != nil {
+			if err := os.WriteFile(
+				filepath.Join(dir, "forward.log"),
+				[]byte(tt.line+"\n"),
+				0o600,
+			); err != nil {
 				t.Fatal(err)
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			command := exec.CommandContext(ctx, "bash", "-c",
+			command := exec.CommandContext(
+				ctx,
+				"bash",
+				"-c",
 				`set -euo pipefail; work_deadline=$((SECONDS+60)); test_dir=$1; started_at=$SECONDS; source "$2"; registry_target_port=8082; registry_forward_pid=`+tt.pid+`; registry_forward_ready; test "$registry_port" = 43127`,
-				"forward-test", dir, helper)
+				"forward-test",
+				dir,
+				helper,
+			)
 			output, err := command.CombinedOutput()
 			if ctx.Err() != nil || (err == nil) != tt.wantSuccess {
 				t.Fatalf("success = %v, want %v: %s", err == nil, tt.wantSuccess, output)
@@ -54,7 +64,11 @@ func TestRegistryForwardDiscardsPreviousListener(t *testing.T) {
 		t.Fatal(err)
 	}
 	dir := t.TempDir()
-	if err = os.WriteFile(filepath.Join(dir, "forward.log"), []byte("Forwarding from 127.0.0.1:43127 -> 8082\n"), 0600); err != nil {
+	if err = os.WriteFile(
+		filepath.Join(dir, "forward.log"),
+		[]byte("Forwarding from 127.0.0.1:43127 -> 8082\n"),
+		0o600,
+	); err != nil {
 		t.Fatal(err)
 	}
 	stub := `#!/usr/bin/env bash
@@ -63,7 +77,7 @@ sleep 0.15
 printf '%s\n' 'Forwarding from 127.0.0.1:45209 -> 8082'
 sleep 10
 `
-	if err = os.WriteFile(filepath.Join(dir, "kubectl"), []byte(stub), 0700); err != nil {
+	if err = os.WriteFile(filepath.Join(dir, "kubectl"), []byte(stub), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

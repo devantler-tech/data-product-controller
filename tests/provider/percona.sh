@@ -193,9 +193,9 @@ rules:
     users: [system:serviceaccount:products:dpc]
     resources:
       - group: psmdb.percona.com
-        resources: [perconaservermongodbs]
+        resources: [perconaservermongodbs, perconaservermongodbs/*]
       - group: ""
-        resources: [secrets]
+        resources: [secrets, secrets/*]
   - level: None
 YAML
 bounded ksail project init --name "$cluster_name" --distribution Vanilla --provider Docker \
@@ -454,5 +454,6 @@ for marker in synthetic-reader-original synthetic-reader-replacement synthetic-w
 		exit 1
 	fi
 done
+require_read_only_source_audit '[{"group":"psmdb.percona.com","resource":"perconaservermongodbs","name":"documents"},{"group":"","resource":"secrets","name":"documents-reader"}]'
 echo 'PASS: complete real Percona query, privilege and lifecycle acceptance'
 bounded docker stats --no-stream --format 'Owned cluster CPU={{.CPUPerc}} memory={{.MemUsage}}' "$control_node"

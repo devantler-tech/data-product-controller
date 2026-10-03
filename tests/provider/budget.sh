@@ -47,6 +47,14 @@ require_audit_server() {
 	echo 'PASS: running API server writes audit events using the exact acceptance policy'
 }
 
+# Inspect the complete run, including denied attempts, after positively observing reads.
+require_read_only_source_audit() {
+	local expected=$1
+	bounded docker exec "$control_node" cat /audit/log.json |
+		jq -se --argjson expected "$expected" -f "$repo_root/tests/provider/audit-read-only.jq" >/dev/null || return 1
+	echo 'PASS: controller audit contains only declared object GETs and zero source mutation attempts'
+}
+
 # Retry one observation until success or the phase deadline, retaining failure diagnostics.
 wait_for() {
 	local description=$1

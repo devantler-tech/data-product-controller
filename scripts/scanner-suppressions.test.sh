@@ -6,6 +6,7 @@ mega_config="$repo_root/.mega-linter.yml"
 chart="$repo_root/charts/data-product-controller"
 trivy_ignore="$repo_root/.trivyignore.yaml"
 
+# fail rejects a scanner exception outside its reviewed contract.
 fail() {
 	printf '%s\n' "scanner suppression test failed: $1" >&2
 	exit 1

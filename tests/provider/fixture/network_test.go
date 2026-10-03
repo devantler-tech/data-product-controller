@@ -37,9 +37,11 @@ func TestNetworkDenialRequiresTimeout(t *testing.T) {
 
 // TestNetworkDenialRejectsHTTPResponseTimeout exercises an established connection that stalls.
 func TestNetworkDenialRejectsHTTPResponseTimeout(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
-		<-request.Context().Done()
-	}))
+	server := httptest.NewServer(
+		http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+			<-request.Context().Done()
+		}),
+	)
 	t.Cleanup(server.Close)
 	transport := probeTransport(nil)
 	t.Cleanup(transport.CloseIdleConnections)
