@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"unicode"
 )
 
 // registryJSON rejects duplicate fields before struct decoding could replace them.
@@ -21,6 +22,7 @@ func registryJSON(body []byte) error {
 	return nil
 }
 
+// registryJSONValue checks every object's field names within the nesting bound.
 func registryJSONValue(decoder *json.Decoder, depth int) error {
 	if depth > 64 {
 		return errors.New("registry JSON exceeds nesting bound")
@@ -42,8 +44,7 @@ func registryJSONValue(decoder *json.Decoder, depth int) error {
 			if keyErr != nil || !valid {
 				return errors.New("registry JSON field unavailable")
 			}
-			// Struct decoding treats these names case-insensitively.
-			field = strings.ToLower(field)
+			field = registryJSONField(field)
 			if _, duplicate := seen[field]; duplicate {
 				return errors.New("registry JSON contains ambiguous fields")
 			}
@@ -63,4 +64,17 @@ func registryJSONValue(decoder *json.Decoder, depth int) error {
 	}
 	_, err = decoder.Token()
 	return err
+}
+
+// registryJSONField uses the same Unicode simple-fold equivalence as encoding/json.
+func registryJSONField(field string) string {
+	return strings.Map(func(character rune) rune {
+		for {
+			next := unicode.SimpleFold(character)
+			if next <= character {
+				return next
+			}
+			character = next
+		}
+	}, field)
 }
