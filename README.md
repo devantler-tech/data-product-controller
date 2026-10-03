@@ -24,7 +24,7 @@ The current foundation provides:
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
 - an opt-in, Secret-backed HTTPS JSON export connector with a read-only API, OpenAPI contract, probes, and metrics;
-- a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing.
+- a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing. Leader election uses release-local Leases and core Event create/patch permissions; it grants no cluster-wide Event access.
 
 Tagged releases publish the Helm chart plus a controller image and manifest artifact signed by the portfolio's trusted keyless release workflow. Platform deployments should pin the released chart and immutable image digest.
 
