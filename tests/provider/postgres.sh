@@ -24,22 +24,27 @@ age_release=__AGE_RELEASE_TAG__
 age_publisher=__AGE_PUBLISHER_SHA__
 operator_image=ghcr.io/cloudnative-pg/cloudnative-pg:1.30.1@sha256:923c267ec29636db3bee20f993d0ec4973fa22998e1adad37da79e4d32b5bc07
 
+# query_model runs the independent consumer assertion for one published data model.
 query_model() {
 	local model=$1
 	shift
 	kube exec postgres-consumer -- env "POSTGRES_MODEL=$model" /fixture postgres-probe "$@"
 }
+# query_all checks the persisted SQL, JSONB and AGE query results.
 query_all() {
 	local model
 	for model in sql document graph; do query_model "$model" || return 1; done
 }
+# database_ready requires actual operator instances and a settled primary.
 database_ready() {
 	kube get cluster warehouse -o json | jq -e '
     .status.instances == 1 and .status.readyInstances == 1 and
     .status.currentPrimary != "" and .status.currentPrimary == .status.targetPrimary and
     any(.status.conditions[]?; .type == "Ready" and .status == "True")' >/dev/null
 }
+# publication_names lists the three independent publication names without credential data.
 publication_names() { printf '%s\n' warehouse-app warehouse-document-reader warehouse-graph-reader; }
+# bind_hybrid_publications binds current source identity and generation to verified model capabilities.
 bind_hybrid_publications() {
 	local uid generation model
 	uid=$(kube get cluster warehouse -o jsonpath='{.metadata.uid}')
@@ -60,6 +65,7 @@ bind_hybrid_publications() {
           "data.devantler.tech/cnpg-hybrid-graph":"lineage"}}}')" >/dev/null
 	done
 }
+# matrix_ready checks current conditions and registry readiness for the complete model matrix.
 matrix_ready() {
 	local status=$1 reason=${2:-} model name
 	for model in sql document graph; do
@@ -78,6 +84,7 @@ matrix_ready() {
 	jq -e --argjson ready "$(if [[ $status == True ]]; then echo true; else echo false; fi)" '
     .products | length==3 and (map(.id)|sort)==["urn:example:postgres-document","urn:example:postgres-graph","urn:example:postgres-sql"] and all(.[]; .ready==$ready)' "$test_dir/registry.json" >/dev/null
 }
+# hybrid_unavailable checks a named hybrid failure in current conditions and the served registry.
 hybrid_unavailable() {
 	local model=$1 reason=$2
 	kube get dataproduct "postgres-$model-product" -o json >"$test_dir/hybrid-failure.json" || return 1
@@ -88,6 +95,7 @@ hybrid_unavailable() {
 	cat "$test_dir/registry.json" >>"$test_dir/registry-seen.jsonl"
 	jq -e --arg id "urn:example:postgres-$model" '.products | length==3 and any(.[]; .id==$id and .ready==false)' "$test_dir/registry.json" >/dev/null
 }
+# retained_identities captures source, credential and storage UIDs without reading Secret data.
 retained_identities() {
 	kube get cluster,secret,pvc -o json | jq -ceS '[.items[] | select(
     (.kind=="Cluster" and .metadata.name=="warehouse") or .kind=="PersistentVolumeClaim" or
