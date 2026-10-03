@@ -14,6 +14,7 @@ for executable in gcc make; do
 done
 export PGDATA=/tmp/age-acceptance
 mkdir "$PGDATA"
+# cleanup stops the disposable PostgreSQL server on every exit.
 cleanup() { pg_ctl -D "$PGDATA" -m immediate -w stop >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 initdb -D "$PGDATA" --no-sync --encoding=UTF8 --locale=C.UTF-8 --auth-local=trust --auth-host=scram-sha-256 >/dev/null
@@ -22,10 +23,12 @@ if ! pg_ctl -D "$PGDATA" -l /tmp/postgres.log -w -t 30 start \
 	cat /tmp/postgres.log >&2
 	exit 1
 fi
+# admin runs bootstrap and server checks over the local superuser socket.
 admin() { psql -X -q -v ON_ERROR_STOP=1 -h /tmp -U postgres -d postgres "$@"; }
 [[ $(admin -At -c 'SHOW shared_preload_libraries') == age ]]
 admin -f /acceptance/age-image.sql >/dev/null
 export PGPASSWORD=synthetic-age-reader
+# reader runs authenticated TCP queries through the restricted AGE reader role.
 reader() { psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -U age_reader -d postgres "$@"; }
 [[ $(reader -At -f /acceptance/age-image-reader.sql) == 1 ]]
 for sql in \

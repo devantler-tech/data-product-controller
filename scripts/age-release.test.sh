@@ -5,6 +5,7 @@ repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 ci="$repo_root/.github/workflows/ci.yaml"
 cd="$repo_root/.github/workflows/cd.yaml"
 publisher="$repo_root/.github/workflows/publish-age.yaml"
+# fail rejects a violated AGE publication contract.
 fail() {
 	printf 'AGE release contract failed: %s\n' "$1" >&2
 	exit 1
