@@ -156,13 +156,16 @@ func main() {
 		setupLog.Error(err, "create engine provider reader")
 		os.Exit(1)
 	}
-	controllerManager, err := ctrl.NewManager(managerConfig, ctrl.Options{
-		Scheme:                 scheme,
-		Metrics:                metricsserver.Options{BindAddress: metricsAddress},
-		HealthProbeBindAddress: probeAddress,
-		LeaderElection:         leaderElection,
-		LeaderElectionID:       "data-product-controller.data.devantler.tech",
-	})
+	controllerManager, err := ctrl.NewManager(
+		providerv1.MetadataOnlyConfig(managerConfig),
+		ctrl.Options{
+			Scheme:                 scheme,
+			Metrics:                metricsserver.Options{BindAddress: metricsAddress},
+			HealthProbeBindAddress: probeAddress,
+			LeaderElection:         leaderElection,
+			LeaderElectionID:       "data-product-controller.data.devantler.tech",
+		},
+	)
 	if err != nil {
 		setupLog.Error(err, "create controller manager")
 		os.Exit(1)

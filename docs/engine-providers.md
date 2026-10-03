@@ -56,7 +56,7 @@ provider messages into product status. Aggregate readiness also requires the pro
 declared dependencies. Typed observation uses a fixed resource mapping, fresh exact-name reads, a five-second deadline and
 30-second polling; unchanged observations do not rewrite status.
 
-The engine reader negotiates only single-object partial metadata for application Secrets.
+Engine and legacy source readers negotiate only single-object partial metadata for application Secrets.
 Servers that cannot provide that representation fail observation with `SourceUnavailable`;
 the client never negotiates a full-Secret fallback. Kubernetes still authorizes the complete
 Secret GET, so exact-name RBAC remains required. Normal source-object reads retain their full

@@ -4,9 +4,20 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+
+	"k8s.io/client-go/rest"
 )
 
 const metadataOnlyAccept = "application/vnd.kubernetes.protobuf;as=PartialObjectMetadata;g=meta.k8s.io;v=v1,application/json;as=PartialObjectMetadata;g=meta.k8s.io;v=v1"
+
+// MetadataOnlyConfig prevents full-object fallback for metadata GETs without changing caller settings.
+func MetadataOnlyConfig(config *rest.Config) *rest.Config {
+	copy := rest.CopyConfig(config)
+	copy.Wrap(func(next http.RoundTripper) http.RoundTripper {
+		return metadataOnlyTransport{next: next}
+	})
+	return copy
+}
 
 // metadataOnlyTransport removes client-go's full-object fallback from single-object metadata GETs.
 // Source GETs retain their normal representation. Unsupported metadata negotiation fails closed.

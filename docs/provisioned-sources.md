@@ -107,6 +107,8 @@ roleRef:
 Kubernetes authorizes a Secret `get` even when the client requests metadata only; RBAC does not
 restrict the response to metadata. Keep these grants narrow. The controller uses uncached metadata
 requests and publishes neither Secret references nor credential values through the public registry.
+It negotiates only partial-object metadata for a connection Secret. If the API cannot provide that
+representation, observation reports `SourceUnavailable` instead of requesting a complete Secret.
 
 ## Readiness and lifecycle
 
