@@ -28,7 +28,7 @@ jobs:
       contents: read # Build the tagged release source.
       packages: write # Publish only the independently versioned AGE image.
       id-token: write # Sign that artifact with the immutable publisher identity.
-    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@4a2570c98423a49d2aea00b84576065a64854180
+    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@86f0f95e5ac93ec914f5717f561af878b7d09bf1
 
   smoke:
     name: Verify published DSP exporter
