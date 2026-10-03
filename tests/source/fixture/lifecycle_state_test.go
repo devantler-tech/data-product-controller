@@ -83,6 +83,7 @@ func TestLifecycleRolloutRejectsOldServingCapacity(t *testing.T) {
 	}
 }
 
+// lifecycleFilter evaluates the actual harness predicate against one locally authored resource snapshot.
 func lifecycleFilter(t *testing.T, input string, args ...string) (string, error) {
 	t.Helper()
 	filter, err := filepath.Abs("../lifecycle-state.jq")

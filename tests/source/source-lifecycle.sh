@@ -2,6 +2,7 @@
 # Functions for the owned disposable installed-release coordinator.
 : "${repo_root:?run through the installed-release coordinator}" "${test_dir:?integration scratch directory is required}"
 
+# lifecycle_begin admits only the owned fixture and sets phase limits within the shared and absolute deadlines.
 lifecycle_begin() {
 	[[ ${cluster_started:-false} == true && ${source_started:-false} == true &&
 		${cluster_name:-} == dpc-e2e-* && ${source_container:-} == "$cluster_name-source" &&
@@ -18,6 +19,7 @@ lifecycle_begin() {
 	echo "PHASE: $1"
 }
 
+# lifecycle_wait retries an assertion through the coordinator without extending the current phase budget.
 lifecycle_wait() {
 	local description=$1 timeout=$2 remaining=$((lifecycle_deadline - SECONDS))
 	shift 2
@@ -29,6 +31,7 @@ lifecycle_wait() {
 	wait_for "$description" "$timeout" "$@"
 }
 
+# lifecycle_phase emits a precise observation boundary, or a conservative future second when nanoseconds are unavailable.
 lifecycle_phase() {
 	local timestamp seconds
 	timestamp=$(date +%s.%N) || return 1
@@ -42,6 +45,7 @@ lifecycle_phase() {
 	fi
 }
 
+# lifecycle_metrics requires a completed observation after the supplied boundary from the selected management Service.
 lifecycle_metrics() {
 	local kind=$1 ready=$2 since=$3 address
 	case "$kind" in
@@ -52,17 +56,20 @@ lifecycle_metrics() {
 	kube exec consumer -- /fixture metrics --url "$address" --kind "$kind" --ready "$ready" --since "$since" --timeout 10s
 }
 
+# lifecycle_rollout checks the named Deployment's current generation against the requested full, partial or zero state.
 lifecycle_rollout() {
 	kube get "deployment/$1" -o json | jq -e -f "$repo_root/tests/source/lifecycle-state.jq" \
 		--arg mode "$2" --arg name "$1" --argjson previous "${3:-0}" >/dev/null
 }
 
+# lifecycle_contract_healthy requires independent contract readiness for the product's current generation.
 lifecycle_contract_healthy() {
 	kube get dataproduct existing-export -o json | jq -e '
     . as $p | any(.status.conditions[]?; .type == "ContractsReady" and .status == "True" and
       .observedGeneration == $p.metadata.generation)' >/dev/null
 }
 
+# source_lifecycle_run exercises access, outages, projected credentials and release gates, then restores the initial credential pair.
 source_lifecycle_run() {
 	lifecycle_begin 'installed HTTP source lifecycle' 900 || return 1
 	lifecycle_wait 'authorized consumer reads the export' 120 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
@@ -124,6 +131,7 @@ source_lifecycle_run() {
 	lifecycle_wait 'restored source remains fully ready' 240 readiness True true
 }
 
+# source_lifecycle_rollback_check requires working exports, fresh source observations and retained ownership after Helm rollback.
 source_lifecycle_rollback_check() {
 	lifecycle_begin 'HTTP source after installed rollback' 120 || return 1
 	local phase
@@ -136,6 +144,7 @@ source_lifecycle_rollback_check() {
 	source_lifecycle_retention_check
 }
 
+# source_lifecycle_retention_capture records independent workload, Secret and container identities before destructive product transitions.
 source_lifecycle_retention_capture() {
 	lifecycle_product_uid=$(kube get dataproduct existing-export -o json | jq -er '.metadata.uid | select(type == "string" and length > 0)')
 	source_lifecycle_uids=$(kube get deployment/dpc-http-source secret/existing-export -o json | jq -ceS \
@@ -145,6 +154,7 @@ source_lifecycle_retention_capture() {
 	[[ -n "$source_lifecycle_container_id" ]]
 }
 
+# source_lifecycle_retention_check rejects replacement, deletion or product adoption and confirms that the retained export still serves.
 source_lifecycle_retention_check() {
 	local current
 	current=$(kube get deployment/dpc-http-source secret/existing-export -o json | jq -ceS \

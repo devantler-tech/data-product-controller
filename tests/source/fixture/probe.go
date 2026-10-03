@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// newClient bounds fixture requests and preserves TLS validation without redirects, ambient proxies or decompression.
 func newClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout: timeout,
@@ -34,6 +35,7 @@ func newClient(timeout time.Duration) *http.Client {
 	}
 }
 
+// probe checks one bounded response or a transport denial, optionally requiring an exact registry product state.
 func probe(ctx context.Context, args []string) error {
 	flags := flag.NewFlagSet("probe", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -133,11 +135,13 @@ func probe(ctx context.Context, args []string) error {
 	return nil
 }
 
+// registryIdentity requires one bounded namespace/name pair with both components present.
 func registryIdentity(identity string) bool {
 	return len(identity) <= 512 && strings.Count(identity, "/") == 1 &&
 		!strings.HasPrefix(identity, "/") && !strings.HasSuffix(identity, "/")
 }
 
+// verifyRegistryAbsent requires a valid bounded inventory whose complete identities exclude the selected product.
 func verifyRegistryAbsent(body []byte, identity string) error {
 	if err := registryJSON(body); err != nil {
 		return err
@@ -167,6 +171,7 @@ func verifyRegistryAbsent(body []byte, identity string) error {
 	return nil
 }
 
+// verifyRegistryProduct requires exactly one selected descriptor with matching readiness and, when supplied, reason.
 func verifyRegistryProduct(body []byte, identity string, ready bool, reason string) error {
 	if err := registryJSON(body); err != nil {
 		return err

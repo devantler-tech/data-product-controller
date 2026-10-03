@@ -3,6 +3,7 @@
 : "${repo_root:?owned coordinator required}" "${test_dir:?owned scratch directory required}"
 : "${cluster_context:?owned cluster required}" "${product_digest:?immutable candidate required}" "${candidate_chart:?packaged candidate required}"
 
+# matrix_observation joins immutable workload identity, current product conditions and both serving registry replicas for one phase.
 matrix_observation() {
 	local phase=$1 image=$2 runtime=$3
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
@@ -17,6 +18,7 @@ matrix_observation() {
 	registry_replicas_ready
 }
 
+# installed_lifecycle_matrix runs candidate faults, a stored released rollback and candidate restoration before testing product deletion.
 installed_lifecycle_matrix() {
 	local baseline_image baseline_runtime baseline_revision candidate_image candidate_version
 	baseline_image="ghcr.io/devantler-tech/data-product-controller@$(jq -er '.imageDigest' "$test_dir/baseline/release.json")"

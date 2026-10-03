@@ -2,6 +2,7 @@
 : "${repo_root:?run through the installed-release coordinator}" "${test_dir:?integration scratch directory is required}" "${source_container:?owned source fixture is required}"
 # The independent TLS publication fails without changing the authenticated source.
 
+# contract_matrix_run exercises independent probe failures, bindings, permissions and flags, leaving the declared check healthy.
 contract_matrix_run() {
 	lifecycle_begin 'installed independent contract matrix' 480 || return 1
 	jq --arg cidr "$DPC_SOURCE_IP/32" '.contractProbe={enabled:true,
@@ -60,6 +61,7 @@ contract_matrix_run() {
 	lifecycle_wait 'installed release retains healthy independent contracts' 180 contract_readiness True ContractsReady
 }
 
+# contract_disabled_probe tests the disabled replica directly so an older serving Pod cannot conceal its behavior.
 contract_disabled_probe() {
 	local address
 	address=$(kube get pods -l app.kubernetes.io/component=contract-probe -o json | jq -er '
@@ -69,6 +71,7 @@ contract_disabled_probe() {
 	probe --url "http://$address:8081/readyz" --want-status 503 --contains FeatureDisabled
 }
 
+# contract_matrix_rollback_check requires fresh contract observations and the original independent probe after rollback.
 contract_matrix_rollback_check() {
 	lifecycle_begin 'contract reachability after installed rollback' 120 || return 1
 	local phase
@@ -80,6 +83,7 @@ contract_matrix_rollback_check() {
 	contract_matrix_retention_check
 }
 
+# contract_matrix_retention_capture records an independently owned, nondeleting probe UID for later comparisons.
 contract_matrix_retention_capture() {
 	lifecycle_product_uid=$(kube get dataproduct existing-export -o json | jq -er '.metadata.uid | select(type == "string" and length > 0)')
 	contract_matrix_uids=$(kube get deployment/dpc-contract-probe -o json | jq -ceS \
@@ -87,6 +91,7 @@ contract_matrix_retention_capture() {
 		--argjson wanted '[{"kind":"Deployment","name":"dpc-contract-probe"}]')
 }
 
+# contract_matrix_retention_check requires the original nondeleting probe with no owner reference to the selected product.
 contract_matrix_retention_check() {
 	local current
 	current=$(kube get deployment/dpc-contract-probe -o json | jq -ceS \

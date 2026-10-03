@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestProbeRequiresExactRegistryAbsence rejects malformed inventories and decoys that could hide the selected product.
 func TestProbeRequiresExactRegistryAbsence(t *testing.T) {
 	for _, tc := range []struct {
 		name, body string

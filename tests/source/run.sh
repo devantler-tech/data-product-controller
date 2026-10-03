@@ -24,6 +24,7 @@ source_started=false
 started_at=$SECONDS
 integration_deadline=$((started_at + 2700))
 
+# cleanup removes this run's source and cluster, preserving failure status and emitting only selected fixture diagnostics.
 cleanup() {
 	result=$?
 	trap - EXIT INT TERM
@@ -50,6 +51,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# wait_for retries one assertion until its allowance or the absolute integration deadline expires.
 wait_for() {
 	local description=$1 timeout=$2
 	shift 2
@@ -73,8 +75,11 @@ wait_for() {
 	done
 }
 
+# kube scopes requests to the fixture namespace and bounds each API request.
 kube() { kubectl --request-timeout=15s -n products "$@"; }
+# probe makes a bounded request from the authorized consumer so assertions exercise cluster networking.
 probe() { kube exec consumer -- /fixture probe --timeout 10s "$@"; }
+# registry_ready selects one exact fixture descriptor instead of accepting another product's readiness.
 registry_ready() { probe --url http://dpc/api/v1/products --registry-product "products/${2:-existing-export}" --registry-ready "$1"; }
 # Probe every endpoint directly: a successful Service request can hide a non-serving follower.
 registry_replicas_ready() {
@@ -101,6 +106,7 @@ registry_replicas_ready() {
 		probe --url "http://$address:8082/api/v1/ui-config" --contains '"uiContractEnabled":false,"uiAppearanceEnabled":false' || return 1
 	done <<<"$addresses"
 }
+# conditions requires both connector and aggregate conditions to match the product's current generation.
 conditions() {
 	local status=$1 reason=${2:-}
 	kube get dataproduct existing-export -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -109,9 +115,11 @@ conditions() {
       select(.status == $status and .observedGeneration == $product.metadata.generation and
         ($reason == "" or .reason == $reason))] | length == 2' >/dev/null
 }
+# readiness joins Kubernetes conditions with the selected registry descriptor's reported readiness.
 readiness() {
 	conditions "$1" "${3:-}" && registry_ready "$2"
 }
+# source_secret updates only the synthetic projected credential while keeping the fixture's HTTPS endpoint fixed.
 source_secret() {
 	jq -n --arg token "$1" '{endpointURL:"https://source.products.svc.cluster.local/export",bearerToken:$token}' \
 		>"$test_dir/config.json"
@@ -122,10 +130,12 @@ source "$repo_root/tests/source/helm-lifecycle.sh"
 source "$repo_root/tests/source/source-lifecycle.sh"
 source "$repo_root/tests/source/contract-matrix.sh"
 source "$repo_root/tests/source/connector-matrix.sh"
+# source_pod returns the sole nondeleting connector Pod UID, rejecting ambiguous rollout states.
 source_pod() {
 	kube get pods -l app.kubernetes.io/component=http-source -o json |
 		jq -er '.items | map(select(.metadata.deletionTimestamp == null)) | if length == 1 then .[0].metadata.uid else error("expected one connector Pod") end'
 }
+# contract_readiness requires a healthy connector alongside matching current contract, aggregate and registry readiness.
 contract_readiness() {
 	local status=$1 reason=$2
 	kube get dataproduct existing-export -o json | jq -e --arg status "$status" --arg reason "$reason" '
@@ -136,6 +146,7 @@ contract_readiness() {
     any(.status.conditions[]?; .type == "ContractsReady" and .reason == $reason)' >/dev/null &&
 		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)"
 }
+# independent_resource_uids records the existing connector and Secret only when neither is deleting or owned by the product.
 independent_resource_uids() {
 	kube get deployment/dpc-http-source secret/existing-export -o json |
 		jq -ceS --arg product_uid "$1" '
@@ -145,6 +156,7 @@ independent_resource_uids() {
     then [.items[] | {key: (.kind + "/" + .metadata.name), value: .metadata.uid}] | from_entries
     else error("connector and credentials must exist independently of the product without pending deletion") end'
 }
+# disabled_export targets a disabled replica directly and requires refusal on both data and readiness endpoints.
 disabled_export() {
 	local address
 	address=$(kube get pods -l app.kubernetes.io/component=http-source -o json | jq -er '

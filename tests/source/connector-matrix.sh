@@ -2,6 +2,7 @@
 : "${test_dir:?integration scratch directory is required}"
 # Real Deployment transitions; the controller only observes the installed workload.
 
+# connector_matrix_run proves that capacity, rollouts, access and flags control readiness while the independent contract stays healthy.
 connector_matrix_run() {
 	lifecycle_begin 'installed connector readiness matrix' 480 || return 1
 	lifecycle_wait 'independent contract is healthy before connector failures' 120 lifecycle_contract_healthy
@@ -44,6 +45,7 @@ connector_matrix_run() {
 	echo 'PASS: connector failures preserve independent contract readiness'
 }
 
+# connector_matrix_rollback_check requires complete current connector capacity and independent contract health after rollback.
 connector_matrix_rollback_check() {
 	lifecycle_begin 'connector readiness after installed rollback' 90 || return 1
 	lifecycle_wait 'rollback restores full current-generation connector capacity' 90 lifecycle_rollout dpc-http-source full
