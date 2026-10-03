@@ -60,7 +60,7 @@ func TestPostgresConsumerExecutesFixtureDirectly(t *testing.T) {
 	command := exec.CommandContext(ctx, "bash", "-c", `set -euo pipefail
 kube() {
 	[[ $1 == exec && $2 == postgres-consumer && $3 == -- && $4 == /fixture &&
-	   $5 == postgres-probe && $6 == "$expected_model" && ${7:-} == "$expected_mode" ]]
+		$5 == postgres-probe && $6 == "$expected_model" && ${7:-} == "$expected_mode" ]]
 }
 `+"\nquery_model() {\n"+helper+"\n}\n"+`
 for expected_model in sql document graph; do

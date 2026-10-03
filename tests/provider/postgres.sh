@@ -228,13 +228,18 @@ yq 'with(select(.kind=="Role"); .rules[1].resourceNames=["warehouse-app","wareho
 bind_hybrid_publications
 for model in sql document graph; do
 	export DPC_POSTGRES_MODEL=$model
+	case "$model" in
+	sql) export DPC_POSTGRES_PATH=/api/rows ;;
+	document) export DPC_POSTGRES_PATH=/api/documents ;;
+	graph) export DPC_POSTGRES_PATH=/api/lineage ;;
+	esac
 	yq '.metadata.name="postgres-"+strenv(DPC_POSTGRES_MODEL)+"-product" |
     .spec.id="urn:example:postgres-"+strenv(DPC_POSTGRES_MODEL) |
     .spec.name="PostgreSQL "+strenv(DPC_POSTGRES_MODEL) |
     .spec.source.engine.type=strenv(DPC_POSTGRES_MODEL) |
     .spec.outputs[0].url="https://postgres-query-"+strenv(DPC_POSTGRES_MODEL)+".products.svc.cluster.local:8443" |
-    .spec.outputs[0].contractUrl=.spec.outputs[0].url+"/openapi.json" |
-    .spec.outputs[0].url += (if strenv(DPC_POSTGRES_MODEL)=="sql" then "/api/rows" elif strenv(DPC_POSTGRES_MODEL)=="document" then "/api/documents" else "/api/lineage" end) |
+    .spec.outputs[0].contractUrl="https://postgres-query-"+strenv(DPC_POSTGRES_MODEL)+".products.svc.cluster.local:8443/openapi.json" |
+    .spec.outputs[0].url += strenv(DPC_POSTGRES_PATH) |
     with(select(strenv(DPC_POSTGRES_MODEL)!="sql"); .spec.source.adapter="cnpg-hybrid/v1" |
       .spec.source.engine.provider="cnpg-hybrid" | .spec.source.connectionSecretRef.name="warehouse-"+strenv(DPC_POSTGRES_MODEL)+"-reader")' \
 		"$repo_root/docs/examples/sql-provider-product.yaml" | kube apply -f - >/dev/null
