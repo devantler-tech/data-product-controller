@@ -39,7 +39,7 @@ operator_image=ghcr.io/cloudnative-pg/cloudnative-pg:1.30.1@sha256:923c267ec2963
 query_model() {
 	local model=$1
 	shift
-	kube exec postgres-consumer -- env "POSTGRES_MODEL=$model" /fixture postgres-probe "$@"
+	kube exec postgres-consumer -- /fixture postgres-probe "$model" "$@"
 }
 # query_all checks the persisted SQL, JSONB and AGE query results.
 query_all() {
@@ -202,7 +202,7 @@ yq 'select(.kind=="Pod") | .spec.containers[].image=strenv(DPC_FIXTURE_IMAGE)' "
 kube apply -f "$repo_root/tests/provider/postgres-network-policy.yaml" >/dev/null
 bounded kubectl --request-timeout=0 -n products wait --for=condition=Ready pod/postgres-writer pod/postgres-consumer --timeout="$(remaining)s"
 for model in sql document graph; do
-	kube exec postgres-writer -- env "POSTGRES_MODEL=$model" /fixture postgres-seed
+	kube exec postgres-writer -- /fixture postgres-seed "$model"
 	wait_for "$model query returns independently seeded persistent records through verified HTTPS" query_model "$model"
 	kube exec "deployment/postgres-query-$model" -- /fixture postgres-privileges
 	query_model "$model" contract

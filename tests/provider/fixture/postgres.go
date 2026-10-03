@@ -270,14 +270,13 @@ func postgresSeed(model string) error {
 }
 
 // postgresProbe requires the published HTTPS query and model contract, with distinct isolation and outage evidence.
-func postgresProbe(model string) error {
+func postgresProbe(model, mode string) error {
 	path, field := postgresQueryRoute(model)
 	if path == "" {
 		return errors.New("unsupported query model")
 	}
-	mode := ""
-	if len(os.Args) > 2 {
-		mode = os.Args[2]
+	if mode != "" && mode != "contract" && mode != "denied" && mode != "outage" {
+		return errors.New("unsupported PostgreSQL probe mode")
 	}
 	if mode == "contract" {
 		path = "/openapi.json"
@@ -342,6 +341,18 @@ func postgresProbe(model string) error {
 // postgresRun keeps query, writer and assertion modes explicit in the independent fixture.
 func postgresRun(mode string) error {
 	model := os.Getenv("POSTGRES_MODEL")
+	probeMode := ""
+	if mode == "postgres-seed" || mode == "postgres-probe" {
+		if len(os.Args) < 3 {
+			return errors.New("PostgreSQL model argument required")
+		}
+		model = os.Args[2]
+		if mode == "postgres-probe" && len(os.Args) == 4 {
+			probeMode = os.Args[3]
+		} else if len(os.Args) != 3 {
+			return errors.New("unsupported PostgreSQL command arguments")
+		}
+	}
 	path, _ := postgresQueryRoute(model)
 	if path == "" {
 		return errors.New("unsupported PostgreSQL model")
@@ -356,7 +367,7 @@ func postgresRun(mode string) error {
 	case "postgres-seed":
 		return postgresSeed(model)
 	case "postgres-probe":
-		return postgresProbe(model)
+		return postgresProbe(model, probeMode)
 	case "postgres-serve":
 		server := &http.Server{
 			Addr: ":8443",
