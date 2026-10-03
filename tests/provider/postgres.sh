@@ -315,6 +315,6 @@ for marker in synthetic-postgres persistent-row persistent-jsonb private-exclude
 		exit 1
 	fi
 done
-require_read_only_source_audit
+require_read_only_source_audit '[{"group":"postgresql.cnpg.io","resource":"clusters","name":"warehouse"},{"group":"","resource":"secrets","name":"warehouse-app"},{"group":"","resource":"secrets","name":"warehouse-document-reader"},{"group":"","resource":"secrets","name":"warehouse-graph-reader"}]'
 echo 'PASS: real native SQL, hybrid JSONB and hybrid AGE query, grant, rotation and retained lifecycle acceptance'
 bounded docker stats --no-stream --format 'Owned cluster CPU={{.CPUPerc}} memory={{.MemUsage}}' "$control_node"
