@@ -70,9 +70,13 @@ kube() {
 		}
 		base := "https://postgres-query-" + model + ".products.svc.cluster.local:8443"
 		source := product.Spec.Source
-		if product.Metadata.Name != "postgres-"+model+"-product" || product.Spec.ID != "urn:example:postgres-"+model ||
-			source.Adapter != adapter || source.Engine.Provider != provider || source.Engine.Type != model ||
-			source.Engine.APIVersion != "engine-provider/v1" || source.ConnectionSecretRef.Name != publication ||
+		if product.Metadata.Name != "postgres-"+model+"-product" ||
+			product.Spec.ID != "urn:example:postgres-"+model ||
+			source.Adapter != adapter ||
+			source.Engine.Provider != provider ||
+			source.Engine.Type != model ||
+			source.Engine.APIVersion != "engine-provider/v1" ||
+			source.ConnectionSecretRef.Name != publication ||
 			source.ResourceRef.APIVersion != "postgresql.cnpg.io/v1" ||
 			source.ResourceRef.Kind != "Cluster" ||
 			source.ResourceRef.Name != "warehouse" ||
