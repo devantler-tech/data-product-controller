@@ -1,0 +1,18 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: scalar
+  namespace: products
+  generation: 9007199254740993
+spec:
+  id: urn:example:scalar
+  name: "yes"
+  description: 2026-10-03
+  version: v1.0.0
+  owner:
+    name: Example
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://api.example.test/observations
+      contractUrl: https://api.example.test/openapi.json

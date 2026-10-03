@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubeyaml "sigs.k8s.io/yaml"
 )
 
 // These fixtures assert author-visible results, independently of validator internals.
@@ -586,25 +588,7 @@ func TestCompleteReportBudget(t *testing.T) {
 
 func TestYAMLScalarPublication(t *testing.T) {
 	t.Parallel()
-	input := `apiVersion: data.devantler.tech/v1alpha1
-kind: DataProduct
-metadata:
-  name: scalar
-  namespace: products
-  generation: 9007199254740993
-spec:
-  id: urn:example:scalar
-  name: yes
-  description: 2026-10-03
-  version: v1.0.0
-  owner:
-    name: Example
-  outputs:
-    - name: observations
-      protocol: OpenAPI
-      url: https://api.example.test/observations
-      contractUrl: https://api.example.test/openapi.json
-`
+	input := scalarFixture(t)
 	documents, code, _ := readDocuments(strings.NewReader(input))
 	if code != "" || len(documents) != 1 {
 		t.Fatalf("scalar declarations rejected: %s", code)
@@ -617,5 +601,139 @@ spec:
 	r := check(t, input)
 	if !r.Valid || !r.Complete || len(r.Descriptors) != 1 {
 		t.Fatalf("scalar publication failed: %+v", r)
+	}
+}
+
+func TestKubernetesYAMLScalarParity(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, scalar, description string }{
+		{"plain yes", "yes", "Observations"},
+		{"plain no", "no", "Observations"},
+		{"plain on", "On", "Observations"},
+		{"plain off", "OFF", "Observations"},
+		{"plain y", "Y", "Observations"},
+		{"plain n", "n", "Observations"},
+		{"mixed-case yes string", "yEs", "Observations"},
+		{"mixed-case on string", "oN", "Observations"},
+		{"mixed-case no string", "nO", "Observations"},
+		{"quoted yes", `"yes"`, "Observations"},
+		{"tagged string", "!!str yes", "Observations"},
+		{"non-specific boolean string", "! yes", "Observations"},
+		{"non-specific number string", "! 42", "Observations"},
+		{"non-specific date string", "Example", "! 2026-10-03"},
+		{"tagged boolean", "!!bool yes", "Observations"},
+		{"quoted tagged boolean", `!!bool "yes"`, "Observations"},
+		{"invalid tagged boolean", "!!bool yEs", "Observations"},
+		{"plain date", "Example", "2026-10-03"},
+		{"tagged date", "Example", "!!timestamp 2026-10-03"},
+		{"invalid tagged date", "Example", "!!timestamp banana"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			input := strings.Replace(scalarFixture(t), `name: "yes"`, "name: "+tc.scalar, 1)
+			input = strings.Replace(
+				input,
+				"description: 2026-10-03",
+				"description: "+tc.description,
+				1,
+			)
+			encoded, err := kubeyaml.YAMLToJSONStrict([]byte(input))
+			r := check(t, input)
+			if err != nil {
+				requireCode(t, r, "InvalidDocument")
+				return
+			}
+			var deployed data.DataProduct
+			if err := json.Unmarshal(encoded, &deployed); err != nil {
+				requireCode(t, r, "AdmissionInvalid")
+				return
+			}
+			if !r.Valid || !r.Complete || len(r.Descriptors) != 1 {
+				t.Fatalf("Kubernetes-compatible declaration rejected: %+v", r)
+			}
+			var preview struct{ DisplayName, Description string }
+			if err := json.Unmarshal(r.Descriptors[0], &preview); err != nil {
+				t.Fatal(err)
+			}
+			if preview.DisplayName != deployed.Spec.Name ||
+				preview.Description != deployed.Spec.Description {
+				t.Fatal("preview changed the scalar meaning used by Kubernetes")
+			}
+		})
+	}
+}
+
+func scalarFixture(t *testing.T) string {
+	t.Helper()
+	input, err := os.ReadFile("testdata/scalar.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(input)
+}
+
+func TestKubernetesYAMLStringKeys(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{"! yes", "! 42", "!!str 42", `"yes"`} {
+		input := strings.Replace(
+			bundle(t, product("one")),
+			`"metadata":{`,
+			`"metadata":{"annotations":{`+key+`: "value"},`,
+			1,
+		)
+		r := check(t, input)
+		if !r.Valid || !r.Complete {
+			t.Fatalf("Kubernetes string key rejected: %+v", r)
+		}
+	}
+}
+
+func TestKubernetesYAMLRejectsNonStringKeys(t *testing.T) {
+	t.Parallel()
+	for _, key := range []string{"yes", "On", "OFF", "Y", "n"} {
+		input := strings.Replace(
+			bundle(t, product("one")),
+			`"metadata":{`,
+			`"metadata":{"annotations":{`+key+`: "value"},`,
+			1,
+		)
+		requireCode(t, check(t, input), "InvalidDocument")
+	}
+}
+
+func TestKubernetesYAMLNonSpecificGeneration(t *testing.T) {
+	t.Parallel()
+	input := strings.Replace(
+		bundle(t, product("one")),
+		`"metadata":{`,
+		`"metadata":{"generation": ! 42,`,
+		1,
+	)
+	encoded, err := kubeyaml.YAMLToJSONStrict([]byte(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var deployed data.DataProduct
+	if err := json.Unmarshal(encoded, &deployed); err == nil {
+		t.Fatal("deployment decoder unexpectedly accepted a string generation")
+	}
+	requireCode(t, check(t, input), "AdmissionInvalid")
+}
+
+func TestKubernetesYAMLNullDocumentAlignment(t *testing.T) {
+	t.Parallel()
+	valid := bundle(t, product("one"))
+	for _, input := range []string{
+		"---\nnull\n---\n" + valid,
+		valid + "\n---\n~\n---\n",
+		"---\n---\n" + valid + "\n---\nnull\n---\n" + bundle(t, product("two")),
+	} {
+		r := check(t, input)
+		if !r.Valid || !r.Complete {
+			t.Fatalf("empty document changed decoder alignment: %+v", r)
+		}
+	}
+	for _, scalar := range []string{"! null", "! ~", "!"} {
+		requireCode(t, check(t, valid+"\n---\n"+scalar+"\n"), "InvalidDocument")
 	}
 }

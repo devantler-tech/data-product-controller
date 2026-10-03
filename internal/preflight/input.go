@@ -7,6 +7,7 @@ import (
 	"io"
 
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	yamlv2 "go.yaml.in/yaml/v2"
 	"go.yaml.in/yaml/v3"
 	kubejson "k8s.io/apimachinery/pkg/util/json"
 )
@@ -28,6 +29,8 @@ func readDocuments(in io.Reader) ([]document, string, int) {
 		return nil, "InputLimit", 0
 	}
 	decoder := yaml.NewDecoder(bytes.NewReader(input))
+	values := yamlv2.NewDecoder(bytes.NewReader(input))
+	values.SetStrict(true)
 	var documents []document
 	for {
 		var node yaml.Node
@@ -39,16 +42,20 @@ func readDocuments(in io.Reader) ([]document, string, int) {
 		if err != nil {
 			return nil, "InvalidDocument", number
 		}
-		if len(node.Content) == 0 || (len(node.Content) == 1 && node.Content[0].Tag == "!!null") {
+		if code := checkNode(&node, 0); code != "" {
+			return nil, code, number
+		}
+		var value any
+		if err := values.Decode(&value); err != nil {
+			return nil, "InvalidDocument", number
+		}
+		if value == nil {
 			continue
 		}
 		if len(documents) >= 256 {
 			return nil, "ProductLimit", number
 		}
-		if code := checkNode(&node, 0); code != "" {
-			return nil, code, number
-		}
-		value, err := decodeYAMLValue(&node)
+		value, err = jsonValue(value)
 		if err != nil {
 			return nil, "InvalidDocument", number
 		}
@@ -83,48 +90,47 @@ func readDocuments(in io.Reader) ([]document, string, int) {
 	return documents, "", 0
 }
 
-// Decode the already checked syntax tree without serializing and reparsing YAML.
-// Date scalars retain their authored string; admission owns format validation.
-func decodeYAMLValue(node *yaml.Node) (any, error) {
-	switch node.Kind {
-	case yaml.DocumentNode:
-		if len(node.Content) != 1 {
-			return nil, errors.New("invalid document")
-		}
-		return decodeYAMLValue(node.Content[0])
-	case yaml.MappingNode:
-		object := make(map[string]any, len(node.Content)/2)
-		for index := 0; index < len(node.Content); index += 2 {
-			value, err := decodeYAMLValue(node.Content[index+1])
+// Decode original scalars with Kubernetes's YAML 1.1 decoder, after the syntax
+// guards. A v3 Node loses bare ! tags, so it cannot supply deployment semantics.
+// Normalize maps without another YAML serialization or parsing round trip.
+func jsonValue(value any) (any, error) {
+	switch value := value.(type) {
+	case map[any]any:
+		object := make(map[string]any, len(value))
+		for key, child := range value {
+			name, ok := key.(string)
+			if !ok {
+				return nil, errors.New("non-string key")
+			}
+			converted, err := jsonValue(child)
 			if err != nil {
 				return nil, err
 			}
-			object[node.Content[index].Value] = value
+			object[name] = converted
 		}
 		return object, nil
-	case yaml.SequenceNode:
-		values := make([]any, len(node.Content))
-		for index, child := range node.Content {
-			value, err := decodeYAMLValue(child)
+	case map[string]any:
+		object := make(map[string]any, len(value))
+		for key, child := range value {
+			converted, err := jsonValue(child)
 			if err != nil {
 				return nil, err
 			}
-			values[index] = value
+			object[key] = converted
+		}
+		return object, nil
+	case []any:
+		values := make([]any, len(value))
+		for index, child := range value {
+			converted, err := jsonValue(child)
+			if err != nil {
+				return nil, err
+			}
+			values[index] = converted
 		}
 		return values, nil
-	case yaml.ScalarNode:
-		if node.Tag == "!!timestamp" {
-			return node.Value, nil
-		}
-		var value any
-		if err := node.Decode(&value); err != nil {
-			return nil, err
-		}
-		return value, nil
-	case yaml.AliasNode:
-		return nil, errors.New("invalid document")
 	default:
-		return nil, errors.New("invalid document")
+		return value, nil
 	}
 }
 
@@ -150,7 +156,7 @@ func checkNode(node *yaml.Node, depth int) string {
 		seen := make(map[string]bool)
 		for i := 0; i < len(node.Content); i += 2 {
 			key := node.Content[i]
-			if key.Kind != yaml.ScalarNode || key.Tag != "!!str" || seen[key.Value] {
+			if key.Kind != yaml.ScalarNode || seen[key.Value] {
 				return "InvalidDocument"
 			}
 			seen[key.Value] = true

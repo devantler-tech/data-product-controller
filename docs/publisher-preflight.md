@@ -94,6 +94,11 @@ the exact `data.devantler.tech/v1alpha1` DataProduct kind. Kubernetes Lists,
 unknown fields, duplicate keys, aliases, anchors, custom tags and trailing
 malformed content are rejected. No document chooses another input path.
 
+Scalar types follow Kubernetes's YAML 1.1 interpretation. Quote string values
+and mapping keys such as `yes`, `no`, `on`, `off`, `y` and `n`. Their unquoted
+forms mean booleans; boolean mapping keys are rejected. Explicit scalar tags
+must also have a valid value.
+
 Bounds are 2 MiB of input, 256 products, 64 document nesting levels, 1,024 total
 composition inputs, and fewer than 64 composition edges on any supplied path.
 Validation has a five-second context and a shared CEL cost budget. Reports retain
