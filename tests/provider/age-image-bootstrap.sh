@@ -67,3 +67,9 @@ pg_ctl -D "$PGDATA" -l /tmp/postgres.log -w -t 30 start \
 [[ $(admin -At -f /acceptance/age-runtime.sql) == f ]]
 [[ $(reader -At -f /acceptance/age-image-reader.sql) == 1 ]]
 echo 'PASS: the owner detects missing server preload even when connection-local Cypher reads succeed'
+pg_ctl -D "$PGDATA" -m fast -w stop >/dev/null
+pg_ctl -D "$PGDATA" -l /tmp/postgres.log -w -t 30 start \
+	-o '-c listen_addresses=127.0.0.1 -c unix_socket_directories=/tmp -c shared_preload_libraries=age -c max_connections=20 -c shared_buffers=32MB' >/dev/null
+[[ $(admin -At -f /acceptance/age-runtime.sql) == t ]]
+[[ $(reader -At -f /acceptance/age-image-reader.sql) == 1 ]]
+echo 'PASS: restoring server preload preserves the persisted graph and reader access'
