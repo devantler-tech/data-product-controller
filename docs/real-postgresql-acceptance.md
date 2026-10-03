@@ -38,7 +38,8 @@ use the exact audit policy and demonstrate enabled controller reads before uncha
 can prove zero reads across a polling interval. Queries must keep working while observation is
 disabled. Deleting all descriptors must remove their registry entries while retaining the source,
 publications, persistent volumes and query paths. Full controller logs and public metadata are
-checked for fixture passwords and distinctive data-plane content.
+checked for fixture passwords and distinctive data-plane content. The complete source/Secret
+audit also rejects every mutation attempt, including denied requests, and broader list/watch access.
 
 The fixture is a separate Go module at `tests/provider/fixture`, with bounded PostgreSQL connections
 and query responses. No database clients enter the controller module. The hosted job has an absolute

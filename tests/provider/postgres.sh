@@ -293,5 +293,6 @@ for marker in synthetic-postgres persistent-row persistent-jsonb private-exclude
 		exit 1
 	fi
 done
+require_read_only_source_audit
 echo 'PASS: real native SQL, hybrid JSONB and hybrid AGE query, grant, rotation and retained lifecycle acceptance'
 bounded docker stats --no-stream --format 'Owned cluster CPU={{.CPUPerc}} memory={{.MemUsage}}' "$control_node"
