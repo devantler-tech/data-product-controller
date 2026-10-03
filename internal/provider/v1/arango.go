@@ -182,13 +182,13 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 			"The operator reports a source failure; inspect the independently operated source.",
 		)
 	}
-	accepted, err := d.IsAccepted()
-	if err != nil || !accepted {
+	checksum, err := arangoSpecChecksum(d.Spec)
+	if err != nil || d.Status.AcceptedSpecVersion == nil ||
+		*d.Status.AcceptedSpecVersion != checksum {
 		return arangoNotReady()
 	}
-	current, err := d.IsUpToDate()
 	acceptedSpec := d.Status.AcceptedSpec
-	if err != nil || !current || d.Status.Phase != arangov1.DeploymentPhaseRunning ||
+	if d.Status.AppliedVersion != checksum || d.Status.Phase != arangov1.DeploymentPhaseRunning ||
 		acceptedSpec == nil || acceptedSpec.Mode == nil ||
 		*acceptedSpec.Mode != arangov1.DeploymentModeSingle ||
 		acceptedSpec.Single.Count == nil || *acceptedSpec.Single.Count != 1 ||

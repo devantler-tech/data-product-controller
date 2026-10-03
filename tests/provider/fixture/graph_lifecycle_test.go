@@ -36,13 +36,13 @@ func TestGraphRotationWaitsForAuthenticationRejection(t *testing.T) {
 updates=0
 database=old
 kube() {
-  if [[ $2 == graph-bootstrap && $5 == rotate ]]; then
-    ((updates+=1))
-    database=old
-    [[ $updates == 1 ]] || database=replacement
-    return 0
-  fi
-  [[ $2 == deployment/graph-query && $5 == stale-password && $database == replacement ]]
+	if [[ $2 == graph-bootstrap && $5 == rotate ]]; then
+	((updates+=1))
+	database=old
+	[[ $updates == 1 ]] || database=replacement
+	return 0
+	fi
+	[[ $2 == deployment/graph-query && $5 == stale-password && $database == replacement ]]
 }
 reader_rotation_ready() {
 `+body+`
@@ -75,10 +75,10 @@ test_dir=unused
 kubectl() { printf '%s\n' "$DPC_TEST_CRD"; }
 patched=false
 kube() {
-  patched=true
-  endpoint=main
-  for argument in "$@"; do [[ $argument != --subresource=status ]] || endpoint=status; done
-  [[ $endpoint == "$DPC_TEST_ENDPOINT" ]]
+	patched=true
+	endpoint=main
+	for argument in "$@"; do [[ $argument != --subresource=status ]] || endpoint=status; done
+	[[ $endpoint == "$DPC_TEST_ENDPOINT" ]]
 }
 
 
@@ -86,9 +86,9 @@ restore_members() {
 `+body+`
 }
 if restore_members; then
-  [[ $DPC_TEST_VALID == true && $patched == true ]]
+	[[ $DPC_TEST_VALID == true && $patched == true ]]
 else
-  [[ $DPC_TEST_VALID == false && $patched == false ]]
+	[[ $DPC_TEST_VALID == false && $patched == false ]]
 fi
 `)
 			valid := "false"
@@ -117,7 +117,8 @@ func TestGraphRecoveryAcceptsAlreadyRemovedRuntimeObjects(t *testing.T) {
 	}
 	var deletion string
 	for _, line := range strings.Split(string(script), "\n") {
-		if strings.HasPrefix(line, "bounded kubectl ") && strings.Contains(line, "old-members.json") {
+		if strings.HasPrefix(line, "bounded kubectl ") &&
+			strings.Contains(line, "old-members.json") {
 			deletion = line
 			break
 		}
@@ -132,9 +133,9 @@ test_dir=unused
 remaining() { echo 10; }
 bounded() { "$@"; }
 kubectl() {
-  for argument in "$@"; do [[ $argument != --ignore-not-found ]] || return 0; done
-  echo 'recorded Pod is already absent' >&2
-  return 1
+	for argument in "$@"; do [[ $argument != --ignore-not-found ]] || return 0; done
+	echo 'recorded Pod is already absent' >&2
+	return 1
 }
 `+deletion)
 	if output, err := command.CombinedOutput(); err != nil {

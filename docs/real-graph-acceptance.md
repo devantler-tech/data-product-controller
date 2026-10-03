@@ -35,7 +35,8 @@ member recovery procedure, verifies a changed source UID and unchanged retained 
 UIDs, rejects stale publication ownership and rebinds the independent password publisher.
 Scheduling recovery replaces the outage selector with the observed node's hostname, because
 clearing the selector restores the operator's accepted outage configuration. Runtime cleanup
-records unlabelled members through source ownership and observed member IDs, and tolerates
+records unlabelled members through source ownership and observed member IDs, and binds each
+Pod to its observed name and UID instead of guessing the operator's generated name. It tolerates
 Pods already removed by the operator's deletion finalizer.
 The recovery patch uses the live served CRD's status endpoint; an unknown serving contract fails
 before any patch, and a plain status field does not receive a subresource request.

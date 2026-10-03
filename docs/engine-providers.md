@@ -147,7 +147,9 @@ Single mode provides no high availability.
 
 The live typed specification checksum must match both `status.acceptedSpecVersion` and
 `status.appliedVersion`. DPC does not apply defaults before hashing: the operator hashes the raw
-spec and separately stores defaulted `status.accepted-spec`. The accepted specification must also
+spec and separately stores defaulted `status.accepted-spec`. Hashing preserves the pinned
+operator's Kubernetes 0.33 PVC metadata encoding, including a null empty creation timestamp;
+the controller's newer Kubernetes library otherwise omits that field. The accepted specification must also
 retain exactly the declared image, Single/count-one profile and a resolved authentication Secret;
 contradictory status does not establish readiness. `Ready`, `SpecAccepted`, `UpToDate`,
 `BootstrapCompleted` and upstream's misspelled `BootstrapSucceded` conditions must be True.

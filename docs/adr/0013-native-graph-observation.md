@@ -36,8 +36,11 @@ Specification changes withdraw readiness until the operator applies the new conf
 Source recreation rejects a retained publication owned by the previous UID. Product removal
 and flag rollback retain independently owned resources.
 
-The upstream API dependency preserves the released checksum serializer and defaulting
-semantics. Only its API is used; no operator reconciler or database client is instantiated.
+The upstream API dependency supplies the released specification and defaulting semantics.
+Checksum compatibility preserves the pinned operator's Kubernetes 0.33 PVC metadata encoding:
+empty creation timestamps remain null even though the controller's newer Kubernetes library
+omits them. Both hashes still bind the complete live specification. Only the upstream API is
+used; no operator reconciler or database client is instantiated.
 Publication metadata is publisher intent. It does not establish effective permissions,
 password validity, graph contents or AQL availability. These require real operator and
 application acceptance under #157; #36 and released rollout #128 remain open.

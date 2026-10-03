@@ -23,6 +23,9 @@ cleanup() {
 	fi
 	if [[ $cluster_started == true ]]; then
 		if [[ $result != 0 ]]; then
+			if declare -F provider_diagnostics >/dev/null; then
+				provider_diagnostics || true
+			fi
 			kubectl --request-timeout=10s -n kube-system get pods -o wide || true
 			kubectl --request-timeout=10s -n kube-system get events --sort-by=.metadata.creationTimestamp || true
 			kubectl --request-timeout=10s -n kube-system logs -l k8s-app=cilium --all-containers=true --tail=100 || true
