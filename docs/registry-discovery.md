@@ -69,14 +69,14 @@ inventory.
 has `state`, a static public `message`, the current product `generation`, and the
 condition's `observedGeneration` (zero when no applicable condition is present).
 
-| State | Meaning |
-| --- | --- |
-| `ready` | A true condition observes this exact product generation. |
-| `not-ready` | A current false condition needs attention from the product owner. |
-| `stale` | The condition observes another generation; its success is not current evidence. |
-| `unobserved` | An applicable independent condition is absent or inconclusive. |
-| `disabled` | A current false condition carries this dimension's recognized feature-disabled reason. |
-| `not-applicable` | The product does not declare this capability. |
+| State            | Meaning                                                                                |
+|------------------|----------------------------------------------------------------------------------------|
+| `ready`          | A true condition observes this exact product generation.                               |
+| `not-ready`      | A current false condition needs attention from the product owner.                      |
+| `stale`          | The condition observes another generation; its success is not current evidence.        |
+| `unobserved`     | An applicable independent condition is absent or inconclusive.                         |
+| `disabled`       | A current false condition carries this dimension's recognized feature-disabled reason. |
+| `not-applicable` | The product does not declare this capability.                                          |
 
 Missing independent conditions are never inferred from aggregate readiness. For example,
 legacy source observation and composition without declared contract requirements can
@@ -119,17 +119,17 @@ change the legacy v1 projection.
 Successful responses and errors use `Cache-Control: no-store`. Errors are JSON objects
 with stable `error` and public `message` fields:
 
-| HTTP status | Code / recovery |
-| --- | --- |
-| `400` | Invalid request, query, product reference or native continuation. Correct the input. |
-| `404` | Disabled capability or `product-not-found`. |
-| `408` | `request-canceled`; the request was canceled. |
-| `410` | `continuation-expired`; restart the inventory snapshot. |
-| `413` | `descriptor-too-large` or legacy `collection-too-large`; reduce metadata or use smaller pages. |
-| `422` | `invalid-descriptor`; the published metadata cannot be encoded for this contract. |
-| `502` | The inventory reader violated the requested object count, namespace or identity. |
-| `503` | `backend-unavailable`; retry explicitly. |
-| `504` | `deadline-exceeded`; the bounded inventory read timed out. |
+| HTTP status | Code / recovery                                                                                |
+|-------------|------------------------------------------------------------------------------------------------|
+| `400`       | Invalid request, query, product reference or native continuation. Correct the input.           |
+| `404`       | Disabled capability or `product-not-found`.                                                    |
+| `408`       | `request-canceled`; the request was canceled.                                                  |
+| `410`       | `continuation-expired`; restart the inventory snapshot.                                        |
+| `413`       | `descriptor-too-large` or legacy `collection-too-large`; reduce metadata or use smaller pages. |
+| `422`       | `invalid-descriptor`; the published metadata cannot be encoded for this contract.              |
+| `502`       | The inventory reader violated the requested object count, namespace or identity.               |
+| `503`       | `backend-unavailable`; retry explicitly.                                                       |
+| `504`       | `deadline-exceeded`; the bounded inventory read timed out.                                     |
 
 `GET /api/v2/schema` (or `?type=descriptor`) serves the descriptor's JSON Schema
 2020-12 document with ID `urn:data-product-descriptor:v1`. `?type=discovery` serves the

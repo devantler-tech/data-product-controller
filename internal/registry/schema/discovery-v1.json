@@ -8,7 +8,15 @@
   "required": ["apiVersion", "products", "continue"],
   "properties": {
     "apiVersion": { "const": "data-product-discovery/v1" },
-    "products": { "type": "array", "maxItems": 100, "items": { "$ref": "urn:data-product-descriptor:v1" } },
-    "continue": { "type": "string", "maxLength": 16384, "pattern": "^[A-Za-z0-9_-]*$" }
+    "products": {
+      "type": "array",
+      "maxItems": 100,
+      "items": { "$ref": "urn:data-product-descriptor:v1" }
+    },
+    "continue": {
+      "type": "string",
+      "maxLength": 16384,
+      "pattern": "^[A-Za-z0-9_-]*$"
+    }
   }
 }

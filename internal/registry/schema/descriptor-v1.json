@@ -5,7 +5,23 @@
   "description": "Public metadata snapshot. Maximum encoded UTF-8 size is 65536 bytes; every string is also limited to 16384 UTF-8 bytes. Observation does not grant access or prove present availability.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["apiVersion", "kind", "namespace", "name", "id", "displayName", "description", "version", "owner", "outputs", "ready", "readiness", "generation", "observedGeneration", "health"],
+  "required": [
+    "apiVersion",
+    "kind",
+    "namespace",
+    "name",
+    "id",
+    "displayName",
+    "description",
+    "version",
+    "owner",
+    "outputs",
+    "ready",
+    "readiness",
+    "generation",
+    "observedGeneration",
+    "health"
+  ],
   "properties": {
     "apiVersion": { "const": "data-product-descriptor/v1" },
     "kind": { "const": "DataProduct" },
@@ -17,85 +33,210 @@
     "version": { "$ref": "#/$defs/text" },
     "owner": { "$ref": "#/$defs/owner" },
     "documentationUrl": { "$ref": "#/$defs/https" },
-    "inputs": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/$defs/input" } },
-    "outputs": { "type": "array", "minItems": 1, "maxItems": 1024, "items": { "$ref": "#/$defs/output" } },
+    "inputs": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": { "$ref": "#/$defs/input" }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1024,
+      "items": { "$ref": "#/$defs/output" }
+    },
     "ui": { "$ref": "#/$defs/ui" },
     "ready": { "type": "boolean" },
     "readiness": { "$ref": "#/$defs/readiness" },
     "composition": { "$ref": "#/$defs/readiness" },
-    "lineage": { "type": "array", "maxItems": 1024, "items": { "$ref": "#/$defs/lineage" } },
+    "lineage": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": { "$ref": "#/$defs/lineage" }
+    },
     "generation": { "$ref": "#/$defs/generation" },
     "observedGeneration": { "$ref": "#/$defs/generation" },
     "health": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": ["source", "connector", "contracts", "composition"],
       "properties": {
-        "source": { "$ref": "#/$defs/health" }, "connector": { "$ref": "#/$defs/health" },
-        "contracts": { "$ref": "#/$defs/health" }, "composition": { "$ref": "#/$defs/health" }
+        "source": { "$ref": "#/$defs/health" },
+        "connector": { "$ref": "#/$defs/health" },
+        "contracts": { "$ref": "#/$defs/health" },
+        "composition": { "$ref": "#/$defs/health" }
       }
     }
   },
   "$defs": {
     "text": { "type": "string", "minLength": 1, "maxLength": 16384 },
-    "https": { "type": "string", "format": "uri", "minLength": 9, "maxLength": 16384, "pattern": "^https://[^\\s\\\\/?#@]+(?:/[^\\s\\\\#]*)?(?:\\?[^\\s\\\\#]*)?$" },
-    "productName": { "type": "string", "minLength": 1, "maxLength": 253, "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*$" },
-    "label": { "type": "string", "minLength": 1, "maxLength": 63, "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
-    "generation": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-    "protocol": { "enum": ["OpenAPI", "AsyncAPI", "GraphQL", "DCAT", "ArrowFlight"] },
+    "https": {
+      "type": "string",
+      "format": "uri",
+      "minLength": 9,
+      "maxLength": 16384,
+      "pattern": "^https://[^\\s\\\\/?#@]+(?:/[^\\s\\\\#]*)?(?:\\?[^\\s\\\\#]*)?$"
+    },
+    "productName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 253,
+      "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*$"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 63,
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "protocol": {
+      "enum": ["OpenAPI", "AsyncAPI", "GraphQL", "DCAT", "ArrowFlight"]
+    },
     "owner": {
-      "type": "object", "additionalProperties": false, "required": ["name"],
-      "properties": { "name": { "$ref": "#/$defs/text" }, "url": { "$ref": "#/$defs/https" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "$ref": "#/$defs/text" },
+        "url": { "$ref": "#/$defs/https" }
+      }
     },
     "reference": {
-      "type": "object", "additionalProperties": false, "required": ["name", "output"],
-      "properties": { "name": { "$ref": "#/$defs/productName" }, "namespace": { "$ref": "#/$defs/label" }, "output": { "$ref": "#/$defs/label" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "output"],
+      "properties": {
+        "name": { "$ref": "#/$defs/productName" },
+        "namespace": { "$ref": "#/$defs/label" },
+        "output": { "$ref": "#/$defs/label" }
+      }
     },
     "input": {
-      "type": "object", "additionalProperties": false, "required": ["name", "productRef"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "productRef"],
       "properties": {
-        "name": { "$ref": "#/$defs/label" }, "productRef": { "$ref": "#/$defs/reference" },
+        "name": { "$ref": "#/$defs/label" },
+        "productRef": { "$ref": "#/$defs/reference" },
         "contract": {
-          "type": "object", "additionalProperties": false, "required": ["minimumVersion", "protocol"],
-          "properties": { "minimumVersion": { "type": "string", "maxLength": 64, "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" }, "protocol": { "$ref": "#/$defs/protocol" } }
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["minimumVersion", "protocol"],
+          "properties": {
+            "minimumVersion": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+            },
+            "protocol": { "$ref": "#/$defs/protocol" }
+          }
         }
       }
     },
     "output": {
-      "type": "object", "additionalProperties": false, "required": ["name", "protocol", "url", "contractUrl"],
-      "properties": { "name": { "$ref": "#/$defs/label" }, "protocol": { "$ref": "#/$defs/protocol" }, "url": { "$ref": "#/$defs/https" }, "contractUrl": { "$ref": "#/$defs/https" }, "mediaType": { "$ref": "#/$defs/text" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "protocol", "url", "contractUrl"],
+      "properties": {
+        "name": { "$ref": "#/$defs/label" },
+        "protocol": { "$ref": "#/$defs/protocol" },
+        "url": { "$ref": "#/$defs/https" },
+        "contractUrl": { "$ref": "#/$defs/https" },
+        "mediaType": { "$ref": "#/$defs/text" }
+      }
     },
     "ui": {
-      "type": "object", "additionalProperties": false, "required": ["url", "title"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "title"],
       "properties": {
-        "url": { "$ref": "#/$defs/https" }, "title": { "$ref": "#/$defs/text" },
+        "url": { "$ref": "#/$defs/https" },
+        "title": { "$ref": "#/$defs/text" },
         "contract": {
-          "type": "object", "additionalProperties": false, "required": ["apiVersion", "hostOrigins", "capabilities"],
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["apiVersion", "hostOrigins", "capabilities"],
           "properties": {
-            "apiVersion": { "enum": ["data-product-ui/v1", "data-product-ui/v2"] },
-            "hostOrigins": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "type": "string", "maxLength": 253, "pattern": "^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?$" } },
-            "capabilities": { "type": "array", "maxItems": 3, "uniqueItems": true, "items": { "enum": ["status", "resize", "appearance"] } }
+            "apiVersion": {
+              "enum": ["data-product-ui/v1", "data-product-ui/v2"]
+            },
+            "hostOrigins": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "maxLength": 253,
+                "pattern": "^https://[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:[0-9]{1,5})?$"
+              }
+            },
+            "capabilities": {
+              "type": "array",
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": { "enum": ["status", "resize", "appearance"] }
+            }
           },
-          "if": { "properties": { "apiVersion": { "const": "data-product-ui/v1" } } },
-          "then": { "properties": { "capabilities": { "items": { "enum": ["status", "resize"] } } } }
+          "if": {
+            "properties": { "apiVersion": { "const": "data-product-ui/v1" } }
+          },
+          "then": {
+            "properties": {
+              "capabilities": { "items": { "enum": ["status", "resize"] } }
+            }
+          }
         }
       }
     },
     "readiness": {
-      "type": "object", "additionalProperties": false, "required": ["reason", "message"],
-      "properties": { "reason": { "$ref": "#/$defs/state" }, "message": { "$ref": "#/$defs/text" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reason", "message"],
+      "properties": {
+        "reason": { "$ref": "#/$defs/state" },
+        "message": { "$ref": "#/$defs/text" }
+      }
     },
-    "state": { "enum": ["ready", "not-ready", "stale", "unobserved", "disabled", "not-applicable"] },
+    "state": {
+      "enum": [
+        "ready",
+        "not-ready",
+        "stale",
+        "unobserved",
+        "disabled",
+        "not-applicable"
+      ]
+    },
     "health": {
-      "type": "object", "additionalProperties": false, "required": ["state", "message", "generation", "observedGeneration"],
-      "properties": { "state": { "$ref": "#/$defs/state" }, "message": { "$ref": "#/$defs/text" }, "generation": { "$ref": "#/$defs/generation" }, "observedGeneration": { "$ref": "#/$defs/generation" } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "message", "generation", "observedGeneration"],
+      "properties": {
+        "state": { "$ref": "#/$defs/state" },
+        "message": { "$ref": "#/$defs/text" },
+        "generation": { "$ref": "#/$defs/generation" },
+        "observedGeneration": { "$ref": "#/$defs/generation" }
+      }
     },
     "lineage": {
-      "type": "object", "additionalProperties": false, "required": ["name", "productRef", "ready", "reason"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "productRef", "ready", "reason"],
       "properties": {
-        "name": { "$ref": "#/$defs/label" }, "productRef": { "$ref": "#/$defs/reference" },
-        "productID": { "$ref": "#/$defs/text" }, "observedGeneration": { "$ref": "#/$defs/generation" },
-        "version": { "$ref": "#/$defs/text" }, "owner": { "$ref": "#/$defs/owner" }, "output": { "$ref": "#/$defs/output" },
-        "ready": { "type": "boolean" }, "reason": { "enum": ["InputReady", "InputNotReady"] }
+        "name": { "$ref": "#/$defs/label" },
+        "productRef": { "$ref": "#/$defs/reference" },
+        "productID": { "$ref": "#/$defs/text" },
+        "observedGeneration": { "$ref": "#/$defs/generation" },
+        "version": { "$ref": "#/$defs/text" },
+        "owner": { "$ref": "#/$defs/owner" },
+        "output": { "$ref": "#/$defs/output" },
+        "ready": { "type": "boolean" },
+        "reason": { "enum": ["InputReady", "InputNotReady"] }
       }
     }
   }
