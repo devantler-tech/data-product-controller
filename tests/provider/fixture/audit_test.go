@@ -34,6 +34,12 @@ func TestAuditReadOnlyRequiresObservedGets(t *testing.T) {
 						"username": "system:serviceaccount:products:dpc",
 					},
 					"responseStatus": map[string]any{"code": 403},
+					"objectRef": map[string]any{
+						"apiGroup":  "database.arangodb.com",
+						"namespace": "products",
+						"resource":  "arangodeployments",
+						"name":      "lineage",
+					},
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -41,11 +47,70 @@ func TestAuditReadOnlyRequiresObservedGets(t *testing.T) {
 				input.Write(data)
 				input.WriteByte('\n')
 			}
-			cmd := exec.Command("jq", "-se", "-f", "../audit-read-only.jq")
+			cmd := exec.Command(
+				"jq",
+				"-se",
+				"--argjson",
+				"expected",
+				graphAuditObjects,
+				"-f",
+				"../audit-read-only.jq",
+			)
 			cmd.Stdin = strings.NewReader(input.String())
 			output, err := cmd.CombinedOutput()
 			if (err == nil) != tc.want {
 				t.Fatalf("read-only=%v, want %v: %s", err == nil, tc.want, output)
+			}
+		})
+	}
+}
+
+const graphAuditObjects = `[{"group":"database.arangodb.com","resource":"arangodeployments","name":"lineage"},{"group":"","resource":"secrets","name":"lineage-reader"}]`
+
+// TestAuditRejectsUndeclaredGets checks the actual filter against broader metadata reads, including denied requests.
+func TestAuditRejectsUndeclaredGets(t *testing.T) {
+	for _, tc := range []struct {
+		name, group, resource, namespace, objectName string
+		want                                         bool
+	}{
+		{"declared source", "database.arangodb.com", "arangodeployments", "products", "lineage", true},
+		{"declared publication", "", "secrets", "products", "lineage-reader", true},
+		{"other source", "database.arangodb.com", "arangodeployments", "products", "unrelated", false},
+		{"other Secret", "", "secrets", "products", "unrelated", false},
+		{"other namespace", "", "secrets", "other", "lineage-reader", false},
+		{"other engine", "psmdb.percona.com", "perconaservermongodbs", "products", "lineage", false},
+		{"unnamed object", "", "secrets", "products", "", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			value := map[string]any{
+				"stage":          "ResponseComplete",
+				"verb":           "get",
+				"user":           map[string]any{"username": "system:serviceaccount:products:dpc"},
+				"responseStatus": map[string]any{"code": 403},
+				"objectRef": map[string]any{
+					"apiGroup":  tc.group,
+					"resource":  tc.resource,
+					"namespace": tc.namespace,
+					"name":      tc.objectName,
+				},
+			}
+			input, err := json.Marshal(value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cmd := exec.Command(
+				"jq",
+				"-se",
+				"--argjson",
+				"expected",
+				graphAuditObjects,
+				"-f",
+				"../audit-read-only.jq",
+			)
+			cmd.Stdin = strings.NewReader(string(input))
+			output, err := cmd.CombinedOutput()
+			if (err == nil) != tc.want {
+				t.Fatalf("declared GET accepted=%v want %v: %s", err == nil, tc.want, output)
 			}
 		})
 	}

@@ -157,7 +157,11 @@ transition timestamps, historical SpecPropagated and Pod-spec checksums are not 
 An independent publisher owns application setup and the password Secret. The pinned bootstrap
 validator accepts only root accounts. The publisher must create a dedicated non-administrator
 user, deny `_system` and database wildcard access, grant `ro` on the application database, deny
-collection wildcard access and grant `ro` on every named vertex/edge collection. It publishes the
+collection wildcard access and grant `ro` on every named vertex/edge collection. Assign explicit
+`none` grants to all other application collections. ArangoDB's database `ro` grant otherwise
+supplies read access when no specific collection grant exists; a collection wildcard `none`
+does not override it. The publisher must install a specific denial before adding an unpublished
+collection, and keep system collections outside the published query contract. It publishes the
 password for consumption directly by the query workload. DPC sees only this public metadata:
 
 ```yaml
@@ -178,8 +182,11 @@ metadata:
       uid: <current-source-uid>
 ```
 
-Under v1, `read-only` declares the complete grant profile above, including no other collection
-grants. Identifiers start with an ASCII letter followed by at most 63 ASCII letters, digits,
+Under v1, `read-only` declares this grant profile, including no other positive collection grants
+and explicit denials for unpublished application collections. This is publisher intent, not
+proof that future collections are automatically isolated. See the upstream
+[permission resolution rules](https://docs.arango.ai/arangodb/3.12/operations/administration/user-management/#permission-resolution).
+Identifiers start with an ASCII letter followed by at most 63 ASCII letters, digits,
 underscores or hyphens. Collections form a comma-separated list of 1–64 unique identifiers
 without whitespace or wildcards. Root, operator, internal and backup users are rejected in any
 letter case. System names, unsupported versions and writable declarations are rejected.

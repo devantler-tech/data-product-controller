@@ -4,4 +4,8 @@
 (length > 0) and
 any(.[]; .stage == "ResponseComplete" and .verb == "get") and
 all(.[]; .verb == "get" and
-  .user.username == "system:serviceaccount:products:dpc")
+  .user.username == "system:serviceaccount:products:dpc" and
+  .objectRef.namespace == "products" and
+  (.objectRef as $object | any($expected[];
+    .group == ($object.apiGroup // "") and
+    .resource == $object.resource and .name == $object.name)))

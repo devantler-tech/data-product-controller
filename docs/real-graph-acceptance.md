@@ -7,7 +7,11 @@ The checksum-pinned Helm package and immutable images are checked against actual
 
 The independent bootstrap workload creates the named `lineage` graph in `catalog`, a writer and
 a reader. It grants the reader database access and read-only access to the named vertex/edge
-collections, with database and collection wildcards denied. Its privileged password has no query
+collections, with database and collection wildcards denied. A separate existing `private`
+collection contains a synthetic unpublished record and receives an explicit `none` grant;
+the reader must receive an authorization denial when requesting it. A database `ro` grant
+otherwise permits reads of collections with no specific grant, so the publisher must install
+denials before adding unpublished collections. Its privileged password has no query
 Service or incoming network access. The separate query workload receives no root password,
 JWT secret, database server private key or Kubernetes token.
 
@@ -29,8 +33,9 @@ UIDs, rejects stale publication ownership and rebinds the independent password p
 The last phase independently disables both observer gates, checks zero source/Secret GETs across
 a polling interval, restores readiness and deletes only the product descriptor. The query and
 external identities must survive. Controller output must contain neither projected passwords nor
-fixture records. The complete source/Secret audit must contain observed GET requests and no
-mutation attempts, including denied requests. List or watch access also fails this scoped profile.
+fixture records. The complete source/Secret audit must contain observed GET requests for only
+the declared namespace, API group, resource and object names, and no mutation attempts, including
+denied requests. List or watch access also fails this scoped profile.
 Cleanup removes only the run's disposable cluster and storage; cleanup failure
 is a failed acceptance result.
 

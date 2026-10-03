@@ -29,6 +29,24 @@ func graphBootstrap(ctx context.Context, client *graphClient) error {
 	}, nil); err != nil {
 		return err
 	}
+	if err := client.request(
+		ctx,
+		http.MethodPost,
+		"/_db/catalog/_api/collection",
+		map[string]string{"name": "private"},
+		nil,
+	); err != nil {
+		return err
+	}
+	if err := client.request(
+		ctx,
+		http.MethodPost,
+		"/_db/catalog/_api/document/private",
+		map[string]string{"_key": "unpublished", "value": "synthetic-private-graph"},
+		nil,
+	); err != nil {
+		return err
+	}
 	for _, user := range []struct{ name, passwordPath, grant string }{
 		{"catalog-writer", "/writer-password/password", "rw"},
 		{"catalog-reader", "/password/password", "ro"},
@@ -50,6 +68,7 @@ func graphBootstrap(ctx context.Context, client *graphClient) error {
 			{"catalog/*", "none"},
 			{"catalog/products", user.grant},
 			{"catalog/relations", user.grant},
+			{"catalog/private", "none"},
 		} {
 			path := "/_db/_system/_api/user/" + user.name + "/database/" + grant.scope
 			if err = client.request(
@@ -193,6 +212,9 @@ func graphAssertion(mode string) error {
 		if err = graphServerWritable(ctx, client); err != nil {
 			return err
 		}
+		if err = graphUndeclaredDenied(ctx, client); err != nil {
+			return err
+		}
 		for index, attempt := range []struct {
 			method, path string
 			body         any
@@ -232,6 +254,24 @@ func graphAssertion(mode string) error {
 	default:
 		return errors.New("unknown graph assertion")
 	}
+}
+
+// graphUndeclaredDenied requires a real authorization rejection for an existing unpublished collection.
+func graphUndeclaredDenied(ctx context.Context, client *graphClient) error {
+	err := client.request(
+		ctx,
+		http.MethodGet,
+		"/_db/catalog/_api/document/private/unpublished",
+		nil,
+		nil,
+	)
+	var rejected *graphAPIError
+	if errors.As(err, &rejected) && rejected.status == http.StatusForbidden &&
+		(rejected.code == 11 || rejected.code == 1004) {
+		return nil
+	}
+	graphDenialDiagnostic("undeclared collection", 1, err)
+	return errors.New("undeclared collection lacked an authorization denial")
 }
 
 // graphDenialDiagnostic reports only fixed assertion identity and numeric API evidence, never server text.
