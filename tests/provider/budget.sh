@@ -3,6 +3,7 @@
 : "${work_deadline:?outer work deadline required}"
 : "${test_dir:?private assertion output directory required}"
 : "${started_at:?run start time required}"
+# Start a phase within the absolute assertion deadline, preserving the cleanup reserve.
 phase() {
 	local name=$1 seconds=$2
 	if [[ ! $seconds =~ ^[1-9][0-9]*$ ]] || ((SECONDS >= work_deadline)); then
@@ -14,6 +15,7 @@ phase() {
 	printf 'PHASE: %s (remaining %ss)\n' "$name" "$((phase_deadline - SECONDS))"
 }
 
+# Return the positive phase time remaining, or fail before another assertion starts.
 remaining() {
 	local left=$((phase_deadline - SECONDS))
 	((left > 0)) || {
@@ -23,6 +25,7 @@ remaining() {
 	printf '%s\n' "$left"
 }
 
+# Run one external process with a phase deadline and bounded termination grace.
 bounded() {
 	local left
 	left=$(remaining) || return 1
@@ -44,6 +47,7 @@ require_audit_server() {
 	echo 'PASS: running API server writes audit events using the exact acceptance policy'
 }
 
+# Retry one observation until success or the phase deadline, retaining failure diagnostics.
 wait_for() {
 	local description=$1
 	shift

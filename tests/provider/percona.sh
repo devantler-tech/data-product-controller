@@ -31,6 +31,7 @@ work_deadline=$((started_at + 1980))
 phase_deadline=$work_deadline
 source "$repo_root/tests/provider/budget.sh"
 
+# Remove only this run's resources and report failure when cleanup is incomplete.
 cleanup() {
 	local result=$? node
 	trap - EXIT INT TERM
@@ -70,8 +71,11 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+# Scope API operations to the disposable namespace and bound each request.
 kube() { kubectl --request-timeout=15s -n products "$@"; }
+# Exercise the public query contract from the independent consumer workload.
 query() { kube exec document-consumer -- /fixture probe "$@"; }
+# Replace the previous listener with a forward to the exact current controller revision.
 forward_registry() {
 	if [[ -n ${registry_forward_pid:-} ]]; then
 		kill "$registry_forward_pid" 2>/dev/null || true
@@ -81,11 +85,13 @@ forward_registry() {
 	wait_for 'current controller revision has one Ready registry pod' registry_target_ready
 	start_registry_forward
 }
+# Retain complete logs from every controller replica before it can be replaced.
 capture_controller_logs() {
 	# Selector-based logs otherwise default to only ten lines. Collect every
 	# current replica before replacement; failed collection is incomplete evidence.
 	kube logs -l app.kubernetes.io/instance=dpc --all-containers=true --prefix=true --tail=-1 >>"$test_dir/controller.log"
 }
+# Render and apply one controller artifact, then verify its current registry listener.
 install_controller() {
 	if [[ ${controller_installed:-false} == true ]]; then
 		capture_controller_logs
@@ -98,10 +104,12 @@ install_controller() {
 	controller_installed=true
 	forward_registry
 }
+# Require actual operator-reported readiness for the one-member replica set.
 database_ready() {
 	kube get perconaservermongodb documents -o json | jq -e '
     .spec.pause == false and .status.state == "ready" and .status.size == 1 and .status.ready == 1' >/dev/null
 }
+# Join current product conditions with the same readiness in the served registry.
 product_ready() {
 	local status=$1 reason=${2:-}
 	kube get dataproduct document-product -o json >"$test_dir/product.json" || return 1
@@ -120,16 +128,19 @@ product_ready() {
 	jq -e --argjson ready "$(if [[ $status == True ]]; then echo true; else echo false; fi)" \
 		'.products | length == 1 and .[0].id == "urn:example:documents" and .[0].ready == $ready' "$test_dir/registry.json" >/dev/null
 }
+# Confirm descriptor deletion is visible through the current registry listener.
 registry_empty() {
 	kill -0 "$registry_forward_pid" 2>/dev/null || return 1
 	curl --fail --silent --max-time 5 "http://127.0.0.1:$registry_port/api/v1/products" >"$test_dir/registry.json" || return 1
 	jq -e '.products | type == "array" and length == 0' "$test_dir/registry.json" >/dev/null
 }
+# Bind the independent credential publication to the observed source identity.
 bind_publication() {
 	local uid=$1
 	kube patch secret documents-reader --type=merge -p \
 		"$(jq -nc --arg uid "$uid" '{metadata:{ownerReferences:[{apiVersion:"psmdb.percona.com/v1",kind:"PerconaServerMongoDB",name:"documents",uid:$uid}]}}')" >/dev/null
 }
+# Capture source, application credential and persistent-volume identities without Secret data.
 retained_identities() {
 	kube get perconaservermongodb,secret,pvc -o json |
 		jq -ceS '[.items[] | select(.kind == "PersistentVolumeClaim" or
@@ -138,9 +149,11 @@ retained_identities() {
       {kind, name:.metadata.name, uid:.metadata.uid, deleting:.metadata.deletionTimestamp}] |
       if length >= 3 and all(.[]; .uid != null and .deleting == null) then sort_by(.kind,.name) else error("retention incomplete") end'
 }
+# Count completed provider observations without consuming the phase or cleanup reserve.
 audit_reads() {
-	docker exec "$control_node" cat /audit/log.json | jq -s '[.[] | select(.stage == "ResponseComplete" and .verb == "get")] | length'
+	bounded docker exec "$control_node" cat /audit/log.json | jq -s '[.[] | select(.stage == "ResponseComplete" and .verb == "get")] | length'
 }
+# Prove a disabled observer adds no reads after enabled observation has been recorded.
 disabled_without_reads() {
 	local reason=$1 before after
 	product_ready False "$reason" || return 1
@@ -158,6 +171,7 @@ disabled_without_reads() {
 	echo 'PASS: disabled gate has zero source or Secret reads across a polling interval'
 }
 
+# Resolve the single amd64 manifest from a pinned index or retain its immutable digest.
 platform_digest() {
 	local image=$1 file=$2
 	bounded docker buildx imagetools inspect --raw "$image" >"$file" || return 1
@@ -274,6 +288,7 @@ bounded helm upgrade --install percona "$test_dir/psmdb-operator.tgz" --namespac
 mkdir "$test_dir/tls"
 openssl req -x509 -newkey rsa:2048 -nodes -days 1 -sha256 -subj /CN=disposable-provider-ca \
 	-keyout "$test_dir/tls/ca.key" -out "$test_dir/tls/ca.crt" >/dev/null 2>&1
+# Issue a disposable certificate with only the explicitly declared DNS identities.
 make_certificate() {
 	local name=$1 san=$2 organization=${3:-disposable-provider}
 	openssl req -newkey rsa:2048 -nodes -subj "/CN=$name/O=$organization" \

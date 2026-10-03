@@ -2,12 +2,48 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+// TestAuditReadRejectsExpiredPhase prevents observation from consuming the cleanup reserve.
+func TestAuditReadRejectsExpiredPhase(t *testing.T) {
+	script, err := os.ReadFile("../percona.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, function, found := strings.Cut(string(script), "\naudit_reads() {\n")
+	if !found {
+		t.Fatal("audit reader function missing")
+	}
+	body, _, found := strings.Cut(function, "\n}\n")
+	if !found {
+		t.Fatal("audit reader function is incomplete")
+	}
+	helper, err := filepath.Abs("../budget.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	stub := "#!/usr/bin/env bash\nprintf '%s\\n' audit-docker-called >&2\nprintf '%s\\n' '{\"stage\":\"ResponseComplete\",\"verb\":\"get\"}'\n"
+	if err := os.WriteFile(filepath.Join(dir, "docker"), []byte(stub), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, "bash", "-c",
+		`set -euo pipefail; work_deadline=60; test_dir=$1; started_at=$SECONDS; source "$2"; control_node=owned-node; audit_reads() {`+"\n"+body+"\n"+`}; phase_deadline=0; audit_reads`,
+		"audit-budget-test", dir, helper)
+	command.Env = append(os.Environ(), "PATH="+dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	output, err := command.CombinedOutput()
+	if ctx.Err() != nil || err == nil || strings.Contains(string(output), "audit-docker-called") {
+		t.Fatalf("expired phase must reject before reading the node: %v: %s", err, output)
+	}
+}
 
 // TestProviderPhaseBudget checks deadline clamping and rejects incomplete observations.
 func TestProviderPhaseBudget(t *testing.T) {
