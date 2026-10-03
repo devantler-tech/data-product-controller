@@ -28,7 +28,7 @@ jobs:
       contents: read
       packages: write
       id-token: write
-    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@__AGE_PUBLISHER_SHA__
+    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@4a2570c98423a49d2aea00b84576065a64854180
 
   smoke:
     name: Verify published DSP exporter
