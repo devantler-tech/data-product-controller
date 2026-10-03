@@ -14,6 +14,8 @@ concurrency:
 jobs:
   publish:
     name: Publish chart to GHCR
+    # Image-acceptance proof tags have no matching controller release.
+    if: ${{ !startsWith(github.ref_name, 'v0.0.0-age-proof.') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read # Checkout the tagged chart source.

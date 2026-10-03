@@ -10,6 +10,9 @@ permissions: {}
 jobs:
   publish:
     name: Publish signed image and manifests
+    # Reserved image-acceptance tags exercise AGE publication without advancing
+    # the controller image or manifest aliases.
+    if: ${{ !startsWith(github.ref_name, 'v0.0.0-age-proof.') }}
     permissions:
       contents: read # Checkout the tagged source.
       packages: write # Publish the image and manifest artifact to GHCR.
@@ -18,6 +21,14 @@ jobs:
     with:
       app-name: data-product-controller
       enable-caller-pin: true
+
+  publish-age:
+    name: Publish signed PostgreSQL AGE image
+    permissions:
+      contents: read # Build the tagged release source.
+      packages: write # Publish only the independently versioned AGE image.
+      id-token: write # Sign that artifact with the immutable publisher identity.
+    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@86f0f95e5ac93ec914f5717f561af878b7d09bf1
 
   smoke:
     name: Verify published DSP exporter

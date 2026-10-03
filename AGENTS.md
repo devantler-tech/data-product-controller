@@ -87,6 +87,7 @@ go test ./...
 go test -tags=browser ./internal/browser
 sh scripts/chart.test.sh
 sh scripts/release.test.sh
+sh scripts/age-release.test.sh
 sh scripts/scanner-suppressions.test.sh
 sh scripts/toolchain.test.sh
 helm lint charts/data-product-controller
@@ -95,6 +96,12 @@ golangci-lint run
 ```
 
 Workflow changes also require `actionlint` and `zizmor`.
+
+The required AGE image job builds `images/postgresql-age`, starts PostgreSQL 17.11 with AGE
+preloaded, and runs `tests/provider/age-image-bootstrap.sh` as UID 26 against a read-only
+container root. Repeat the same test after changing its base, archive, compiler or extension
+pins. Keep the Apache checksum and detached signature verification, CNPG executables, synthetic
+acceptance credentials, and denial checks. See `docs/postgresql-age-image.md`.
 
 The required CI source-integration job runs `bash tests/source/run.sh` in an
 ephemeral KSail cluster with enforced NetworkPolicy. It requires Docker and several

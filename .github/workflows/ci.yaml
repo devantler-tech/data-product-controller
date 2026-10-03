@@ -86,7 +86,9 @@ jobs:
           persist-credentials: false
 
       - name: Validate trusted publication path
-        run: sh scripts/release.test.sh
+        run: |
+          sh scripts/release.test.sh
+          sh scripts/age-release.test.sh
 
   source-integration:
     name: Validate source and registry in Kubernetes
@@ -207,6 +209,27 @@ jobs:
 
       - name: Exercise real graph traversal, privileges and lifecycle
         run: bash tests/provider/arango.sh
+  age-image:
+    name: Validate PostgreSQL AGE image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the verified extension and exercise real queries
+        run: |
+          set -euo pipefail
+          sh scripts/age-release.test.sh
+          docker build --pull --file images/postgresql-age/Dockerfile --tag dpc-age:acceptance images/postgresql-age
+          docker run --rm --user 26 --read-only --network none --cap-drop ALL \
+            --security-opt no-new-privileges --memory 512m --cpus 2 --tmpfs /tmp:rw,size=128m \
+            --mount "type=bind,source=$PWD/tests/provider,target=/acceptance,readonly" \
+            --entrypoint /bin/bash dpc-age:acceptance /acceptance/age-image-bootstrap.sh
 
   required-checks:
     name: CI - Required Checks
@@ -218,6 +241,7 @@ jobs:
         source-integration,
         percona-acceptance,
         arango-acceptance,
+        age-image,
       ]
     if: always()
     runs-on: ubuntu-latest
@@ -232,3 +256,4 @@ jobs:
             ${{ needs.source-integration.result }}
             ${{ needs.percona-acceptance.result }}
             ${{ needs.arango-acceptance.result }}
+            ${{ needs.age-image.result }}
