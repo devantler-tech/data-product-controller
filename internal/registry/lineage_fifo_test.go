@@ -14,11 +14,20 @@ import (
 // TestLineageReaderRejectsFIFO runs the actual independent reader without a pipe writer.
 func TestLineageReaderRejectsFIFO(t *testing.T) {
 	directory := t.TempDir()
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := root.Close(); err != nil {
+			t.Error(err)
+		}
+	})
 	source, err := os.ReadFile("../../docs/examples/lineage-client/main.go")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(directory, "main.go"), source, 0o600); err != nil {
+	if err := root.WriteFile("main.go", source, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	build := exec.CommandContext(t.Context(), "go", "build", "-o", "reader", "main.go")
