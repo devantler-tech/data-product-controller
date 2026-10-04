@@ -1,4 +1,4 @@
-/* Offline public descriptor validation. No registry, network or runtime dependency. */
+/* Public descriptor validation. No registry, network or runtime dependency. */
 (() => {
   "use strict";
   const encoder = new TextEncoder();
@@ -53,6 +53,16 @@
     try { parsed = new URL(value); } catch { throw new Error("Use absolute public HTTPS metadata URLs."); }
     if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.hash || /\s|\\|#/.test(value))
       throw new Error("Use public HTTPS metadata URLs without credentials, whitespace or fragments.");
+    if (!authority[1].startsWith("[")) {
+      const labels = authority[1].split(".");
+      const last = labels.at(-1);
+      if (/^[0-9]+$/.test(last) || last.startsWith("0x")) {
+        if (labels.length !== 4 || labels.some(label =>
+          !/^(0|[1-9][0-9]*)$/.test(label) || Number(label) > 255) ||
+            parsed.hostname !== authority[1])
+          throw new Error("Use canonical numeric IP addresses in public metadata URLs.");
+      }
+    }
   }
 
   function owner(value) {
@@ -115,12 +125,10 @@
     if (Object.hasOwn(value, "output")) output(value.output);
   }
 
-  /** Require the exported document, then pass its UI through the existing publisher-origin validator. */
-  function parse(source, hostOrigin) {
-    if (typeof source !== "string" || encoder.encode(source).length > 65536)
+  /** Admit the closed public snapshot for inspection; this grants no UI or data access. */
+  function validate(value) {
+    if (encoder.encode(JSON.stringify(value)).length > 65536)
       throw new Error("Keep the complete descriptor within 64 KiB.");
-    let value;
-    try { value = JSON.parse(source); } catch { throw new Error("Use a valid descriptor JSON document."); }
     shape(value, ["apiVersion", "kind", "namespace", "name", "id", "displayName", "description", "version", "owner", "outputs", "ready", "readiness", "generation", "observedGeneration", "health"],
       ["documentationUrl", "inputs", "ui", "composition", "lineage"]);
     if (value.apiVersion !== "data-product-descriptor/v1" || value.kind !== "DataProduct")
@@ -128,6 +136,7 @@
     name(value.namespace);
     fullName(value.name);
     for (const key of ["id", "displayName", "version"]) text(value[key], true);
+    if (!/^urn:[A-Za-z0-9][A-Za-z0-9:._-]+$/.test(value.id)) url(value.id);
     text(value.description);
     owner(value.owner);
     array(value.outputs, output);
@@ -137,6 +146,14 @@
     if (Object.hasOwn(value, "lineage")) array(value.lineage, lineage);
     readiness(value.readiness);
     if (Object.hasOwn(value, "composition")) readiness(value.composition);
+    if (Object.hasOwn(value, "ui")) {
+      shape(value.ui, ["url", "title"], ["contract"]);
+      url(value.ui.url);
+      text(value.ui.title);
+      if (value.ui.url.length > 2048 || value.ui.title.length > 200 || !value.ui.title.trim())
+        throw new Error("Use a bounded public UI URL and title.");
+      if (Object.hasOwn(value.ui, "contract")) DataProductUI.validateMetadata(value.ui);
+    }
     integer(value.generation);
     integer(value.observedGeneration);
     shape(value.health, ["source", "connector", "contracts", "composition"]);
@@ -151,6 +168,19 @@
         throw new Error("Health readiness must describe this descriptor generation.");
     }
     if (typeof value.ready !== "boolean") throw new Error("Descriptor readiness must be boolean.");
+    if (value.ready !== (value.readiness.reason === "ready") ||
+        (value.ready && value.observedGeneration !== value.generation))
+      throw new Error("Descriptor readiness must describe its current generation.");
+    return structuredClone(value);
+  }
+
+  /** Offline mounting additionally requires current readiness and exact publisher host approval. */
+  function parse(source, hostOrigin) {
+    if (typeof source !== "string" || encoder.encode(source).length > 65536)
+      throw new Error("Keep the complete descriptor within 64 KiB.");
+    let value;
+    try { value = JSON.parse(source); } catch { throw new Error("Use a valid descriptor JSON document."); }
+    value = validate(value);
     if (!value.ready || value.readiness.reason !== "ready" || value.observedGeneration !== value.generation)
       throw new Error("This descriptor snapshot does not report current readiness.");
     if (!Object.hasOwn(value, "ui")) throw new Error("This descriptor does not publish a portable UI.");
@@ -158,5 +188,5 @@
     return DataProductUI.validate(value.ui, hostOrigin);
   }
 
-  window.DataProductDescriptor = Object.freeze({ parse });
+  window.DataProductDescriptor = Object.freeze({ validate, parse });
 })();

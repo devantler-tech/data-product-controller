@@ -158,6 +158,17 @@ be canonical IP addresses so Go and browser consumers interpret the same destina
 
 Consumers reject unsupported `apiVersion` and `kind` values. The v1 schema enumerates
 its accepted fields; incompatible shape changes require a new descriptor version.
+The reference workspace validates every discovery descriptor against the closed public
+profile before rendering, selection, or export. It bounds streamed response bytes and
+rejects invalid UTF-8 before parsing: 64 KiB for an exact descriptor, 2 MiB for a page,
+and 4 KiB for host configuration. A malformed later page retains earlier validated cards
+and reports incomplete discovery. Refresh cancels earlier inventory and selected-product
+reads; selecting another product cancels the previous lookup and UI configuration read.
+Metadata validation permits valid unhealthy products and products without a UI to be
+inspected. Mounting still requires current aggregate readiness and the separate publisher
+host approval and presentation grants. Search includes canonical name, namespace/name,
+public product ID, display name, owner, description and namespace among loaded products.
+
 The old `/api/v1/products` retains its response shape and readiness projection for
 inventories that fit one bounded 100-product read and the 2-MiB response cap. It returns
 an explicit `413` if more products remain, rather than claiming the first page is the

@@ -61,6 +61,8 @@ let inventoryComplete = false;
 let rejectedProducts = 0;
 let pageFailure = "";
 let inventoryRequest = 0;
+let inventoryRead = null;
+let selectedRead = null;
 let selectedDescriptor = null;
 const more = document.querySelector("#load-more");
 const scope = document.querySelector("#discovery-scope");
@@ -189,6 +191,8 @@ function routeKey() {
 
 /** Revoke the current frame and hide descriptors before a new navigation or refresh. */
 function clearSelection() {
+  selectedRead?.abort();
+  selectedRead = null;
   dependencyTrace.reset();
   ++selection;
   selectedKey = "";
@@ -224,18 +228,20 @@ async function navigateProduct(key, push = false) {
   }
   selectionStatus.textContent = "Loading selected product…";
   const [namespace, name] = key.split("/");
+  selectedRead = new AbortController();
+  const signal = AbortSignal.any([selectedRead.signal, AbortSignal.timeout(10000)]);
   try {
     const response = await fetch(`/api/v2/products/${encodeURIComponent(namespace)}/${encodeURIComponent(name)}`, {
-      cache: "no-store", credentials: "same-origin", signal: AbortSignal.timeout(10000),
+      cache: "no-store", credentials: "same-origin", signal,
     });
     if (selected !== selection) return;
     if (!response.ok) {
       if (response.status === 404) throw new Error("This product is no longer available. Select another product.");
       throw new Error("Could not load the selected product. Open its link again or select it to retry.");
     }
-    const product = await response.json();
+    const product = DataProductDescriptor.validate(await boundedJSON(response, 65536));
     if (selected !== selection) return;
-    if (product.apiVersion !== "data-product-descriptor/v1" || `${product.namespace}/${product.name}` !== key)
+    if (`${product.namespace}/${product.name}` !== key)
       throw new Error("The registry returned an invalid product descriptor.");
     selectionStatus.hidden = true;
     await selectProduct(product);
@@ -314,6 +320,8 @@ function showLineage(product) {
 
 /** Select a descriptor and open its independent surface only while the product is ready. */
 async function selectProduct(product, button) {
+  selectedRead?.abort();
+  selectedRead = new AbortController();
   dependencyTrace.select(product, discoveryEnabled && lineageEnabled);
   const selected = ++selection;
   selectedKey = `${product.namespace}/${product.name}`;
@@ -351,13 +359,13 @@ async function selectProduct(product, button) {
       const response = await fetch("/api/v1/ui-config", {
         cache: "no-store",
         credentials: "same-origin",
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.any([selectedRead.signal, AbortSignal.timeout(5000)]),
       });
       if (!response.ok)
         throw new Error(
           "The host could not read its UI configuration. Select the product to retry.",
         );
-      const configuration = await response.json();
+      const configuration = await boundedJSON(response, 4096);
       if (selected !== selection) return;
       if (configuration.uiContractEnabled !== true)
         throw new Error("Portable UI contracts are disabled on this host.");
@@ -430,6 +438,9 @@ function filterProducts() {
       product.description,
       product.owner.name,
       product.namespace,
+      product.name,
+      `${product.namespace}/${product.name}`,
+      product.id,
     ]
       .join(" ")
       .toLocaleLowerCase();
@@ -465,14 +476,49 @@ function filterProducts() {
 
 /** Validate the page's bounded omission indicator before committing inventory state. */
 function validDiscoveryPage(collection) {
-  return collection.apiVersion === "data-product-discovery/v1" && Array.isArray(collection.products) &&
+  if (!collection || typeof collection !== "object" ||
+      Object.keys(collection).length !== 4 ||
+      !["apiVersion", "products", "rejected", "continue"].every(key => Object.hasOwn(collection, key)))
+    return false;
+  if (!(collection.apiVersion === "data-product-discovery/v1" && Array.isArray(collection.products) &&
     Number.isInteger(collection.rejected) && collection.rejected >= 0 &&
     collection.rejected <= 100 && collection.products.length + collection.rejected <= 100 &&
-    typeof collection.continue === "string";
+    typeof collection.continue === "string" && collection.continue.length <= 16384 &&
+    /^[A-Za-z0-9_-]*$/.test(collection.continue))) return false;
+  try {
+    collection.products = collection.products.map(product => DataProductDescriptor.validate(product));
+    return !catalogNamespace || collection.products.every(product => product.namespace === catalogNamespace);
+  } catch { return false; }
+}
+
+/** Bound bytes before decoding strict UTF-8 and JSON; unsupported response text is never rendered. */
+async function boundedJSON(response, maximum) {
+  if (!response.body) throw new Error("The registry returned an empty response.");
+  const reader = response.body.getReader();
+  const chunks = [];
+  let bytes = 0;
+  try {
+    for (;;) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maximum) throw new Error("The registry response exceeds its public metadata limit.");
+      chunks.push(value);
+    }
+  } finally { await reader.cancel(); }
+  const data = new Uint8Array(bytes);
+  let offset = 0;
+  for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.byteLength; }
+  try {
+    return JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(data));
+  } catch { throw new Error("The registry returned invalid public metadata."); }
 }
 
 /** Refresh invalidates the selected surface before re-reading readiness; failures remain retryable. */
 async function loadProducts() {
+  inventoryRead?.abort();
+  inventoryRead = new AbortController();
+  const signal = milliseconds => AbortSignal.any([inventoryRead.signal, AbortSignal.timeout(milliseconds)]);
   const request = ++inventoryRequest;
   refresh.disabled = true;
   clearSelection();
@@ -489,8 +535,8 @@ async function loadProducts() {
   count.textContent = "Loading…";
   status.textContent = "Loading products…";
   try {
-    const configurationResponse = await fetch("/api/v1/ui-config", {cache: "no-store", signal: AbortSignal.timeout(5000)});
-    const configuration = configurationResponse.ok ? await configurationResponse.json() : {};
+    const configurationResponse = await fetch("/api/v1/ui-config", {cache: "no-store", signal: signal(5000)});
+    const configuration = configurationResponse.ok ? await boundedJSON(configurationResponse, 4096) : {};
     if (request !== inventoryRequest) return;
     discoveryEnabled = configuration.discoveryEnabled === true;
     lineageEnabled = configuration.lineageEnabled === true;
@@ -502,13 +548,13 @@ async function loadProducts() {
     const response = await fetch(endpoint, {
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(10000),
+      signal: signal(10000),
     });
     if (!response.ok) {
       throw new Error(`registry returned ${response.status}`);
     }
 
-    const collection = await response.json();
+    const collection = await boundedJSON(response, 2 * 1024 * 1024);
     if (request !== inventoryRequest) return;
     if (!Array.isArray(collection.products) ||
         (discoveryEnabled && !validDiscoveryPage(collection)))
@@ -539,7 +585,9 @@ async function loadMore() {
   if (catalogNamespace) query.set("namespace", catalogNamespace);
   more.disabled = true;
   try {
-    const response = await fetch(`/api/v2/products?${query}`, {cache: "no-store", signal: AbortSignal.timeout(10000)});
+    const response = await fetch(`/api/v2/products?${query}`, {
+      cache: "no-store", signal: AbortSignal.any([inventoryRead.signal, AbortSignal.timeout(10000)]),
+    });
     if (request !== inventoryRequest) return;
     if (!response.ok) {
       if (response.status === 410) {
@@ -549,7 +597,7 @@ async function loadMore() {
       }
       throw new Error("Could not load more products. Use Load more products to retry.");
     }
-    const collection = await response.json();
+    const collection = await boundedJSON(response, 2 * 1024 * 1024);
     if (request !== inventoryRequest) return;
     if (!validDiscoveryPage(collection))
       throw new Error("The registry returned an invalid catalog page. Use Refresh products to restart.");

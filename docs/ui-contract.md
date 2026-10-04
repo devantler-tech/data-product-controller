@@ -230,6 +230,9 @@ dispose();
 ```
 
 `DataProductUI.validate(manifest, location.origin)` validates without navigating.
+`DataProductUI.validateMetadata(manifest)` validates the public presentation shape
+without granting host permission. Descriptor inspection uses that limited operation;
+both `validate` and `mount` still require exact publisher approval for the actual host.
 `mount` validates again, throws on refusal, and returns an idempotent disposer.
 Catch refusal and render it as inert text. Do not run multiple mounts on the same
 frame; dispose the current one first. The library is framework-independent.
