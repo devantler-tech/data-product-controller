@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 type observation struct {
@@ -67,7 +68,7 @@ func readTraceFile(path string) (trace, error) {
 		return result, err
 	}
 	defer func() { _ = root.Close() }()
-	file, err := root.Open(name)
+	file, err := root.OpenFile(name, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return result, err
 	}

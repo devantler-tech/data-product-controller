@@ -542,7 +542,8 @@ async function loadProducts() {
     lineageEnabled = configuration.lineageEnabled === true;
     document.querySelector("#catalog-scope").hidden = !discoveryEnabled;
     if (discoveryEnabled) navigateProduct(routeKey());
-    const query = new URLSearchParams({limit: "50"});
+    // Sixteen 64 KiB descriptors leave room inside the 2 MiB response bound.
+    const query = new URLSearchParams({limit: "16"});
     if (catalogNamespace) query.set("namespace", catalogNamespace);
     const endpoint = discoveryEnabled ? `/api/v2/products?${query}` : "/api/v1/products";
     const response = await fetch(endpoint, {
@@ -581,7 +582,7 @@ async function loadProducts() {
 async function loadMore() {
   if (!continuation || more.disabled) return;
   const request = inventoryRequest;
-  const query = new URLSearchParams({limit: "50", continue: continuation});
+  const query = new URLSearchParams({limit: "16", continue: continuation});
   if (catalogNamespace) query.set("namespace", catalogNamespace);
   more.disabled = true;
   try {
