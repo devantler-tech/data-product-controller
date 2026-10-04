@@ -52,6 +52,7 @@ func TestDeletingProductRevokesBrowserSurface(t *testing.T) {
 				page.MustElement(".product-card").MustClick()
 			} else {
 				page.MustNavigate(server.URL).MustWaitLoad()
+				page.MustElement(".product-card").MustClick()
 			}
 			page.MustElement("#product-readiness").MustWait(`() => this.textContent === "Not ready"`)
 			if src := page.MustElement("#product-surface").MustAttribute("src"); src != nil {
