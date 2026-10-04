@@ -49,7 +49,8 @@ func TestEveryExplicitSelectionIsChecked(t *testing.T) {
 		"true",
 		&output,
 	)
-	if code != 1 || output.Len() != 0 && !strings.Contains(output.String(), "ReadFailed") {
+	if code != 1 || err == nil || !strings.Contains(err.Error(), "readable regular local file") ||
+		output.Len() != 0 {
 		t.Fatalf("unreadable earlier selection was ignored: %d %v %s", code, err, output.String())
 	}
 }
