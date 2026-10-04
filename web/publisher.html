@@ -24,8 +24,10 @@
           <label>Local JSON file<input id="report-file" type="file" accept=".json,application/json"></label>
           <details>
             <summary>Or paste report JSON</summary>
-            <label class="sr-only" for="report-text">Report JSON</label>
-            <textarea id="report-text" rows="5" spellcheck="false"></textarea>
+            <label>
+              <span class="sr-only">Report JSON</span>
+              <textarea id="report-text" rows="5" spellcheck="false"></textarea>
+            </label>
           </details>
         </div>
         <div class="actions"><button id="read-report" type="submit">Read report</button><button id="clear-report" class="secondary" type="button">Clear</button></div>

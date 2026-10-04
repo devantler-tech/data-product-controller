@@ -154,7 +154,7 @@ button.secondary {
   border-color: var(--border);
 }
 
-button: disabled {
+button:disabled {
   opacity: .55;
   cursor: default;
 }
