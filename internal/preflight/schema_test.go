@@ -11,10 +11,12 @@ import (
 
 type offlineReportSchemas struct{}
 
+// Load rejects every external reference so schema validation cannot make a network request.
 func (offlineReportSchemas) Load(string) (any, error) {
 	return nil, errors.New("external schema loading is forbidden")
 }
 
+// reportSchema compiles the delivered report schema with only the bundled descriptor resource.
 func reportSchema(t *testing.T) *jsonschema.Schema {
 	t.Helper()
 	compiler := jsonschema.NewCompiler()
@@ -47,6 +49,7 @@ func reportSchema(t *testing.T) *jsonschema.Schema {
 	return schema
 }
 
+// reportValue converts an emitted report into a checked mutable JSON fixture.
 func reportValue(t *testing.T, report BundleReport) map[string]any {
 	t.Helper()
 	encoded, err := json.Marshal(report)
@@ -60,6 +63,7 @@ func reportValue(t *testing.T, report BundleReport) map[string]any {
 	return result
 }
 
+// reportObject fails the test when a JSON fixture lacks the expected object shape.
 func reportObject(t *testing.T, value any) map[string]any {
 	t.Helper()
 	result, ok := value.(map[string]any)
@@ -69,6 +73,7 @@ func reportObject(t *testing.T, value any) map[string]any {
 	return result
 }
 
+// reportArray fails the test when a JSON fixture lacks the expected array shape.
 func reportArray(t *testing.T, value any) []any {
 	t.Helper()
 	result, ok := value.([]any)
@@ -78,6 +83,7 @@ func reportArray(t *testing.T, value any) []any {
 	return result
 }
 
+// TestActualBundleReportsSatisfyOfflineSchema checks emitted reports and rejects incompatible mutations.
 func TestActualBundleReportsSatisfyOfflineSchema(t *testing.T) {
 	schema := reportSchema(t)
 	p, c := product("producer"), dependent("consumer", "producer")

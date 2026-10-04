@@ -17,6 +17,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 )
 
+// main reports command errors to stderr and exits with the offline validation result.
 func main() {
 	code, err := run(
 		context.Background(),
@@ -159,7 +160,10 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 
 type selectedFiles []string
 
+// String leaves the repeatable file flag's default empty without publishing selected paths.
 func (f *selectedFiles) String() string { return "" }
+
+// Set retains each explicit selection and rejects attempts to exceed the shared file limit.
 func (f *selectedFiles) Set(value string) error {
 	if value == "" || len(*f) >= 32 {
 		return errors.New("invalid selection")
@@ -175,6 +179,7 @@ type selectedInput struct {
 	opened, failed bool
 }
 
+// close releases an opened input and allows the command's deferred cleanup to run repeatedly.
 func (s *selectedInput) close() {
 	if s.file != nil {
 		_ = s.file.Close()
@@ -182,6 +187,7 @@ func (s *selectedInput) close() {
 	}
 }
 
+// Read lazily opens a selected regular file without blocking on a FIFO and closes it on completion.
 func (s *selectedInput) Read(b []byte) (int, error) {
 	if !s.opened {
 		s.opened = true

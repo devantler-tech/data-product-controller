@@ -8,6 +8,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/controller"
 )
 
+// checkGraph validates bounded local dependencies while keeping missing producers unresolved.
 func checkGraph(ctx context.Context, report *Report, documents []document) {
 	products := make(map[string]*data.DataProduct)
 	edges := 0

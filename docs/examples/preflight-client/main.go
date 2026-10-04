@@ -50,6 +50,7 @@ func exact(value any, required, optional string) (map[string]any, error) {
 	return object, nil
 }
 
+// array requires a non-null array within the example's explicit collection bound.
 func array(value any, limit int) ([]any, error) {
 	result, ok := value.([]any)
 	if !ok || result == nil || len(result) > limit {
@@ -58,6 +59,7 @@ func array(value any, limit int) ([]any, error) {
 	return result, nil
 }
 
+// integer accepts only nonnegative integral JSON numbers within the named report bound.
 func integer(value any, maximum int) (int, error) {
 	number, ok := value.(json.Number)
 	if !ok {
@@ -70,6 +72,7 @@ func integer(value any, maximum int) (int, error) {
 	return int(n), nil
 }
 
+// text requires a nonempty public string within its encoded byte limit.
 func text(value any, maximum int) (string, error) {
 	result, ok := value.(string)
 	if !ok || result == "" || len(result) > maximum {
@@ -78,6 +81,7 @@ func text(value any, maximum int) (string, error) {
 	return result, nil
 }
 
+// boolean rejects coercions and requires an explicit JSON boolean.
 func boolean(value any) (bool, error) {
 	result, ok := value.(bool)
 	if !ok {
@@ -86,6 +90,7 @@ func boolean(value any) (bool, error) {
 	return result, nil
 }
 
+// featureSet checks the report's sorted, unique list of known deployment requirements.
 func featureSet(value any) (map[string]bool, error) {
 	values, err := array(value, 8)
 	if err != nil {
@@ -173,6 +178,7 @@ type (
 	}
 )
 
+// reference validates the closed product-reference profile and identifier length bounds.
 func reference(value any) (map[string]any, error) {
 	ref, err := exact(value, "name output", "namespace")
 	if err != nil {
@@ -190,6 +196,7 @@ func reference(value any) (map[string]any, error) {
 	return ref, nil
 }
 
+// owner checks the preview's public owner fields without fetching an optional URL.
 func owner(value any) error {
 	object, err := exact(value, "name", "url")
 	if err != nil {
@@ -203,6 +210,7 @@ func owner(value any) error {
 	return nil
 }
 
+// readiness requires the offline preview to describe readiness as unobserved.
 func readiness(value any) error {
 	object, err := exact(value, "reason message", "")
 	if err != nil {
@@ -406,6 +414,7 @@ func descriptor(value any) (publicProduct, error) {
 	return result, nil
 }
 
+// validateReport checks report shape, counts, provenance and plan consistency without trusting validity claims.
 func validateReport(value any) (map[string]any, error) {
 	// plan is the sole nullable field and is checked separately.
 	raw, ok := value.(map[string]any)
@@ -782,6 +791,7 @@ func readReportFile(path string) (map[string]any, error) {
 	return validateReport(value)
 }
 
+// main prints bounded report claims and a static review order, or a fixed rejection message.
 func main() {
 	if len(os.Args) != 2 {
 		fmt.Fprintln(os.Stderr, "Usage: go run main.go report.json")

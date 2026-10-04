@@ -98,6 +98,7 @@ func (a *admission) validate(
 	return nil, budget
 }
 
+// admissionFindings projects validator errors into fixed categories and schema-known paths.
 func admissionFindings(
 	errs field.ErrorList,
 	shape *structural.Structural,

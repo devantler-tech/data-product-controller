@@ -8,6 +8,7 @@ import (
 	"testing"
 )
 
+// TestEveryExplicitSelectionIsChecked covers all selected files, duplicate declarations and input failures.
 func TestEveryExplicitSelectionIsChecked(t *testing.T) {
 	first := writeManifest(t, validManifest)
 	second := writeManifest(t, strings.ReplaceAll(validManifest, "harbour", "coast"))
@@ -53,6 +54,7 @@ func TestEveryExplicitSelectionIsChecked(t *testing.T) {
 	}
 }
 
+// TestExplicitV2ReportAndDisabledBundle keeps v1 the default and evaluates the gate before input access.
 func TestExplicitV2ReportAndDisabledBundle(t *testing.T) {
 	path := writeManifest(t, validManifest)
 	var output bytes.Buffer

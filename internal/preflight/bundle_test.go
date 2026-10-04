@@ -12,6 +12,7 @@ import (
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 )
 
+// selected evaluates explicit in-memory sources as a v2 bundle for regression fixtures.
 func selected(t *testing.T, sources ...string) BundleReport {
 	t.Helper()
 	readers := make([]io.Reader, 0, len(sources))
@@ -21,6 +22,7 @@ func selected(t *testing.T, sources ...string) BundleReport {
 	return CheckBundle(context.Background(), readers, "")
 }
 
+// richCode locates an expected public finding and fails when validation omits it.
 func richCode(t *testing.T, r BundleReport, code string) BundleDiagnostic {
 	t.Helper()
 	for _, d := range r.Diagnostics {
@@ -32,6 +34,7 @@ func richCode(t *testing.T, r BundleReport, code string) BundleDiagnostic {
 	return BundleDiagnostic{}
 }
 
+// dependent creates a fixture with one declared input referencing the named local producer.
 func dependent(name, producer string) data.DataProduct {
 	p := product(name)
 	p.Spec.Inputs = []data.InputPort{
@@ -43,6 +46,7 @@ func dependent(name, producer string) data.DataProduct {
 	return p
 }
 
+// TestBundlePhysicalProvenanceAndIndexedDependency preserves empty-document offsets and input indexes.
 func TestBundlePhysicalProvenanceAndIndexedDependency(t *testing.T) {
 	p := dependent("consumer", "missing")
 	r := selected(t, bundle(t, product("first")), "null\n---\n# empty\n---\n"+bundle(t, p))
@@ -61,6 +65,7 @@ func TestBundlePhysicalProvenanceAndIndexedDependency(t *testing.T) {
 	}
 }
 
+// TestBundlePreciseAdmissionAndPrivateMapKeys requires useful coordinates without private submitted keys.
 func TestBundlePreciseAdmissionAndPrivateMapKeys(t *testing.T) {
 	p := product("invalid")
 	p.Spec.Owner.Name = ""
@@ -78,6 +83,7 @@ func TestBundlePreciseAdmissionAndPrivateMapKeys(t *testing.T) {
 	}
 }
 
+// TestBundleCycleWitnessAndStablePlan checks actionable cycles and deterministic producer-first plans.
 func TestBundleCycleWitnessAndStablePlan(t *testing.T) {
 	a, b := dependent("a", "b"), dependent("b", "a")
 	r := selected(t, bundle(t, b), bundle(t, a))
@@ -118,6 +124,7 @@ func TestBundleCycleWitnessAndStablePlan(t *testing.T) {
 	}
 }
 
+// TestBundlePerProductFeaturesAndTruncation preserves per-product requirements and omitted finding counts.
 func TestBundlePerProductFeaturesAndTruncation(t *testing.T) {
 	p, c := product("producer"), dependent("consumer", "producer")
 	r := selected(t, bundle(t, c, p))
@@ -144,9 +151,16 @@ func TestBundlePerProductFeaturesAndTruncation(t *testing.T) {
 	}
 }
 
+// TestBundleAggregateIngressAndFileBoundaries enforces one input budget without joining file syntax.
 func TestBundleAggregateIngressAndFileBoundaries(t *testing.T) {
 	r := selected(t, strings.Repeat(" ", maxInputBytes/2+1), strings.Repeat(" ", maxInputBytes/2+1))
-	richCode(t, r, "InputLimit")
+	if finding := richCode(
+		t,
+		r,
+		"InputLimit",
+	); finding.Message != "The selected inputs exceed 2 MiB in total." {
+		t.Fatalf("aggregate limit wording: %s", finding.Message)
+	}
 	if r.Valid || r.Plan != nil {
 		t.Fatal("per-file budgets widened aggregate ingress")
 	}
@@ -164,6 +178,7 @@ func TestBundleAggregateIngressAndFileBoundaries(t *testing.T) {
 	}
 }
 
+// TestPublicLegacyReportDoesNotRetainPrivateDeclarations rejects private evaluation state in public v1 results.
 func TestPublicLegacyReportDoesNotRetainPrivateDeclarations(t *testing.T) {
 	p := product("public")
 	p.Annotations = map[string]string{"PRIVATE_FIELD": "PRIVATE_VALUE"}
@@ -173,6 +188,7 @@ func TestPublicLegacyReportDoesNotRetainPrivateDeclarations(t *testing.T) {
 	}
 }
 
+// TestBundleOmittedErrorStillInvalidatesSelection prevents diagnostic truncation from hiding invalidity.
 func TestBundleOmittedErrorStillInvalidatesSelection(t *testing.T) {
 	p := product("unresolved")
 	for index := range 128 {
@@ -200,6 +216,7 @@ func TestBundleOmittedErrorStillInvalidatesSelection(t *testing.T) {
 	}
 }
 
+// TestBundleDepthWitnessMatchesProductLevelBound checks the accepted depth and the first rejected level.
 func TestBundleDepthWitnessMatchesProductLevelBound(t *testing.T) {
 	for _, count := range []int{64, 65} {
 		var chain []data.DataProduct
@@ -230,6 +247,7 @@ func TestBundleDepthWitnessMatchesProductLevelBound(t *testing.T) {
 	}
 }
 
+// TestInterruptedBundleRetainsObservedFeatureRequirements derives the union from retained observations.
 func TestInterruptedBundleRetainsObservedFeatureRequirements(t *testing.T) {
 	// Cancellation may interrupt the product loop after a checked consumer but before
 	// the legacy engine finalizes its aggregate feature list.

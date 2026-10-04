@@ -2,6 +2,7 @@ package preflight
 
 import "sort"
 
+// productKey identifies a declaration within its namespace for the static dependency plan.
 func productKey(doc document) string { return doc.product.Namespace + "/" + doc.product.Name }
 
 // reviewPlan counts distinct producers while retaining every declared port edge.

@@ -21,7 +21,12 @@ func TestIndependentPublisherReportReader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(source, code, 0o600); err != nil {
+	root, err := os.OpenRoot(directory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = root.Close() })
+	if err := root.WriteFile("main.go", code, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	// #nosec G204 -- executable is the test toolchain; arguments are this test's private temporary paths.

@@ -50,6 +50,7 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 	return CheckFiles(ctx, []io.Reader{in}, namespace)
 }
 
+// checkSelected shares admission, projection and dependency budgets across the entire selection.
 func checkSelected(ctx context.Context, sources []io.Reader, namespace string) Report {
 	report := Report{
 		APIVersion: "data-product-preflight/v1", Valid: true, Complete: true,
@@ -192,6 +193,7 @@ func (r *Report) add(document int, code, path string) {
 	r.addAt(document, "error", code, path, pointer)
 }
 
+// observeDeclarations collects deployment requirements and checks declared contract output names.
 func observeDeclarations(
 	report *Report,
 	number int,
@@ -220,6 +222,7 @@ func observeDeclarations(
 	}
 }
 
+// declaredFeatures returns sorted gate requirements without enabling them or consulting live state.
 func declaredFeatures(product *data.DataProduct) []string {
 	required := map[string]bool{}
 	if product.Spec.Source != nil {
@@ -256,13 +259,14 @@ func declaredFeatures(product *data.DataProduct) []string {
 	return result
 }
 
+// diagnosticMessage maps internal finding codes to fixed text that contains no submitted values.
 func diagnosticMessage(code string) string {
 	messages := map[string]string{
 		"NoProducts":             "Provide at least one DataProduct document.",
 		"SourceLimit":            "Select at most 32 local input files.",
 		"DocumentLimit":          "The selection exceeds 4096 physical documents.",
 		"ReadFailed":             "The selected input could not be read.",
-		"InputLimit":             "The selected input exceeds 2 MiB.",
+		"InputLimit":             "The selected inputs exceed 2 MiB in total.",
 		"ProductLimit":           "The bundle exceeds 256 products.",
 		"DepthLimit":             "The document exceeds 64 nesting levels.",
 		"InvalidDocument":        "Use unambiguous YAML or JSON without aliases, duplicate keys or trailing content.",

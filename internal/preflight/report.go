@@ -101,6 +101,7 @@ func CheckBundle(ctx context.Context, sources []io.Reader, namespace string) Bun
 	return bundleReport(r)
 }
 
+// bundleReport adapts evaluation state into bounded public v2 data and drops incomplete previews.
 func bundleReport(r Report) BundleReport {
 	result := BundleReport{
 		APIVersion: "data-product-preflight/v2", Valid: r.Valid, Complete: r.Complete,
@@ -159,6 +160,7 @@ func CheckFiles(ctx context.Context, sources []io.Reader, namespace string) Repo
 	return r
 }
 
+// addDetail counts every finding before limiting displayed diagnostics and resolves safe coordinates.
 func (r *Report) addDetail(
 	document int,
 	severity, code, path string,
@@ -210,11 +212,13 @@ func (r *Report) addDetail(
 	)
 }
 
+// addAt records one finding in both report versions without exposing v2 paths through legacy output.
 func (r *Report) addAt(document int, severity, code, legacyPath, path string) {
 	r.appendLegacy(document, severity, code, legacyPath)
 	r.addDetail(document, severity, code, path, nil, false)
 }
 
+// appendLegacy preserves the bounded v1 diagnostic shape and fixed public wording.
 func (r *Report) appendLegacy(document int, severity, code, path string) {
 	if len(r.Diagnostics) < 128 {
 		r.Diagnostics = append(
@@ -230,6 +234,7 @@ func (r *Report) appendLegacy(document int, severity, code, path string) {
 	}
 }
 
+// addAdmission retains one coarse v1 finding while expanding safe admission categories in v2.
 func (r *Report) addAdmission(document int, legacyPath string, findings []finding) {
 	legacyCode := "AdmissionInvalid"
 	if findings[0].code == "UnknownField" {

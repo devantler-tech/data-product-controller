@@ -36,6 +36,7 @@ type cancelReader struct {
 	reader io.Reader
 }
 
+// Read checks cancellation before each bounded read from the caller's selected source.
 func (r cancelReader) Read(b []byte) (int, error) {
 	if err := r.ctx.Err(); err != nil {
 		return 0, err
@@ -99,6 +100,7 @@ func readSelected(
 	return documents, summaries, "", 0, Position{}
 }
 
+// parseSource preserves one file's physical document positions under the aggregate document budget.
 func parseSource(
 	ctx context.Context,
 	input []byte,
@@ -268,6 +270,7 @@ func jsonValue(value any) (any, error) {
 	}
 }
 
+// checkNode rejects ambiguous YAML syntax and excessive nesting before decoding submitted values.
 func checkNode(node *yaml.Node, depth int) string {
 	if depth > 64 {
 		return "DepthLimit"
