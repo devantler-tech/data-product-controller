@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Inspect a saved data product validation report locally, including findings, public previews and declared dependencies.">
   <title>Publisher review · Data products</title>
-  <link rel="stylesheet" href="/publisher.css">
-  <script src="/ui-contract.js" defer></script>
-  <script src="/descriptor.js" defer></script>
-  <script src="/preflight-report.js" defer></script>
-  <script src="/publisher.js" defer></script>
+  <link rel="stylesheet" href="publisher.css">
 </head>
 <body>
   <header class="app-header">
-    <div><span class="brand">Data products</span><h1>Publisher review</h1></div>
+    <div>
+      <span class="brand">Data products</span>
+      <h1>Publisher review</h1>
+    </div>
     <label class="theme-control">Theme <select id="theme"><option>System</option><option>Light</option><option>Dark</option></select></label>
   </header>
   <main>
@@ -22,7 +22,11 @@
       <form id="report-form">
         <div class="import-fields">
           <label>Local JSON file<input id="report-file" type="file" accept=".json,application/json"></label>
-          <details><summary>Or paste report JSON</summary><label class="sr-only" for="report-text">Report JSON</label><textarea id="report-text" rows="5" spellcheck="false"></textarea></details>
+          <details>
+            <summary>Or paste report JSON</summary>
+            <label class="sr-only" for="report-text">Report JSON</label>
+            <textarea id="report-text" rows="5" spellcheck="false"></textarea>
+          </details>
         </div>
         <div class="actions"><button id="read-report" type="submit">Read report</button><button id="clear-report" class="secondary" type="button">Clear</button></div>
       </form>
@@ -52,7 +56,8 @@
           <article id="product-detail">
             <h3 id="preview-title" tabindex="-1">Select a product</h3>
             <div id="preview-content"></div>
-            <h4>Product requirements</h4><p id="product-requirements">Select a product to inspect its requirements.</p>
+            <h4>Product requirements</h4>
+            <p id="product-requirements">Select a product to inspect its requirements.</p>
             <button id="export-preview" class="secondary" type="button" disabled>Download public descriptor</button>
           </article>
         </div>
@@ -75,5 +80,9 @@
       </section>
     </div>
   </main>
+  <script src="/ui-contract.js" defer></script>
+  <script src="/descriptor.js" defer></script>
+  <script src="/preflight-report.js" defer></script>
+  <script src="/publisher.js" defer></script>
 </body>
 </html>
