@@ -72,7 +72,9 @@ func TestDeletingProductsStayInspectableWithoutReadiness(t *testing.T) {
 			if value["ready"] != !deleting {
 				t.Fatalf("%s deleting=%t exposed ready=%v", path, deleting, value["ready"])
 			}
-			if deleting && !strings.Contains(strings.ToLower(response.Body.String()), "being deleted") {
+			if deleting && !strings.Contains(
+				strings.ToLower(response.Body.String()), "being deleted",
+			) {
 				t.Fatalf("%s did not explain pending deletion", path)
 			}
 		}

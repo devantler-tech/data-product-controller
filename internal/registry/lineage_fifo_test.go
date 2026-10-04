@@ -32,12 +32,15 @@ func TestLineageReaderRejectsFIFO(t *testing.T) {
 	}
 	bounded, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(bounded, filepath.Join(directory, "reader"), fifo)
+	cmd := exec.CommandContext(bounded, "./reader", "trace.json")
+	cmd.Dir = directory
 	output, err := cmd.CombinedOutput()
 	if bounded.Err() != nil {
 		t.Fatal("lineage reader blocked on a named pipe without a writer")
 	}
-	if err == nil || !strings.Contains(string(output), "Could not read a supported dependency trace.") {
+	if err == nil || !strings.Contains(
+		string(output), "Could not read a supported dependency trace.",
+	) {
 		t.Fatalf("non-regular trace was not rejected: %v %s", err, output)
 	}
 }
