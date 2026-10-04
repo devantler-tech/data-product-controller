@@ -98,6 +98,10 @@ Do not copy instructions into them.
   metadata rules, and reuse canonical public projection and declared compatibility rules.
   Imported status never establishes readiness. Missing local producers remain unresolved;
   invalid or incomplete bundles publish no descriptor previews. See `docs/publisher-preflight.md`.
+  Repeatable `--file` shares one byte/product/document/graph/CEL/context budget across selections.
+  Preserve default v1 output; explicit `--report-version v2` adds numeric provenance, safe known
+  paths, bounded witnesses/counts and a static plan only for complete valid bundles. Raw declarations
+  never remain in public reports. Keep the report schema offline and the example reader independent.
 
 ## Validation
 

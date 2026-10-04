@@ -4,8 +4,10 @@ package preflight
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"sort"
+	"strings"
 	"time"
 
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
@@ -34,10 +36,21 @@ type Report struct {
 	RequiredFeatures []string          `json:"requiredFeatures"`
 	Diagnostics      []Diagnostic      `json:"diagnostics"`
 	Descriptors      []json.RawMessage `json:"descriptors,omitempty"`
+	documents        []document
+	sources          []SourceSummary
+	details          []BundleDiagnostic
+	counts           DiagnosticCounts
+	failure          Position
+	productFeatures  []ProductFeatures
+	plan             *ReviewPlan
 }
 
 // Check is the offline publisher boundary.
 func Check(ctx context.Context, in io.Reader, namespace string) Report {
+	return CheckFiles(ctx, []io.Reader{in}, namespace)
+}
+
+func checkSelected(ctx context.Context, sources []io.Reader, namespace string) Report {
 	report := Report{
 		APIVersion: "data-product-preflight/v1", Valid: true, Complete: true,
 		RequiredFeatures: []string{}, Diagnostics: []Diagnostic{},
@@ -45,22 +58,25 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if ctx.Err() != nil {
-		report.add(0, "error", "ValidationLimit", "")
+		report.add(0, "ValidationLimit", "")
 		return report
 	}
 	if namespace != "" && len(validation.IsDNS1123Label(namespace)) != 0 {
-		report.add(0, "error", "InvalidNamespace", "metadata.namespace")
+		report.add(0, "InvalidNamespace", "metadata.namespace")
 		return report
 	}
-	documents, code, number := readDocuments(in)
+	documents, summaries, code, number, failure := readSelected(ctx, sources)
+	report.sources = summaries
+	report.failure = failure
 	if code != "" {
-		report.add(number, "error", code, "")
+		report.add(number, code, "")
 		return report
 	}
+	report.documents = documents
 	report.Products = len(documents)
 	validator, err := loadAdmission()
 	if err != nil {
-		report.add(0, "error", "ValidationUnavailable", "")
+		report.add(0, "ValidationUnavailable", "")
 		return report
 	}
 	budget := int64(celconfig.RuntimeCELCostBudget)
@@ -68,7 +84,7 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 	required := make(map[string]bool)
 	for index := range documents {
 		if ctx.Err() != nil {
-			report.add(index+1, "error", "ValidationLimit", "")
+			report.add(index+1, "ValidationLimit", "")
 			return report
 		}
 		doc := &documents[index]
@@ -77,23 +93,26 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 			product.Namespace = namespace
 		}
 		if product.Namespace == "" {
-			report.add(index+1, "error", "NamespaceRequired", "metadata.namespace")
+			report.add(index+1, "NamespaceRequired", "metadata.namespace")
 			continue
 		}
 		if len(validation.IsDNS1123Label(product.Namespace)) != 0 ||
 			len(validation.IsDNS1123Subdomain(product.Name)) != 0 {
-			report.add(index+1, "error", "AdmissionInvalid", "metadata")
+			report.add(index+1, "AdmissionInvalid", "metadata")
 			continue
 		}
-		if len(
-			apivalidation.ValidateObjectMeta(
-				&product.ObjectMeta,
-				true,
-				apivalidation.NameIsDNSSubdomain,
-				field.NewPath("metadata"),
-			),
-		) != 0 {
-			report.add(index+1, "error", "AdmissionInvalid", "metadata")
+		metadataErrors := apivalidation.ValidateObjectMeta(
+			&product.ObjectMeta,
+			true,
+			apivalidation.NameIsDNSSubdomain,
+			field.NewPath("metadata"),
+		)
+		if len(metadataErrors) != 0 {
+			report.addAdmission(
+				index+1,
+				"metadata",
+				admissionFindings(metadataErrors, validator.schema, "InvalidField"),
+			)
 			continue
 		}
 		// The local command validates declarations, never an imported observation.
@@ -101,31 +120,41 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 		product.Generation = 0
 		metadata, ok := doc.object["metadata"].(map[string]any)
 		if !ok {
-			report.add(index+1, "error", "AdmissionInvalid", "metadata")
+			report.add(index+1, "AdmissionInvalid", "metadata")
 			continue
 		}
 		metadata["namespace"] = product.Namespace
 		delete(doc.object, "status")
-		code, budget = validator.validate(ctx, doc.object, budget)
-		if code != "" {
-			report.add(index+1, "error", code, "spec")
+		findings, remaining := validator.validate(ctx, doc.object, budget)
+		budget = remaining
+		if len(findings) > 0 {
+			report.addAdmission(index+1, "spec", findings)
 			continue
 		}
 		key := product.Namespace + "/" + product.Name
 		if names[key] || ids[product.Spec.ID] {
-			report.add(index+1, "error", "IdentityConflict", "metadata")
+			report.add(index+1, "IdentityConflict", "metadata")
 			continue
 		}
 		names[key], ids[product.Spec.ID] = true, true
 		if product.Spec.UI != nil && !registry.ValidPublicationUI(*product.Spec.UI) {
-			report.add(index+1, "error", "InvalidUI", "spec.ui")
+			report.add(index+1, "InvalidUI", "spec.ui")
 			continue
 		}
 		if _, err := registry.PublicationPreview(product); err != nil {
-			report.add(index+1, "error", "InvalidPublicMetadata", "spec")
+			report.add(index+1, "InvalidPublicMetadata", "spec")
 			continue
 		}
 		observeDeclarations(&report, index+1, product, required)
+		features := declaredFeatures(product)
+		report.productFeatures = append(
+			report.productFeatures,
+			ProductFeatures{
+				Source:           doc.origin.Source,
+				Document:         doc.origin.Document,
+				RequiredFeatures: features,
+			},
+		)
 	}
 	for feature := range required {
 		report.RequiredFeatures = append(report.RequiredFeatures, feature)
@@ -135,10 +164,11 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 		checkGraph(ctx, &report, documents)
 	}
 	if report.Valid && report.Complete {
+		report.plan = reviewPlan(documents)
 		for index := range documents {
 			encoded, err := registry.PublicationPreview(&documents[index].product)
 			if err != nil {
-				report.add(index+1, "error", "InvalidPublicMetadata", "spec")
+				report.add(index+1, "InvalidPublicMetadata", "spec")
 				report.Descriptors = nil
 				break
 			}
@@ -147,25 +177,19 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 		encoded, err := json.Marshal(report)
 		if err != nil || len(encoded) > 2<<20 {
 			report.Descriptors = nil
-			report.add(0, "error", "PreviewLimit", "")
+			report.add(0, "PreviewLimit", "")
 		}
 	}
 	return report
 }
 
 // add bounds diagnostic volume and uses only fixed public messages and known paths.
-func (r *Report) add(document int, severity, code, path string) {
-	if severity == "error" {
-		r.Valid = false
+func (r *Report) add(document int, code, path string) {
+	pointer := ""
+	if path != "" {
+		pointer = "/" + strings.ReplaceAll(path, ".", "/")
 	}
-	r.Complete = false
-	if len(r.Diagnostics) >= 128 {
-		return
-	}
-	r.Diagnostics = append(r.Diagnostics, Diagnostic{
-		Document: document, Severity: severity, Code: code, Path: path,
-		Message: diagnosticMessage(code),
-	})
+	r.addAt(document, "error", code, path, pointer)
 }
 
 func observeDeclarations(
@@ -174,6 +198,30 @@ func observeDeclarations(
 	product *data.DataProduct,
 	required map[string]bool,
 ) {
+	for _, feature := range declaredFeatures(product) {
+		required[feature] = true
+	}
+	if len(product.Spec.ContractChecks) != 0 {
+		outputs := make(map[string]bool)
+		for _, output := range product.Spec.Outputs {
+			outputs[output.Name] = true
+		}
+		for index, check := range product.Spec.ContractChecks {
+			if !outputs[check.Output] {
+				report.addAt(
+					number,
+					"error",
+					"ContractOutputNotFound",
+					"spec.contractChecks",
+					fmt.Sprintf("/spec/contractChecks/%d/output", index),
+				)
+			}
+		}
+	}
+}
+
+func declaredFeatures(product *data.DataProduct) []string {
+	required := map[string]bool{}
 	if product.Spec.Source != nil {
 		required["provisioned-sources"] = true
 		if product.Spec.Source.Engine != nil {
@@ -188,15 +236,6 @@ func observeDeclarations(
 	}
 	if len(product.Spec.ContractChecks) != 0 {
 		required["contract-readiness"] = true
-		outputs := make(map[string]bool)
-		for _, output := range product.Spec.Outputs {
-			outputs[output.Name] = true
-		}
-		for _, check := range product.Spec.ContractChecks {
-			if !outputs[check.Output] {
-				report.add(number, "error", "ContractOutputNotFound", "spec.contractChecks")
-			}
-		}
 	}
 	if product.Spec.UI != nil && product.Spec.UI.Contract != nil {
 		required["ui-contract"] = true
@@ -209,11 +248,19 @@ func observeDeclarations(
 	if product.Annotations["data.devantler.tech/dcat-type"] == "Dataset" {
 		required["dcat-catalog"] = true
 	}
+	result := []string{}
+	for feature := range required {
+		result = append(result, feature)
+	}
+	sort.Strings(result)
+	return result
 }
 
 func diagnosticMessage(code string) string {
 	messages := map[string]string{
 		"NoProducts":             "Provide at least one DataProduct document.",
+		"SourceLimit":            "Select at most 32 local input files.",
+		"DocumentLimit":          "The selection exceeds 4096 physical documents.",
 		"ReadFailed":             "The selected input could not be read.",
 		"InputLimit":             "The selected input exceeds 2 MiB.",
 		"ProductLimit":           "The bundle exceeds 256 products.",
@@ -222,6 +269,10 @@ func diagnosticMessage(code string) string {
 		"UnsupportedResource":    "Use data.devantler.tech/v1alpha1 DataProduct documents only.",
 		"UnknownField":           "Remove fields outside the delivered DataProduct API.",
 		"AdmissionInvalid":       "The declaration does not satisfy the delivered API schema or cross-field rules.",
+		"InvalidField":           "The field does not satisfy the delivered API schema.",
+		"RequiredField":          "Provide this required field.",
+		"DuplicateListItem":      "List items must have unique declared identities.",
+		"CrossFieldInvalid":      "The declaration does not satisfy the delivered cross-field rules.",
 		"NamespaceRequired":      "Set metadata.namespace or explicitly select --namespace.",
 		"InvalidNamespace":       "Select a canonical Kubernetes namespace.",
 		"IdentityConflict":       "Each namespace/name and stable product ID must be unique in this bundle.",

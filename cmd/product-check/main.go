@@ -47,32 +47,54 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 	}
 	flags := flag.NewFlagSet("product-check", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
-	file := flags.String("file", "", "Selected local YAML or JSON file")
+	var files selectedFiles
+	flags.Var(&files, "file", "Selected local YAML or JSON file; repeat for a bundle")
+	version := flags.String("report-version", "v1", "v1 or v2 report")
 	namespace := flags.String("namespace", "", "Namespace for documents that omit it")
 	format := flags.String("format", "text", "text or json")
 	if err := flags.Parse(
 		args,
-	); err != nil || *file == "" || flags.NArg() != 0 ||
-		(*format != "text" && *format != "json") {
+	); err != nil || len(files) == 0 || len(files) > 32 || flags.NArg() != 0 ||
+		(*format != "text" && *format != "json") || (*version != "v1" && *version != "v2") {
 		return 1, errors.New(
-			"usage: product-check --file FILE [--namespace NAMESPACE] [--format text|json]",
+			"usage: product-check --file FILE [--file FILE ...] [--namespace NAMESPACE] [--report-version v1|v2] [--format text|json]",
 		)
 	}
-	// Nonblocking open avoids a regular-file-to-FIFO race while checking the opened object.
-	// #nosec G304 -- only the caller selects this local path; document content never selects files.
-	input, err := os.OpenFile(*file, os.O_RDONLY|syscall.O_NONBLOCK, 0)
-	if err != nil {
-		return 1, errors.New("select a readable regular local file")
+	inputs := make([]io.Reader, 0, len(files))
+	selected := make([]*selectedInput, 0, len(files))
+	for _, file := range files {
+		input := &selectedInput{path: file}
+		selected = append(selected, input)
+		inputs = append(inputs, input)
 	}
-	defer func() { _ = input.Close() }()
-	info, err := input.Stat()
-	if err != nil || !info.Mode().IsRegular() {
-		return 1, errors.New("select a readable regular local file")
+	defer func() {
+		for _, input := range selected {
+			input.close()
+		}
+	}()
+	var report preflight.Report
+	var encodedReport any
+	var rich *preflight.BundleReport
+	if *version == "v2" {
+		bundle := preflight.CheckBundle(ctx, inputs, *namespace)
+		rich = &bundle
+		encodedReport = bundle
+		report.Valid = bundle.Valid
+		report.Complete = bundle.Complete
+		report.Products = bundle.Products
+		report.RequiredFeatures = bundle.RequiredFeatures
+	} else {
+		report = preflight.CheckFiles(ctx, inputs, *namespace)
+		encodedReport = report
 	}
-	report := preflight.Check(ctx, input, *namespace)
+	for _, input := range selected {
+		if input.failed {
+			return 1, errors.New("select a readable regular local file")
+		}
+	}
 	var result []byte
 	if *format == "json" {
-		result, err = json.Marshal(report)
+		result, err = json.Marshal(encodedReport)
 		if err != nil {
 			return 1, errors.New("unable to encode preflight report")
 		}
@@ -90,6 +112,28 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 		for _, diagnostic := range report.Diagnostics {
 			_, _ = text.WriteString("document " + strconv.Itoa(diagnostic.Document) + " " +
 				diagnostic.Code + " " + diagnostic.Path + ": " + diagnostic.Message + "\n")
+		}
+		if rich != nil {
+			for _, finding := range rich.Diagnostics {
+				_, _ = fmt.Fprintf(
+					&text,
+					"source %d document %d line %d column %d %s %s: %s\n",
+					finding.Source,
+					finding.Document,
+					finding.Line,
+					finding.Column,
+					finding.Code,
+					finding.Path,
+					finding.Message,
+				)
+			}
+			if rich.DiagnosticCounts.Omitted > 0 {
+				_, _ = fmt.Fprintf(
+					&text,
+					"%d additional finding(s) omitted.\n",
+					rich.DiagnosticCounts.Omitted,
+				)
+			}
 		}
 		if len(report.RequiredFeatures) != 0 {
 			_, _ = text.WriteString(
@@ -111,4 +155,60 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 		return 2, nil
 	}
 	return 0, nil
+}
+
+type selectedFiles []string
+
+func (f *selectedFiles) String() string { return "" }
+func (f *selectedFiles) Set(value string) error {
+	if value == "" || len(*f) >= 32 {
+		return errors.New("invalid selection")
+	}
+	*f = append(*f, value)
+	return nil
+}
+
+// selectedInput opens only an explicitly selected file and closes it after its bounded read.
+type selectedInput struct {
+	path           string
+	file           *os.File
+	opened, failed bool
+}
+
+func (s *selectedInput) close() {
+	if s.file != nil {
+		_ = s.file.Close()
+		s.file = nil
+	}
+}
+
+func (s *selectedInput) Read(b []byte) (int, error) {
+	if !s.opened {
+		s.opened = true
+		// Nonblocking open prevents a regular-file-to-FIFO race; content never selects paths.
+		// #nosec G304 -- the command caller explicitly selects this local path.
+		file, err := os.OpenFile(s.path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+		if err != nil {
+			s.failed = true
+			return 0, errors.New("unreadable selection")
+		}
+		s.file = file
+		info, err := file.Stat()
+		if err != nil || !info.Mode().IsRegular() {
+			s.failed = true
+			s.close()
+			return 0, errors.New("invalid selection")
+		}
+	}
+	if s.file == nil {
+		return 0, io.EOF
+	}
+	n, err := s.file.Read(b)
+	if err != nil {
+		if !errors.Is(err, io.EOF) {
+			s.failed = true
+		}
+		s.close()
+	}
+	return n, err
 }
