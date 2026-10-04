@@ -10,6 +10,7 @@ import (
 	yamlv2 "go.yaml.in/yaml/v2"
 	"go.yaml.in/yaml/v3"
 	kubejson "k8s.io/apimachinery/pkg/util/json"
+	strictjson "sigs.k8s.io/json"
 )
 
 const maxInputBytes = 2 << 20
@@ -72,14 +73,13 @@ func readDocuments(in io.Reader) ([]document, string, int) {
 			return nil, "UnsupportedResource", number
 		}
 		var product data.DataProduct
-		typed := json.NewDecoder(bytes.NewReader(encoded))
-		typed.DisallowUnknownFields()
-		if err := typed.Decode(&product); err != nil {
-			// Do not emit parser errors: both field names and values are untrusted.
-			var typeError *json.UnmarshalTypeError
-			if errors.As(err, &typeError) {
-				return nil, "AdmissionInvalid", number
-			}
+		// Kubernetes treats JSON field names as case-sensitive, including metadata.
+		// Keep strict errors private: their field names and values are untrusted.
+		strictErrors, err := strictjson.UnmarshalStrict(encoded, &product)
+		if err != nil {
+			return nil, "AdmissionInvalid", number
+		}
+		if len(strictErrors) != 0 {
 			return nil, "UnknownField", number
 		}
 		documents = append(documents, document{product: product, object: object})

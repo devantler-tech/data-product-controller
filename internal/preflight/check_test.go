@@ -557,6 +557,26 @@ func TestAuthoredKubernetesMetadata(t *testing.T) {
 	}
 }
 
+func TestKubernetesMetadataFieldCase(t *testing.T) {
+	t.Parallel()
+	for _, sample := range []string{
+		strings.Replace(bundle(t, product("one")), `"name":"one"`, `"Name":"one"`, 1),
+		strings.Replace(bundle(t, product("one")), `"name":"one"`, `"name":"one","Name":"other"`, 1),
+		strings.Replace(bundle(t, product("one")), `"name":"one"`, `"name":"one","Labels":{"bad/key/extra":"value"}`, 1),
+		strings.Replace(bundle(t, product("one")), `"name":"one"`, `"name":"one","Annotations":{"PRIVATE_FIELD":"PRIVATE_VALUE"}`, 1),
+	} {
+		r := check(t, sample)
+		requireCode(t, r, "UnknownField")
+		if r.Valid || r.Complete || len(r.Descriptors) != 0 {
+			t.Fatalf("case-aliased Kubernetes metadata accepted: %+v", r)
+		}
+		encoded, err := json.Marshal(r)
+		if err != nil || strings.Contains(string(encoded), "PRIVATE_") {
+			t.Fatal("unknown metadata field leaked into diagnostics")
+		}
+	}
+}
+
 func TestCustomYAMLTagIsRejected(t *testing.T) {
 	t.Parallel()
 	r := check(t, "!include "+bundle(t, product("one")))

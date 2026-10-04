@@ -85,6 +85,8 @@ linters:
             - go.yaml.in/yaml/v2$
             - go.yaml.in/yaml/v3$
             - sigs.k8s.io/yaml$
+            # Match Kubernetes's case-sensitive strict JSON fields, including metadata.
+            - sigs.k8s.io/json$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
