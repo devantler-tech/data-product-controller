@@ -38,11 +38,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "source",
-          "documents",
-          "products"
-        ],
+        "required": ["source", "documents", "products"],
         "properties": {
           "source": {
             "type": "integer",
@@ -86,11 +82,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "source",
-          "document",
-          "requiredFeatures"
-        ],
+        "required": ["source", "document", "requiredFeatures"],
         "properties": {
           "source": {
             "type": "integer",
@@ -163,10 +155,7 @@
             "maximum": 2097153
           },
           "severity": {
-            "enum": [
-              "error",
-              "warning"
-            ]
+            "enum": ["error", "warning"]
           },
           "code": {
             "enum": [
@@ -218,11 +207,7 @@
             "items": {
               "type": "object",
               "additionalProperties": false,
-              "required": [
-                "source",
-                "document",
-                "path"
-              ],
+              "required": ["source", "document", "path"],
               "properties": {
                 "source": {
                   "type": "integer",
@@ -251,12 +236,7 @@
     "diagnosticCounts": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "total",
-        "errors",
-        "warnings",
-        "omitted"
-      ],
+      "required": ["total", "errors", "warnings", "omitted"],
       "properties": {
         "total": {
           "type": "integer",
@@ -310,10 +290,7 @@
                 "additionalProperties": {
                   "properties": {
                     "state": {
-                      "enum": [
-                        "unobserved",
-                        "not-applicable"
-                      ]
+                      "enum": ["unobserved", "not-applicable"]
                     },
                     "generation": {
                       "const": 0
@@ -412,10 +389,7 @@
     "plan": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "order",
-        "edges"
-      ],
+      "required": ["order", "edges"],
       "properties": {
         "order": {
           "type": "array",
@@ -424,11 +398,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "key",
-              "source",
-              "document"
-            ],
+            "required": ["key", "source", "document"],
             "properties": {
               "key": {
                 "type": "string",
