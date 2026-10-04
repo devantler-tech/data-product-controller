@@ -5,6 +5,7 @@
 : "${test_dir:?run through tests/source/run.sh}"
 
 engine_start_budget
+: "${engine_started_at:?engine acceptance budget required}"
 engine_product_file="$test_dir/engine-product.json"
 engine_cluster_file="$test_dir/engine-cluster.yaml"
 
