@@ -3,6 +3,7 @@ set -euo pipefail
 # Resolve only the selector before prerequisites, scratch space or runtime actions.
 source_suite_dir=${BASH_SOURCE[0]%/*}
 [[ "$source_suite_dir" != "${BASH_SOURCE[0]}" ]] || source_suite_dir=.
+# shellcheck source=tests/source/suite.sh
 source "$source_suite_dir/suite.sh"
 unset source_suite_dir
 source_suite_validate

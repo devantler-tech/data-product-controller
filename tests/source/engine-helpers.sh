@@ -3,7 +3,7 @@
 # Each engine acceptance module gets its own bounded budget.
 engine_start_budget() {
 	engine_started_at=$SECONDS
-	engine_deadline=$((SECONDS + 480))
+	engine_deadline=$((engine_started_at + 480))
 }
 # Report the shared acceptance budget, failing once the module has exhausted it.
 engine_remaining() {
@@ -42,6 +42,8 @@ engine_delete() {
 # Count server-side schema rejection only; transport and authorization errors must fail acceptance.
 engine_reject() {
 	local description=$1 filter=$2
+	: "${engine_product_file:?selected family product fixture required}"
+	: "${test_dir:?owned fixture required}"
 	jq "$filter" "$engine_product_file" >"$test_dir/engine-invalid.json"
 	if kube apply --dry-run=server -f "$test_dir/engine-invalid.json" >"$test_dir/engine-admission.log" 2>&1; then
 		echo "engine admission unexpectedly accepted: $description" >&2
@@ -58,4 +60,3 @@ engine_reject() {
 	esac
 	echo "PASS: engine admission rejects $description"
 }
-
