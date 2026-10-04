@@ -267,3 +267,62 @@ func TestInterruptedBundleRetainsObservedFeatureRequirements(t *testing.T) {
 		t.Fatalf("interruption lost the checked product's requirements: %+v", result)
 	}
 }
+
+// reportAtPayloadSize builds real admitted products whose escaped public text reaches the requested size.
+func reportAtPayloadSize(t *testing.T, target int) BundleReport {
+	t.Helper()
+	products := make([]data.DataProduct, 35)
+	for index := range products {
+		products[index] = product(fmt.Sprintf("bounded-%03d", index))
+		products[index].Spec.Description = strings.Repeat("<", 9900)
+	}
+	last := len(products) - 1
+	products[last].Spec.Description = "x"
+	input := func() string {
+		// Unescaped HTML characters are valid JSON input; public JSON escapes them.
+		return strings.ReplaceAll(bundle(t, products...), "\\u003c", "<")
+	}
+	base := selected(t, input())
+	if !base.Valid || !base.Complete {
+		t.Fatalf("bounded report fixture rejected: %+v", base.Diagnostics)
+	}
+	encoded, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	needed := target - len(encoded) + 1
+	if needed < 1 || needed > 60000 {
+		t.Fatalf("fixture cannot reach payload size: %d", needed)
+	}
+	products[last].Spec.Description = strings.Repeat("<", needed/6) +
+		strings.Repeat("x", needed%6)
+	return selected(t, input())
+}
+
+// TestBundleReportReservesJSONFraming checks the saved-file limit with real projected declarations.
+func TestBundleReportReservesJSONFraming(t *testing.T) {
+	for _, size := range []int{maxInputBytes - 1, maxInputBytes, maxInputBytes + 1} {
+		t.Run(fmt.Sprint(size), func(t *testing.T) {
+			report := reportAtPayloadSize(t, size)
+			if size >= maxInputBytes {
+				richCode(t, report, "PreviewLimit")
+				if report.Valid || report.Complete || report.Plan != nil ||
+					len(report.Descriptors) != 0 {
+					t.Fatal("oversized framed report retained complete previews")
+				}
+				return
+			}
+			if !report.Valid || !report.Complete {
+				t.Fatalf("bounded framed report rejected: %+v", report.Diagnostics)
+			}
+			encoded, err := json.Marshal(report)
+			if err != nil {
+				t.Fatal(err)
+			}
+			framed := append(encoded, '\n')
+			if len(encoded) != size || len(framed) != maxInputBytes {
+				t.Fatalf("unexpected payload/framing sizes: %d/%d", len(encoded), len(framed))
+			}
+		})
+	}
+}

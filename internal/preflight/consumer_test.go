@@ -54,6 +54,16 @@ func TestIndependentPublisherReportReader(t *testing.T) {
 	}
 	p, c := product("producer"), dependent("consumer", "producer")
 	complete := selected(t, bundle(t, p, c))
+	framed, err := json.Marshal(reportAtPayloadSize(t, maxInputBytes-1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	framed = append(framed, '\n')
+	if len(framed) != maxInputBytes {
+		t.Fatalf("expected the exact saved-report limit, got %d", len(framed))
+	}
+	read(t, framed, true)
+	read(t, append(framed, ' '), false)
 	many := product("many")
 	for index := 0; index < 9; index++ {
 		output := many.Spec.Outputs[0]
