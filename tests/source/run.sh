@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Resolve only the selector before prerequisites, scratch space or runtime actions.
+source_suite_dir=${BASH_SOURCE[0]%/*}
+[[ "$source_suite_dir" != "${BASH_SOURCE[0]}" ]] || source_suite_dir=.
+# shellcheck source=tests/source/suite.sh
+source "$source_suite_dir/suite.sh"
+unset source_suite_dir
+source_suite_validate
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 for command in ksail docker kubectl helm jq yq openssl cosign timeout; do
@@ -130,6 +137,7 @@ source "$repo_root/tests/source/helm-lifecycle.sh"
 source "$repo_root/tests/source/source-lifecycle.sh"
 source "$repo_root/tests/source/contract-matrix.sh"
 source "$repo_root/tests/source/connector-matrix.sh"
+source "$repo_root/tests/source/engine-helpers.sh"
 # source_pod returns the sole nondeleting connector Pod UID, rejecting ambiguous rollout states.
 source_pod() {
 	kube get pods -l app.kubernetes.io/component=http-source -o json |
@@ -203,9 +211,11 @@ done <<<"$cluster_nodes"
 
 # No GHCR write or release credentials: both images exist only in this cluster's registry.
 docker build --tag localhost:5055/data-product-controller:e2e "$repo_root"
-bash "$repo_root/tests/source/dsp-catalog.sh" localhost:5055/data-product-controller:e2e
-bash "$repo_root/tests/source/ui-kit.sh" localhost:5055/data-product-controller:e2e
-bash "$repo_root/tests/source/product-check.sh" localhost:5055/data-product-controller:e2e
+if source_suite_includes lifecycle; then
+	bash "$repo_root/tests/source/dsp-catalog.sh" localhost:5055/data-product-controller:e2e
+	bash "$repo_root/tests/source/ui-kit.sh" localhost:5055/data-product-controller:e2e
+	bash "$repo_root/tests/source/product-check.sh" localhost:5055/data-product-controller:e2e
+fi
 docker push localhost:5055/data-product-controller:e2e
 docker build --file "$repo_root/tests/source/fixture/Dockerfile" \
 	--tag localhost:5055/source-fixture:e2e "$repo_root"
@@ -272,35 +282,43 @@ jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
 mkdir "$test_dir/candidate-chart"
 helm package "$repo_root/charts/data-product-controller" --destination "$test_dir/candidate-chart" >/dev/null
 candidate_chart="$test_dir/candidate-chart/data-product-controller-$(helm show chart "$repo_root/charts/data-product-controller" | yq -r '.version').tgz"
-helm_release_lifecycle
+if source_suite_includes lifecycle; then
+	helm_release_lifecycle
 
-install_chart
-kube get deployments -l app.kubernetes.io/component=http-source -o json | jq -e '.items | length == 0' >/dev/null
-echo 'PASS: HTTP source workload absent by default'
-install_chart --set httpSource.enabled=true
-kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
-kube --request-timeout=0 rollout status deployment/dpc-http-source --timeout=240s
-kube --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=condition=Established --timeout=60s
-source "$repo_root/tests/source/ui-appearance.sh"
-yq '.spec.connector.resourceRef.name = "dpc-http-source"' "$repo_root/docs/examples/http-source-product.yaml" | kube apply -f -
-wait_for 'observation disabled in conditions and registry' 180 readiness False false ConnectorFeatureDisabled
-wait_for 'both leader-elected replicas serve the default workspace, descriptors and disabled optional grants' 120 registry_replicas_ready
+	install_chart
+	kube get deployments -l app.kubernetes.io/component=http-source -o json | jq -e '.items | length == 0' >/dev/null
+	echo 'PASS: HTTP source workload absent by default'
+	install_chart --set httpSource.enabled=true
+	kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
+	kube --request-timeout=0 rollout status deployment/dpc-http-source --timeout=240s
+	kube --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=condition=Established --timeout=60s
+	source "$repo_root/tests/source/ui-appearance.sh"
+	yq '.spec.connector.resourceRef.name = "dpc-http-source"' "$repo_root/docs/examples/http-source-product.yaml" | kube apply -f -
+	wait_for 'observation disabled in conditions and registry' 180 readiness False false ConnectorFeatureDisabled
+	wait_for 'both leader-elected replicas serve the default workspace, descriptors and disabled optional grants' 120 registry_replicas_ready
 
-install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
-kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
-wait_for 'observation requires its exact-resource grant' 180 readiness False false ConnectorAccessDenied
-yq 'with(select(.kind == "Role"); .rules[0].resourceNames = ["dpc-http-source"]) |
-  with(select(.kind == "RoleBinding"); .subjects[0].name = "dpc" | .subjects[0].namespace = "products")' \
-	"$repo_root/docs/examples/connector-observer-rbac.yaml" >"$test_dir/observer-rbac.yaml"
-kube apply -f "$test_dir/observer-rbac.yaml"
-wait_for 'healthy source reaches product and registry readiness' 240 readiness True true
-wait_for 'authorized consumer reads the real export' 120 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
-probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
+	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
+	kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
+	wait_for 'observation requires its exact-resource grant' 180 readiness False false ConnectorAccessDenied
+	yq 'with(select(.kind == "Role"); .rules[0].resourceNames = ["dpc-http-source"]) |
+	  with(select(.kind == "RoleBinding"); .subjects[0].name = "dpc" | .subjects[0].namespace = "products")' \
+		"$repo_root/docs/examples/connector-observer-rbac.yaml" >"$test_dir/observer-rbac.yaml"
+	kube apply -f "$test_dir/observer-rbac.yaml"
+	wait_for 'healthy source reaches product and registry readiness' 240 readiness True true
+	wait_for 'authorized consumer reads the real export' 120 probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
+	probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
 
-source "$repo_root/tests/source/installed-matrix.sh"
-installed_lifecycle_matrix
-source "$repo_root/tests/source/composition.sh"
-source "$repo_root/tests/source/catalog.sh"
-source "$repo_root/tests/source/engine-provider.sh"
-source "$repo_root/tests/source/percona-provider.sh"
-source "$repo_root/tests/source/arango-provider.sh"
+	source "$repo_root/tests/source/installed-matrix.sh"
+	installed_lifecycle_matrix
+	source "$repo_root/tests/source/composition.sh"
+	source "$repo_root/tests/source/catalog.sh"
+else
+	# Each provider job starts with the candidate controller and an empty inventory.
+	# Keep the common CA/Secret fixture for the SQL module's HTTP flag assertion.
+	install_chart
+	kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
+	kube --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=condition=Established --timeout=60s
+fi
+if source_suite_includes sql; then source "$repo_root/tests/source/engine-provider.sh"; fi
+if source_suite_includes document; then source "$repo_root/tests/source/percona-provider.sh"; fi
+if source_suite_includes graph; then source "$repo_root/tests/source/arango-provider.sh"; fi
