@@ -46,7 +46,7 @@ func discoveryFixture(t *testing.T) (*httptest.Server, *atomic.Bool, *atomic.Int
 			},
 		},
 	}
-	first["composition"] = map[string]any{"reason": "InputsReady", "message": "Inputs are ready."}
+	first["composition"] = map[string]any{"reason": "ready", "message": "Inputs are ready."}
 	first["lineage"] = []any{
 		map[string]any{
 			"name":   "observations",
@@ -238,10 +238,13 @@ func discoveryProduct(name string) map[string]any {
 		"description": "Public observations.",
 		"version":     "v1.0.0",
 		"owner":       map[string]any{"name": "Harbour team"},
-		"outputs":     []any{},
-		"ready":       false,
+		"outputs": []any{map[string]any{
+			"name": "observations", "protocol": "OpenAPI",
+			"url": "https://example.test/query", "contractUrl": "https://example.test/schema",
+		}},
+		"ready": false,
 		"readiness": map[string]any{
-			"reason":  "StatusStale",
+			"reason":  "stale",
 			"message": "Current generation has not been observed.",
 		},
 		"generation":         3,

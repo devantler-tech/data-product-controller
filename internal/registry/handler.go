@@ -58,6 +58,11 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 			Path:        "ui-contract.js",
 			ContentType: "text/javascript; charset=utf-8",
 		},
+		uibundle.Source{
+			FS:          web.Assets,
+			Path:        "descriptor.js",
+			ContentType: "text/javascript; charset=utf-8",
+		},
 	)
 	server := &server{
 		reader: reader, contractEnabled: options.ContractEnabled,

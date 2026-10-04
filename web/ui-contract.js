@@ -43,8 +43,8 @@
     return url;
   }
 
-  /** Validate a complete public manifest and its exact host-origin authorization. */
-  function validate(manifest, hostOrigin) {
+  /** Validate public presentation metadata without granting any host permission. */
+  function validateMetadata(manifest) {
     if (
       new TextEncoder().encode(JSON.stringify(manifest)).length > 16384 ||
       !shape(manifest, ["url", "title", "contract"])
@@ -92,12 +92,6 @@
         );
       }
     }
-    if (
-      httpsURL(hostOrigin).origin !== hostOrigin ||
-      !contract.hostOrigins.includes(hostOrigin)
-    ) {
-      throw new Error("The publisher has not allowed this host origin.");
-    }
     const supported = capabilities[contract.apiVersion];
     if (
       !Array.isArray(contract.capabilities) ||
@@ -112,6 +106,18 @@
       );
     }
     return structuredClone(manifest);
+  }
+
+  /** Bind validated metadata to the publisher's exact host-origin authorization. */
+  function validate(manifest, hostOrigin) {
+    const checked = validateMetadata(manifest);
+    if (
+      httpsURL(hostOrigin).origin !== hostOrigin ||
+      !checked.contract.hostOrigins.includes(hostOrigin)
+    ) {
+      throw new Error("The publisher has not allowed this host origin.");
+    }
+    return checked;
   }
 
   /** Mount an untrusted surface with per-load session binding and explicit presentation grants. */
@@ -270,5 +276,5 @@
     return dispose;
   }
 
-  window.DataProductUI = Object.freeze({ validate, mount });
+  window.DataProductUI = Object.freeze({ validateMetadata, validate, mount });
 })();

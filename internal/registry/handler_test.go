@@ -147,8 +147,8 @@ func TestRegistryAssetFingerprints(t *testing.T) {
 	)
 	urls := regexp.MustCompile(`/assets/[a-z-]+-[a-f0-9]{64}\.(js|css)`).
 		FindAllString(document.Body.String(), -1)
-	if len(urls) != 4 {
-		t.Fatalf("document references %d fingerprinted assets, want 4", len(urls))
+	if len(urls) != 5 {
+		t.Fatalf("document references %d fingerprinted assets, want 5", len(urls))
 	}
 	for _, url := range urls {
 		response := httptest.NewRecorder()
