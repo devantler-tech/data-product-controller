@@ -50,6 +50,11 @@ func RegistryDiscoveryEnabled(value string) (bool, error) {
 	return featureEnabled("REGISTRY_DISCOVERY_ENABLED", value)
 }
 
+// RegistryLineageEnabled parses the independent default-off dependency trace release gate.
+func RegistryLineageEnabled(value string) (bool, error) {
+	return featureEnabled("REGISTRY_LINEAGE_ENABLED", value)
+}
+
 // UIHostOrigins validates publisher-owned HTTPS origins without accepting wildcards or URL components.
 func UIHostOrigins(value string) ([]string, error) {
 	if value == "" {

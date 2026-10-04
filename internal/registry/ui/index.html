@@ -126,6 +126,30 @@
             aria-live="polite"
             hidden
           ></p>
+          <section id="dependency-trace" aria-labelledby="trace-title" hidden>
+            <div class="trace-heading">
+              <h3 id="trace-title">Dependency trace</h3>
+              <button id="trace-inputs" class="text-button" type="button">Trace inputs</button>
+              <button id="save-trace" class="text-button" type="button" hidden>Save trace</button>
+            </div>
+            <p id="trace-status" class="status" role="status"></p>
+            <div id="trace-result" hidden>
+              <p id="trace-findings" class="status"></p>
+              <div class="trace-scroll" tabindex="0" role="region" aria-label="Products in dependency trace">
+                <table id="trace-table">
+                  <caption>Products and current observations</caption>
+                  <thead><tr><th scope="col">Product</th><th scope="col">Owner / version</th><th scope="col">Readiness</th></tr></thead>
+                </table>
+              </div>
+              <div class="trace-scroll" tabindex="0" role="region" aria-label="Declared input relationships">
+                <table id="trace-edges">
+                  <caption>Declared inputs</caption>
+                  <thead><tr><th scope="col">Consumer / input</th><th scope="col">Producer / output</th><th scope="col">Contract</th><th scope="col">Trace</th></tr></thead>
+                </table>
+              </div>
+              <p class="status">These are observations, not an access grant. Compatible contracts do not establish readiness or matching data schemas.</p>
+            </div>
+          </section>
         </div>
         <iframe
           id="product-surface"
@@ -140,6 +164,7 @@
       </section>
     </main>
     <script src="/assets/ui-contract.js" defer></script>
+    <script src="/assets/lineage.js" defer></script>
     <script src="/assets/registry.js" defer></script>
   </body>
 </html>

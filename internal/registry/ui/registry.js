@@ -47,6 +47,14 @@ let selectedKey = "";
 let disposeSurface = () => {};
 let selection = 0;
 let discoveryEnabled = false;
+let lineageEnabled = false;
+const dependencyTrace = DataProductLineage.create({
+  navigate: key => navigateProduct(key, true),
+  linkFor: key => {
+    const [namespace, name] = key.split("/");
+    return productURL({namespace, name}).href;
+  },
+});
 let continuation = "";
 let catalogNamespace = "";
 let inventoryComplete = false;
@@ -109,7 +117,7 @@ function showDetails(product) {
     name.textContent = output.name;
     const meta = document.createElement("span");
     meta.className = "interface-meta";
-    meta.textContent = `${output.protocol} (${output.mediaType})`;
+    meta.textContent = output.mediaType ? `${output.protocol} (${output.mediaType})` : output.protocol;
     item.append(name, meta);
     for (const [kind, label, value] of [
       ["api", "Open API", output.url],
@@ -181,6 +189,7 @@ function routeKey() {
 
 /** Revoke the current frame and hide descriptors before a new navigation or refresh. */
 function clearSelection() {
+  dependencyTrace.reset();
   ++selection;
   selectedKey = "";
   selectedDescriptor = null;
@@ -305,6 +314,7 @@ function showLineage(product) {
 
 /** Select a descriptor and open its independent surface only while the product is ready. */
 async function selectProduct(product, button) {
+  dependencyTrace.select(product, discoveryEnabled && lineageEnabled);
   const selected = ++selection;
   selectedKey = `${product.namespace}/${product.name}`;
   disposeSurface();
@@ -483,6 +493,7 @@ async function loadProducts() {
     const configuration = configurationResponse.ok ? await configurationResponse.json() : {};
     if (request !== inventoryRequest) return;
     discoveryEnabled = configuration.discoveryEnabled === true;
+    lineageEnabled = configuration.lineageEnabled === true;
     document.querySelector("#catalog-scope").hidden = !discoveryEnabled;
     if (discoveryEnabled) navigateProduct(routeKey());
     const query = new URLSearchParams({limit: "50"});

@@ -72,6 +72,10 @@ inventory.
 
 ## Interpret public health
 
+For an on-demand transitive input chain, enable the additional default-off
+[dependency trace capability](dependency-traces.md). Its contract and readiness
+states remain separate from discovery and data access.
+
 `health` contains `source`, `connector`, `contracts` and `composition`. Each dimension
 has `state`, a static public `message`, the current product `generation`, and the
 condition's `observedGeneration` (zero when no applicable condition is present).

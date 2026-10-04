@@ -221,4 +221,10 @@ discovery_render=$(helm template data-product-controller "$chart" --namespace di
 discovery_flag=$(printf '%s' "$discovery_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "REGISTRY_DISCOVERY_ENABLED") | .value' -)
 [ "$discovery_flag" = 'true' ] || fail 'registry discovery must be explicitly enableable'
 
+lineage_flag=$(printf '%s' "$default_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "REGISTRY_LINEAGE_ENABLED") | .value' -)
+[ "$lineage_flag" = 'false' ] || fail 'dependency tracing must default off'
+lineage_render=$(helm template data-product-controller "$chart" --namespace lineage-system --set registryLineage.enabled=true)
+lineage_flag=$(printf '%s' "$lineage_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "REGISTRY_LINEAGE_ENABLED") | .value' -)
+[ "$lineage_flag" = 'true' ] || fail 'dependency tracing must be explicitly enableable'
+
 printf '%s\n' 'chart behavior tests passed'

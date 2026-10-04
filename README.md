@@ -19,6 +19,7 @@ The current foundation provides:
 - default-off contract reachability through independent probes, with URL-bound `ContractsReady` conditions and bounded network checks;
 - a portable JSON descriptor registry at `/api/v1/products`;
 - default-off [bounded discovery](docs/registry-discovery.md) with a versioned descriptor schema, exact product lookup, namespace-scoped pages, public health dimensions, shared product links and offline descriptor handoff;
+- default-off [dependency traces](docs/dependency-traces.md) with transitive input diagnosis, separate contract and readiness states, upstream navigation and portable JSON export;
 - a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
 - a default-off [offline DSP catalog exporter](docs/dsp-catalog.md) that combines DCAT snapshots with explicit provider services, transfer formats and offers;
 - a default-off [publisher preflight command](docs/publisher-preflight.md) that validates local manifests and previews public descriptors before GitOps publication;

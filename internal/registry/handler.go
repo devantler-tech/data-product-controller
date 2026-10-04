@@ -21,9 +21,11 @@ var uiFiles embed.FS
 
 // HandlerOptions controls the optional portable UI presentation grants.
 type HandlerOptions struct {
-	ContractEnabled   func(context.Context) bool
-	AppearanceEnabled func(context.Context) bool
-	DiscoveryEnabled  func(context.Context) bool
+	ContractEnabled    func(context.Context) bool
+	AppearanceEnabled  func(context.Context) bool
+	DiscoveryEnabled   func(context.Context) bool
+	LineageEnabled     func(context.Context) bool
+	InputCompatibility func(datav1alpha1.InputPort, *datav1alpha1.DataProduct) string
 }
 
 // NewHandler builds the registry API and UI with optional presentation grants disabled.
@@ -47,6 +49,11 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 			ContentType: "text/javascript; charset=utf-8",
 		},
 		uibundle.Source{
+			FS:          uiFiles,
+			Path:        "ui/lineage.js",
+			ContentType: "text/javascript; charset=utf-8",
+		},
+		uibundle.Source{
 			FS:          web.Assets,
 			Path:        "ui-contract.js",
 			ContentType: "text/javascript; charset=utf-8",
@@ -56,12 +63,15 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 		reader: reader, contractEnabled: options.ContractEnabled,
 		appearanceEnabled: options.AppearanceEnabled, bundle: bundle, bundleErr: bundleErr,
 		discoveryEnabled: options.DiscoveryEnabled,
+		lineageEnabled:   options.LineageEnabled, inputCompatibility: options.InputCompatibility,
+		lineageSlot: make(chan struct{}, 1),
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/v1/products", server.listProducts)
 	mux.HandleFunc("GET /api/v1/ui-config", server.uiConfig)
 	mux.HandleFunc("GET /api/v2/products", server.discoveryProducts)
 	mux.HandleFunc("GET /api/v2/products/{namespace}/{name}", server.discoveryProduct)
+	mux.HandleFunc("GET /api/v2/products/{namespace}/{name}/lineage", server.productLineage)
 	mux.HandleFunc("GET /api/v2/schema", server.discoverySchema)
 	mux.HandleFunc("GET /api/v2/", http.NotFound)
 	mux.HandleFunc("GET /", server.registryUI)
@@ -79,11 +89,13 @@ func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 		UIContractEnabled   bool `json:"uiContractEnabled"`
 		UIAppearanceEnabled bool `json:"uiAppearanceEnabled"`
 		DiscoveryEnabled    bool `json:"discoveryEnabled"`
+		LineageEnabled      bool `json:"lineageEnabled"`
 	}{
 		UIContractEnabled: contractEnabled,
 		UIAppearanceEnabled: contractEnabled &&
 			s.appearanceEnabled != nil && s.appearanceEnabled(request.Context()),
 		DiscoveryEnabled: s.discoveryEnabled != nil && s.discoveryEnabled(request.Context()),
+		LineageEnabled:   s.lineageAvailable(request.Context()),
 	})
 }
 
@@ -120,12 +132,15 @@ func setUISecurityHeaders(writer http.ResponseWriter) {
 }
 
 type server struct {
-	bundle            *uibundle.Bundle
-	bundleErr         error
-	reader            client.Reader
-	contractEnabled   func(context.Context) bool
-	appearanceEnabled func(context.Context) bool
-	discoveryEnabled  func(context.Context) bool
+	bundle             *uibundle.Bundle
+	bundleErr          error
+	reader             client.Reader
+	contractEnabled    func(context.Context) bool
+	appearanceEnabled  func(context.Context) bool
+	discoveryEnabled   func(context.Context) bool
+	lineageEnabled     func(context.Context) bool
+	inputCompatibility func(datav1alpha1.InputPort, *datav1alpha1.DataProduct) string
+	lineageSlot        chan struct{}
 }
 
 type productCollection struct {

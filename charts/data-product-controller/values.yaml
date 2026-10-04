@@ -20,6 +20,9 @@ uiAppearance:
 registryDiscovery:
   enabled: false
 
+registryLineage:
+  enabled: false
+
 provisionedSources:
   enabled: false
 

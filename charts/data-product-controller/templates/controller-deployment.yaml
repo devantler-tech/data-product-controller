@@ -37,6 +37,8 @@ spec:
           command: [/manager]
           args: [--leader-elect]
           env:
+            - name: REGISTRY_LINEAGE_ENABLED
+              value: {{ .Values.registryLineage.enabled | quote }}
             - name: REGISTRY_DISCOVERY_ENABLED
               value: {{ .Values.registryDiscovery.enabled | quote }}
             - name: DCAT_CATALOG_ENABLED
