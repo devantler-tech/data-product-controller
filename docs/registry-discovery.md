@@ -107,6 +107,11 @@ dimension, and consumers must display that dimension without inventing a success
 All generation values must be nonnegative integers no larger than 9,007,199,254,740,991,
 so independent JavaScript clients can compare them exactly.
 
+A product with a deletion timestamp remains inspectable but is never aggregate-ready,
+even while its last Ready condition is current and true. Its public message is
+"The product is being deleted." Independent health dimensions retain their observed
+states; pending deletion prevents the browser from opening the product UI.
+
 These are metadata observations at the time of the read. They do not assert current
 endpoint availability, schema compatibility beyond declared metadata, effective data
 permissions, successful data-plane requests or production adoption. An exported file
@@ -164,6 +169,9 @@ rejects invalid UTF-8 before parsing: 64 KiB for an exact descriptor, 2 MiB for 
 and 4 KiB for host configuration. A malformed later page retains earlier validated cards
 and reports incomplete discovery. Refresh cancels earlier inventory and selected-product
 reads; selecting another product cancels the previous lookup and UI configuration read.
+The browser requests 16 products per page, leaving room for the maximum-size descriptors
+and page envelope inside the response bound. Local descriptor files also use strict UTF-8
+decoding; malformed bytes reject the import and withdraw any earlier UI session.
 Metadata validation permits valid unhealthy products and products without a UI to be
 inspected. Mounting still requires current aggregate readiness and the separate publisher
 host approval and presentation grants. Search includes canonical name, namespace/name,

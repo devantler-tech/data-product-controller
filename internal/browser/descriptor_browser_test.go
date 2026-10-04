@@ -318,7 +318,7 @@ func TestOfflineDescriptorHandoff(t *testing.T) {
 	before = navigations.Load()
 	page.MustEval(`() => {
 		const file=new File(['{}'],'slow.json',{type:'application/json'});
-		file.text=()=>new Promise(resolve=>{window.finishDescriptorRead=resolve;});
+		file.arrayBuffer=()=>new Promise(resolve=>{window.finishDescriptorRead=resolve;});
 		const transfer=new DataTransfer(); transfer.items.add(file);
 		document.querySelector('#descriptor-file').files=transfer.files;
 		document.querySelector('#descriptor').value='';
@@ -330,7 +330,7 @@ func TestOfflineDescriptorHandoff(t *testing.T) {
 	}
 	page.MustElement("#close").MustClick()
 	page.MustEval(
-		`async (text) => { finishDescriptorRead(text); await new Promise(resolve=>setTimeout(resolve,50)); }`,
+		`async (text) => { finishDescriptorRead(new TextEncoder().encode(text).buffer); await new Promise(resolve=>setTimeout(resolve,50)); }`,
 		data,
 	)
 	if page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src') || document.querySelector('#kit-status').dataset.state !== 'closed'`).

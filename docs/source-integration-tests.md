@@ -23,8 +23,15 @@ registry. It never selects the operator's current Kubernetes context. Cleanup
 deletes the source container, that cluster, and its storage on normal exit or
 handled termination. Allow several gigabytes of free disk space for Kubernetes and image
 builds. CI runs the same command on a disposable hosted runner, verifies the KSail
-download checksum, grants only repository read access, and limits the job to
-50 minutes.
+download checksum, grants only repository read access, and limits each job to
+50 minutes. Four required matrix jobs select `SOURCE_TEST_SUITE=lifecycle`, `sql`,
+`document` or `graph`. Each owns a fresh cluster, kubeconfig, images, source fixture
+and cleanup. The lifecycle job retains packaged command/UI checks, signed Helm
+upgrade/rollback and the installed source, connector, contract, composition and
+catalog checks. The provider jobs install the candidate into an empty inventory
+and run exactly one synthetic family; they share function definitions without
+executing another family first. Invalid suite values fail before setup. Omitting
+the variable runs all four suites sequentially for local use.
 
 The harness does not use KSail's `--ttl`: that mode keeps the create command in the
 foreground until automatic destruction, which would prevent the assertions from
@@ -97,7 +104,7 @@ that the retained connector still works.
 
 ## Bounds and evidence
 
-Each assertion has a deadline and reports its phase. Waits share a 45-minute
+Each assertion has a deadline and reports its phase. Waits in each job share a 45-minute
 acceptance deadline, reserving time inside the hosted 50-minute job for cleanup.
 Source failure detection
 includes Kubernetes probe thresholds before the controller's polling interval;
@@ -150,7 +157,7 @@ permission revocation, source recreation, independent password ownership rebindi
 rollback and deletion retention. The versioned publication describes synthetic application
 intent; the test does not authenticate to ArangoDB.
 
-Each engine module has a shared eight-minute deadline. The hosted job has a 50-minute ceiling;
+Each engine module has a shared eight-minute deadline. Each hosted job has a 50-minute ceiling;
 the source, composition, catalog and SQL checks retain their assertions and the Document and
 Graph modules each retain an independent eight-minute budget. These tests run the
 real controller and Kubernetes API; they do not install CloudNativePG, Percona or ArangoDB, run databases,
