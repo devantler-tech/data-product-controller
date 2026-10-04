@@ -64,7 +64,11 @@ window.DataProductLineage = (() => {
     const references = new Map([...keys].map(key => [key, []]));
     const upstream = new Map([...observed].map(key => [key, []]));
     const incoming = new Map([...observed].map(key => [key, 0]));
+    const emittedDepths = new Map();
     for (const edge of trace.edges) {
+      // The producer visits each product once, emitting all its inputs at one depth.
+      if (emittedDepths.has(edge.from) && emittedDepths.get(edge.from) !== edge.depth) return false;
+      emittedDepths.set(edge.from, edge.depth);
       if (keys.has(edge.to)) references.get(edge.from).push(edge.to);
       if (edge.state === "resolved") {
         upstream.get(edge.from).push(edge.to);

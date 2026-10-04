@@ -43,7 +43,8 @@ and the public text and URL profile. Failed lookups carry only their identity,
 fixed state and zero generations; they do not invent publisher metadata or contract
 compatibility. Every retained node must connect to the selected root. Resolved
 edges remain acyclic even beside incomplete branches, and depths must describe a
-possible bounded path. Shared dependencies may have several valid path lengths.
+possible bounded path. Shared dependencies may have several valid path lengths,
+but every input emitted by one consumer must record the same first-visit depth.
 Known version contradictions are rejected using exact integer comparisons; absent
 output declarations cannot establish output existence or protocol compatibility.
 
