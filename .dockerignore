@@ -2,7 +2,8 @@
 .github
 .claude
 charts
-config
+config/*
+!config/crd
 docs
 scripts
 *.md

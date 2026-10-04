@@ -12,6 +12,17 @@ import (
 
 var errDescriptorTooLarge = errors.New("descriptor exceeds public bounds")
 
+// PublicationPreview applies the portable publication profile without trusting authored observations.
+func PublicationPreview(product *datav1alpha1.DataProduct) ([]byte, error) {
+	preview := product.DeepCopy()
+	preview.Status = datav1alpha1.DataProductStatus{}
+	preview.Generation = 0
+	return encodePortableDescriptor(preview)
+}
+
+// ValidPublicationUI checks publisher declarations without establishing a session or granting capabilities.
+func ValidPublicationUI(ui datav1alpha1.ProductUI) bool { return validPublicUI(ui) }
+
 type portableDescriptor struct {
 	APIVersion string `json:"apiVersion"`
 	Kind       string `json:"kind"`

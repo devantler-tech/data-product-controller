@@ -278,6 +278,14 @@ func findOutput(product *datav1alpha1.DataProduct, name string) *datav1alpha1.Ou
 	return nil
 }
 
+// DeclaredInputCompatibility checks only supplied public metadata, never producer readiness or schema contents.
+func DeclaredInputCompatibility(
+	input datav1alpha1.InputPort,
+	producer *datav1alpha1.DataProduct,
+) string {
+	return inputCompatibility(input, producer)
+}
+
 // inputCompatibility checks the selected port and optional publisher-declared contract requirement.
 func inputCompatibility(input datav1alpha1.InputPort, producer *datav1alpha1.DataProduct) string {
 	output := findOutput(producer, input.ProductRef.Output)

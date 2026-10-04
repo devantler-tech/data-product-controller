@@ -75,6 +75,18 @@ linters:
             - k8s.io/api/apps/v1$
             - k8s.io/client-go
             - sigs.k8s.io/controller-runtime
+            # Offline publisher validation embeds the delivered schema and runs its rules;
+            # these packages instantiate no API server or network client.
+            - k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
+            - k8s.io/apiextensions-apiserver/pkg/apiserver/schema
+            - k8s.io/apiextensions-apiserver/pkg/apiserver/validation$
+            - k8s.io/apiserver/pkg/apis/cel$
+            # Match Kubernetes YAML 1.1 scalar decoding after v3 syntax guards.
+            - go.yaml.in/yaml/v2$
+            - go.yaml.in/yaml/v3$
+            - sigs.k8s.io/yaml$
+            # Match Kubernetes's case-sensitive strict JSON fields, including metadata.
+            - sigs.k8s.io/json$
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

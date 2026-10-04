@@ -205,6 +205,7 @@ done <<<"$cluster_nodes"
 docker build --tag localhost:5055/data-product-controller:e2e "$repo_root"
 bash "$repo_root/tests/source/dsp-catalog.sh" localhost:5055/data-product-controller:e2e
 bash "$repo_root/tests/source/ui-kit.sh" localhost:5055/data-product-controller:e2e
+bash "$repo_root/tests/source/product-check.sh" localhost:5055/data-product-controller:e2e
 docker push localhost:5055/data-product-controller:e2e
 docker build --file "$repo_root/tests/source/fixture/Dockerfile" \
 	--tag localhost:5055/source-fixture:e2e "$repo_root"

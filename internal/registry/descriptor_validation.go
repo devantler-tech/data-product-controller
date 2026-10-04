@@ -21,10 +21,14 @@ var portableMinimumVersion = regexp.MustCompile(
 	`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`,
 )
 
+var portableURN = regexp.MustCompile(`^urn:[A-Za-z0-9][A-Za-z0-9:._-]+$`)
+
 // validPortableMetadata validates the public schema without loading external documents or data.
 func validPortableMetadata(descriptor portableDescriptor) bool {
 	if !validProductName(descriptor.Name) || !validPublicLabel(descriptor.Namespace) ||
-		descriptor.ID == "" || descriptor.DisplayName == "" || descriptor.Description == "" || descriptor.Version == "" ||
+		!validPublicIdentity(
+			descriptor.ID,
+		) || descriptor.DisplayName == "" || descriptor.Description == "" || descriptor.Version == "" ||
 		!validPublicOwner(descriptor.Owner) || len(descriptor.Outputs) == 0 ||
 		!validGeneration(
 			descriptor.Generation,
@@ -61,6 +65,11 @@ func validPortableMetadata(descriptor portableDescriptor) bool {
 		}
 	}
 	return descriptor.UI == nil || validPublicUI(*descriptor.UI)
+}
+
+// validPublicIdentity retains the API's URN vocabulary and credential-free HTTPS identity profile.
+func validPublicIdentity(value string) bool {
+	return portableURN.MatchString(value) || validPublicHTTPS(value)
 }
 
 // validGeneration bounds integers to values independent JavaScript clients can compare exactly.

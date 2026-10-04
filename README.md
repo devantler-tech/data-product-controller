@@ -21,6 +21,7 @@ The current foundation provides:
 - default-off [bounded discovery](docs/registry-discovery.md) with a versioned descriptor schema, exact product lookup, namespace-scoped pages, public health dimensions, shared product links and offline descriptor handoff;
 - a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
 - a default-off [offline DSP catalog exporter](docs/dsp-catalog.md) that combines DCAT snapshots with explicit provider services, transfer formats and offers;
+- a default-off [publisher preflight command](docs/publisher-preflight.md) that validates local manifests and previews public descriptors before GitOps publication;
 - a registry workspace that renders product descriptors and embeds product UIs in a restricted sandbox;
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
@@ -116,6 +117,17 @@ spec:
 ```
 
 The custom resource is control-plane metadata. Product data and credentials do not belong in the Kubernetes API. Credentials remain in Secrets consumed directly by provisioner or connector workloads.
+
+Before publishing a bundle, opt in to `product-check` and check the selected file:
+
+```bash
+PUBLISHER_PREFLIGHT_ENABLED=true go run ./cmd/product-check \
+  --file docs/examples/composition.yaml
+```
+
+The [publisher guide](docs/publisher-preflight.md) covers the released command,
+namespace selection and exit codes. A passing result validates declarations;
+live readiness and access still require independent observation.
 
 ## Decentralized UI contract
 
