@@ -36,62 +36,6 @@ body {
   gap: 1rem;
 }
 
-#dependency-trace {
-  border-top: 1px solid var(--line);
-  margin-top: 1rem;
-  padding-top: 0.75rem;
-}
-
-.trace-heading {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-}
-
-.trace-scroll {
-  overflow-x: auto;
-  margin-top: 0.75rem;
-}
-
-.trace-scroll table {
-  border-collapse: collapse;
-  width: 100%;
-  text-align: left;
-  font-size: 0.85rem;
-  color: var(--text);
-}
-
-.trace-scroll caption {
-  text-align: left;
-  font-weight: 600;
-  padding-bottom: 0.4rem;
-}
-
-.trace-scroll th,
-.trace-scroll td {
-  border-bottom: 1px solid var(--line);
-  padding: 0.6rem 0.75rem 0.6rem 0;
-  vertical-align: top;
-  min-width: 10rem;
-}
-
-.trace-scroll td span,
-.trace-scroll td strong,
-.trace-scroll td a {
-  display: block;
-}
-
-.trace-scroll td span {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.trace-scroll tr:not([data-state="ready"]):not([data-state="resolved"]) td:first-child {
-  border-left: 2px solid var(--accent);
-  padding-left: 0.65rem;
-}
-
 #health-detail,
 #discovery-scope,
 #load-more {
@@ -523,6 +467,62 @@ dd {
 
 .appearance select {
   width: auto;
+}
+
+#dependency-trace {
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+}
+
+.trace-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.trace-scroll {
+  overflow-x: auto;
+  margin-top: 0.75rem;
+}
+
+.trace-scroll table {
+  border-collapse: collapse;
+  width: 100%;
+  text-align: left;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.trace-scroll caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.4rem;
+}
+
+.trace-scroll th,
+.trace-scroll td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.6rem 0.75rem 0.6rem 0;
+  vertical-align: top;
+  min-width: 10rem;
+}
+
+.trace-scroll td span,
+.trace-scroll td strong,
+.trace-scroll td a {
+  display: block;
+}
+
+.trace-scroll td span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.trace-scroll tr:not([data-state="ready"]):not([data-state="resolved"]) td:first-child {
+  border-left: 2px solid var(--accent);
+  padding-left: 0.65rem;
 }
 
 @media (width <= 36rem) {

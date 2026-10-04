@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -152,7 +153,9 @@ func TestLineagePartialBranchesAndPrivacy(t *testing.T) {
 	root := traceProduct("root", "missing", "missing", "bad", "unavailable", "foreign", "healthy")
 	root.Spec.Inputs[4].ProductRef.Namespace = "foreign"
 	bad := traceProduct("bad")
-	bad.Spec.Owner.URL = "https://credential:sentinel@example.test/"
+	bad.Spec.Owner.URL = (&url.URL{
+		Scheme: "https", Host: "example.test", User: url.UserPassword("credential", "sentinel"),
+	}).String()
 	healthy := traceProduct("healthy")
 	healthy.Status.Conditions[0].Message = "private-provider-diagnostic"
 	root.Status.Inputs = []datav1alpha1.InputStatus{

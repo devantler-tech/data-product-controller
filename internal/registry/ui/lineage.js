@@ -107,8 +107,8 @@ window.DataProductLineage = (() => {
     const result = document.querySelector("#trace-result");
     const action = document.querySelector("#trace-inputs");
     const save = document.querySelector("#save-trace");
-    const nodes = document.querySelector("#trace-table tbody");
-    const edges = document.querySelector("#trace-edges tbody");
+    const nodes = document.querySelector("#trace-table").createTBody();
+    const edges = document.querySelector("#trace-edges").createTBody();
     let selected = null, current = 0, controller = null, snapshot = null;
 
     function reset() {

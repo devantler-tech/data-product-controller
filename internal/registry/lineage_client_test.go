@@ -3,7 +3,6 @@ package registry
 import (
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -26,15 +25,19 @@ func TestLineageIndependentConsumer(t *testing.T) {
 			}
 			_, body := readTrace(t, traceHandler(reader))
 			directory := t.TempDir()
-			path := filepath.Join(directory, "trace.json")
-			if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			files, err := os.OpenRoot(directory)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = files.Close() }()
+			if err := files.WriteFile("trace.json", []byte(body), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			source, err := os.ReadFile("../../docs/examples/lineage-client/main.go")
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(directory, "main.go"), source, 0o600); err != nil {
+			if err := files.WriteFile("main.go", source, 0o600); err != nil {
 				t.Fatal(err)
 			}
 			cmd := exec.CommandContext(t.Context(), "go", "run", "main.go", "trace.json")
