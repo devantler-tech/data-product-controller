@@ -2,6 +2,8 @@ package preflight
 
 import (
 	"context"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/devantler-tech/data-product-controller/config/crd"
@@ -22,6 +24,8 @@ type admission struct {
 	openAPI validation.SchemaValidator
 	cel     *cel.Validator
 }
+
+type finding struct{ code, path string }
 
 var loadAdmission = sync.OnceValues(func() (*admission, error) {
 	var definition api.CustomResourceDefinition
@@ -53,7 +57,7 @@ func (a *admission) validate(
 	ctx context.Context,
 	object map[string]any,
 	budget int64,
-) (string, int64) {
+) ([]finding, int64) {
 	unknown := pruning.PruneWithOptions(
 		object,
 		a.schema,
@@ -61,11 +65,21 @@ func (a *admission) validate(
 		structural.UnknownFieldPathOptions{TrackUnknownFieldPaths: true},
 	)
 	if len(unknown) != 0 {
-		return "UnknownField", budget
+		result := []finding{}
+		for _, path := range unknown {
+			result = append(
+				result,
+				finding{code: "UnknownField", path: safeAdmissionPath(path, a.schema)},
+			)
+		}
+		return result, budget
 	}
-	if len(validation.ValidateCustomResource(field.NewPath("manifest"), object, a.openAPI)) != 0 ||
-		len(listtype.ValidateListSetsAndMaps(field.NewPath("manifest"), a.schema, object)) != 0 {
-		return "AdmissionInvalid", budget
+	errs := validation.ValidateCustomResource(field.NewPath("manifest"), object, a.openAPI)
+	errs = append(
+		errs,
+		listtype.ValidateListSetsAndMaps(field.NewPath("manifest"), a.schema, object)...)
+	if len(errs) > 0 {
+		return admissionFindings(errs, a.schema, "InvalidField"), budget
 	}
 	if a.cel != nil {
 		errs, remaining := a.cel.Validate(
@@ -77,9 +91,76 @@ func (a *admission) validate(
 			budget,
 		)
 		if len(errs) != 0 {
-			return "AdmissionInvalid", remaining
+			return admissionFindings(errs, a.schema, "CrossFieldInvalid"), remaining
 		}
 		budget = remaining
 	}
-	return "", budget
+	return nil, budget
+}
+
+// admissionFindings projects validator errors into fixed categories and schema-known paths.
+func admissionFindings(
+	errs field.ErrorList,
+	shape *structural.Structural,
+	category string,
+) []finding {
+	result := make([]finding, 0, len(errs))
+	for _, err := range errs {
+		code := category
+		if err.Type == field.ErrorTypeRequired {
+			code = "RequiredField"
+		}
+		if err.Type == field.ErrorTypeDuplicate {
+			code = "DuplicateListItem"
+		}
+		result = append(result, finding{code: code, path: safeAdmissionPath(err.Field, shape)})
+	}
+	return result
+}
+
+// safeAdmissionPath walks only the embedded schema; raw names and dynamic map keys never escape.
+func safeAdmissionPath(raw string, shape *structural.Structural) string {
+	if raw == "manifest" {
+		return ""
+	}
+	raw = strings.TrimPrefix(raw, "manifest.")
+	path := ""
+	for len(raw) > 0 && shape != nil {
+		end := strings.IndexAny(raw, ".[")
+		if end < 0 {
+			end = len(raw)
+		}
+		if end > 0 {
+			property, ok := shape.Properties[raw[:end]]
+			if !ok {
+				return path
+			}
+			path += "/" + raw[:end]
+			shape = &property
+			raw = raw[end:]
+		}
+		if len(raw) == 0 {
+			break
+		}
+		if raw[0] == '.' {
+			raw = raw[1:]
+			continue
+		}
+		if raw[0] != '[' || shape.Items == nil {
+			return path
+		}
+		close := strings.IndexByte(raw, ']')
+		if close < 2 {
+			return path
+		}
+		index, err := strconv.Atoi(raw[1:close])
+		if err != nil || index < 0 || index > 4095 || strconv.Itoa(index) != raw[1:close] {
+			return path
+		}
+		path += "/" + strconv.Itoa(index)
+		shape = shape.Items
+		raw = raw[close+1:]
+		raw = strings.TrimPrefix(raw, ".")
+	}
+	return path
 }

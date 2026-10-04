@@ -5,7 +5,7 @@ set -euo pipefail
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 image=${1:?provide the built or verified released application image}
 [[ $# == 1 && "$image" =~ ^[a-zA-Z0-9][a-zA-Z0-9./_:@-]+$ ]] || exit 1
-for command in docker jq timeout; do
+for command in docker jq timeout go; do
 	command -v "$command" >/dev/null || {
 		echo "missing prerequisite: $command" >&2
 		exit 1
@@ -98,4 +98,73 @@ jq -e '.valid == false and .complete == false and (has("descriptors") | not) and
 check_file unresolved 2
 jq -e '.valid and .complete == false and (has("descriptors") | not) and
   any(.diagnostics[]; .code == "ProducerUnresolved")' "$evidence/unresolved-report.json" >/dev/null
+
+# Selected producer and consumer files are one bounded validation scope.
+jq '.metadata.name = "consumer" | .spec.id = "urn:example:consumer" |
+  .spec.inputs = [{name:"upstream",productRef:{name:"harbour",output:"query"}}]' \
+	"$evidence/valid.json" >"$evidence/consumer.json"
+jq '.spec.inputs = [{name:"upstream",productRef:{name:"consumer",output:"query"}}]' \
+	"$evidence/valid.json" >"$evidence/cycle.json"
+chmod 444 "$evidence/consumer.json" "$evidence/cycle.json"
+jq '.spec.inputs[0].contract = {minimumVersion:"v2.0.0",protocol:"OpenAPI"}' \
+	"$evidence/consumer.json" >"$evidence/incompatible.json"
+jq '.spec.inputs = [range(0;140) | {name:("input-" + tostring),
+  productRef:{name:"absent",output:"query"}}]' \
+	"$evidence/valid.json" >"$evidence/truncated.json"
+chmod 444 "$evidence/incompatible.json" "$evidence/truncated.json"
+
+check_bundle() {
+	local name=$1 expected=$2 result
+	shift 2
+	if run_check --env PUBLISHER_PREFLIGHT_ENABLED=true \
+		--mount "type=bind,src=$evidence,dst=/input,readonly" \
+		"$image" --report-version v2 --format json "$@" >"$evidence/$name-v2.json"; then
+		result=0
+	else
+		result=$?
+	fi
+	[[ "$result" == "$expected" ]]
+	! grep -F 'PRIVATE_' "$evidence/$name-v2.json"
+}
+check_bundle selected 0 --file /input/consumer.json --file /input/valid.json
+jq -e '.apiVersion == "data-product-preflight/v2" and .valid and .complete and
+  .products == 2 and (.sources | length) == 2 and
+  [.plan.order[].key] == ["products/harbour","products/consumer"] and
+  .plan.edges[0].inputIndex == 0 and .diagnosticCounts.total == 0 and
+  all(.descriptors[]; .ready == false and .generation == 0 and .observedGeneration == 0)
+' "$evidence/selected-v2.json" >/dev/null
+check_bundle duplicate 1 --file /input/valid.json --file /input/valid.json
+jq -e '(.valid | not) and (.complete | not) and .plan == null and
+  .descriptors == [] and any(.diagnostics[]; .code == "IdentityConflict")' \
+	"$evidence/duplicate-v2.json" >/dev/null
+check_bundle cycle 1 --file /input/cycle.json --file /input/consumer.json
+jq -e '(.valid | not) and .plan == null and .descriptors == [] and
+  any(.diagnostics[]; .code == "CompositionCycle" and (.witness | length) == 2)' \
+	"$evidence/cycle-v2.json" >/dev/null
+check_bundle unresolved 2 --file /input/consumer.json
+jq -e '.valid and (.complete | not) and .plan == null and .descriptors == [] and
+  any(.diagnostics[]; .code == "ProducerUnresolved" and .source == 1 and
+    .document == 1 and .path == "/spec/inputs/0/productRef")' \
+	"$evidence/unresolved-v2.json" >/dev/null
+check_bundle missing 1 --file /input/missing.json --file /input/valid.json
+[[ ! -s "$evidence/missing-v2.json" ]]
+check_bundle invalid 1 --file /input/invalid.json --file /input/consumer.json
+jq -e '(.valid | not) and .descriptors == [] and .plan == null and
+  .diagnosticCounts.errors > 0' "$evidence/invalid-v2.json" >/dev/null
+check_bundle incompatible 1 --file /input/valid.json --file /input/incompatible.json
+jq -e '(.valid | not) and .descriptors == [] and .plan == null and
+  any(.diagnostics[]; .code == "ContractIncompatible" and
+    .path == "/spec/inputs/0/contract")' "$evidence/incompatible-v2.json" >/dev/null
+check_bundle truncated 2 --file /input/truncated.json
+jq -e '.valid and (.complete | not) and .descriptors == [] and .plan == null and
+  (.diagnostics | length) == 128 and .diagnosticCounts.total == 140 and
+  .diagnosticCounts.warnings == 140 and .diagnosticCounts.omitted == 12' \
+	"$evidence/truncated-v2.json" >/dev/null
+
+# Build the single standard-library reader without module or network dependency resolution.
+GO111MODULE=off GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
+	go build -o "$evidence/report-reader" "$repo_root/docs/examples/preflight-client/main.go"
+for name in selected duplicate cycle unresolved invalid incompatible truncated; do
+	"$evidence/report-reader" "$evidence/$name-v2.json" >"$evidence/$name-reader.log"
+done
 echo 'PASS: packaged publisher preflight is default-off, offline, schema-aware and never claims observed readiness'
