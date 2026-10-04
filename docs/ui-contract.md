@@ -208,6 +208,11 @@ the product. When testing the chart's demo in a second host, explicitly configur
 that additional origin through `uiContract.additionalHostOrigins`. For products
 published outside the chart, configure both their manifest and their own deployment.
 
+Editing a manifest or descriptor, replacing its selected file, or changing a grant
+closes the active interface and cancels pending imports. Choose **Validate and open**
+or **Import and open** again to use the revised declaration and permissions. Leaving
+the page closes its session; restoring browser history does not reopen it automatically.
+
 Alternatively, serve `web/index.html`, `kit.css`, `kit.js`, and `ui-contract.js`
 from any HTTPS static host. Apply the policy in `web.KitHandler`: same-origin
 scripts/styles, no host connections, HTTPS frames, no ancestors, objects or base
@@ -233,6 +238,10 @@ dispose();
 `DataProductUI.validateMetadata(manifest)` validates the public presentation shape
 without granting host permission. Descriptor inspection uses that limited operation;
 both `validate` and `mount` still require exact publisher approval for the actual host.
+`DataProductUI.validateURL(value)` checks the literal public HTTPS metadata profile
+without fetching it. UI declarations, descriptor links and trace references use
+the same profile. Canonical local HTTPS and IP destinations are supported; URL
+normalization cannot repair an invalid declaration into an accepted destination.
 `mount` validates again, throws on refusal, and returns an idempotent disposer.
 Catch refusal and render it as inert text. Do not run multiple mounts on the same
 frame; dispose the current one first. The library is framework-independent.

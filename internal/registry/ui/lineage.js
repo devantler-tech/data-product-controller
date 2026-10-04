@@ -20,7 +20,13 @@ window.DataProductLineage = (() => {
     value.split("/").length === 2 && labelValid(value.split("/")[0]) &&
     value.split("/")[1].length <= 253 && value.split("/")[1].split(".").every(labelValid);
   /** Bound display metadata before rendering or retaining an export snapshot. */
-  const textValid = value => typeof value === "string" && value.length <= 16384;
+  const textValid = value => typeof value === "string" && new TextEncoder().encode(value).length <= 16384;
+  /** Public identities and support links share the portable descriptor's offline URL profile. */
+  const urlValid = value => {
+    try { DataProductUI.validateURL(value); return true; } catch { return false; }
+  };
+  const identityValid = value => textValid(value) &&
+    (/^urn:[A-Za-z0-9][A-Za-z0-9:._-]+$/.test(value) || urlValid(value));
   /** Reject absent required fields and extra fields outside the public trace profile. */
   const closed = (value, required, optional = []) => value && typeof value === "object" &&
     !Array.isArray(value) && required.every(key => Object.hasOwn(value, key)) &&
@@ -30,13 +36,64 @@ window.DataProductLineage = (() => {
   /** Preserve exact nonnegative generation comparisons in JavaScript. */
   const safeGeneration = value => Number.isSafeInteger(value) && value >= 0;
   /** Validate fixed health dimensions and prevent stale generations from claiming readiness. */
-  function validHealth(health) {
+  function validHealth(health, generation) {
     return closed(health, ["source", "connector", "contracts", "composition"]) &&
       Object.values(health).every(check =>
         closed(check, ["state", "message", "generation", "observedGeneration"]) &&
         (observedStates.has(check.state) && check.state !== "deleting" || check.state === "not-applicable") &&
-        textValid(check.message) && safeGeneration(check.generation) && safeGeneration(check.observedGeneration) &&
+        textValid(check.message) && check.generation === generation && safeGeneration(check.observedGeneration) &&
         (check.state !== "ready" || check.generation === check.observedGeneration));
+  }
+
+  /** Mirror the canonical stable-version comparison without rounding numeric components. */
+  function versionCompatible(actual, minimum) {
+    const parts = value => {
+      const match = typeof value === "string" && /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.exec(value);
+      if (!match || match.slice(1).some(part => part.length > 20)) return null;
+      const numbers = match.slice(1).map(BigInt);
+      return numbers.every(number => number <= 18446744073709551615n) ? numbers : null;
+    };
+    const a = parts(actual), m = parts(minimum);
+    if (!a || !m || a[0] !== m[0]) return false;
+    if (a[0] === 0n) return actual === minimum;
+    return a[1] > m[1] || a[1] === m[1] && a[2] >= m[2];
+  }
+
+  /** Retained nodes must be reachable; resolved paths stay acyclic even beside a failed branch. */
+  function validGraph(trace, observed, keys) {
+    const references = new Map([...keys].map(key => [key, []]));
+    const upstream = new Map([...observed].map(key => [key, []]));
+    const incoming = new Map([...observed].map(key => [key, 0]));
+    for (const edge of trace.edges) {
+      if (keys.has(edge.to)) references.get(edge.from).push(edge.to);
+      if (edge.state === "resolved") {
+        upstream.get(edge.from).push(edge.to);
+        incoming.set(edge.to, incoming.get(edge.to) + 1);
+      }
+    }
+    const reached = new Set([trace.root]), visit = [trace.root];
+    for (let index = 0; index < visit.length; ++index) {
+      for (const key of references.get(visit[index])) {
+        if (!reached.has(key)) { reached.add(key); visit.push(key); }
+      }
+    }
+    if (reached.size !== keys.size) return false;
+    const pending = [...observed].filter(key => incoming.get(key) === 0);
+    // Each bit records a possible path length, allowing shared products first visited by different paths.
+    const depths = new Map([...observed].map(key => [key, key === trace.root ? 1n : 0n]));
+    const depthMask = (1n << 64n) - 1n;
+    for (let index = 0; index < pending.length; ++index) {
+      const from = pending[index];
+      for (const key of upstream.get(from)) {
+        depths.set(key, depths.get(key) | (depths.get(from) << 1n & depthMask));
+        incoming.set(key, incoming.get(key) - 1);
+        if (incoming.get(key) === 0) pending.push(key);
+      }
+    }
+    return pending.length === observed.size && trace.edges.every(edge =>
+      (edge.from !== trace.root || edge.depth === 1) &&
+      (edge.depth !== 64 || ["depth-limit", "cross-namespace"].includes(edge.state)) &&
+      (depths.get(edge.from) & 1n << BigInt(edge.depth - 1)) !== 0n);
   }
 
   /** Check the closed, bounded graph and reject falsely complete references or cycles. */
@@ -52,21 +109,25 @@ window.DataProductLineage = (() => {
         (!trace.complete && !trace.issues.length)) return false;
     const keys = new Set();
     const observed = new Set();
+    const nodes = new Map();
     for (const node of trace.nodes) {
       if (!closed(node, ["key", "state", "generation", "observedGeneration"], ["id", "displayName", "version", "owner", "health"]) ||
           !keyValid(node.key) || node.key.split("/")[0] !== root.split("/")[0] ||
           keys.has(node.key) || (!observedStates.has(node.state) && !failures.has(node.state)) ||
           !safeGeneration(node.generation) || !safeGeneration(node.observedGeneration) ||
           (node.state === "ready" && node.generation !== node.observedGeneration) ||
-          (node.displayName !== undefined && !textValid(node.displayName)) ||
-          (node.version !== undefined && !textValid(node.version)) ||
-          (node.id !== undefined && !textValid(node.id)) ||
-          (node.owner !== undefined && (!closed(node.owner, ["name"], ["url"]) || !textValid(node.owner.name) ||
-            (node.owner.url !== undefined && !textValid(node.owner.url)))) ||
-          (node.health !== undefined && !validHealth(node.health))) return false;
+          (node.displayName !== undefined && (!textValid(node.displayName) || !node.displayName)) ||
+          (node.version !== undefined && (!textValid(node.version) || !node.version)) ||
+          (node.id !== undefined && !identityValid(node.id)) ||
+          (node.owner !== undefined && (!closed(node.owner, ["name"], ["url"]) || !textValid(node.owner.name) || !node.owner.name ||
+            (node.owner.url !== undefined && !urlValid(node.owner.url)))) ||
+          (node.health !== undefined && !validHealth(node.health, node.generation))) return false;
       if (observedStates.has(node.state)) observed.add(node.key);
-      else if (trace.complete || !trace.issues.includes(node.state)) return false;
+      else if (trace.complete || !trace.issues.includes(node.state) ||
+          node.generation !== 0 || node.observedGeneration !== 0 ||
+          Object.keys(node).some(key => !["key", "state", "generation", "observedGeneration"].includes(key))) return false;
       keys.add(node.key);
+      nodes.set(node.key, node);
     }
     const inputs = new Set();
     if (!observed.has(root) || !trace.edges.every(edge => {
@@ -83,26 +144,18 @@ window.DataProductLineage = (() => {
       if (edge.state === "resolved") {
         if (!observed.has(edge.to) || edge.compatibility === "not-evaluated") return false;
       } else if (!failures.has(edge.state) || trace.complete || !trace.issues.includes(edge.state)) return false;
-      if (edge.state !== "cross-namespace" && edge.to.split("/")[0] !== root.split("/")[0]) return false;
+      if ((edge.state === "cross-namespace") !== (edge.to.split("/")[0] !== root.split("/")[0])) return false;
+      if (["missing", "unavailable", "invalid", "identity-mismatch", "metadata-limit", "product-limit", "cross-namespace"].includes(edge.state) &&
+          edge.compatibility !== "not-evaluated") return false;
+      if (["missing", "invalid", "identity-mismatch", "metadata-limit"].includes(edge.state) &&
+          nodes.get(edge.to)?.state !== edge.state) return false;
+      if (edge.compatibility === "contract-incompatible" && !edge.requirement) return false;
+      if (edge.compatibility === "compatible" && edge.requirement && nodes.get(edge.to)?.version !== undefined &&
+          !versionCompatible(nodes.get(edge.to).version, edge.requirement.minimumVersion)) return false;
       inputs.add(inputKey);
       return true;
     })) return false;
-    if (!trace.complete) return true;
-    // Complete traces cannot contain a cycle, even when every edge claims to be resolved.
-    const upstream = new Map([...observed].map(key => [key, []]));
-    const incoming = new Map([...observed].map(key => [key, 0]));
-    for (const edge of trace.edges) {
-      upstream.get(edge.from).push(edge.to);
-      incoming.set(edge.to, incoming.get(edge.to) + 1);
-    }
-    const pending = [...observed].filter(key => incoming.get(key) === 0);
-    for (let index = 0; index < pending.length; ++index) {
-      for (const key of upstream.get(pending[index])) {
-        incoming.set(key, incoming.get(key) - 1);
-        if (incoming.get(key) === 0) pending.push(key);
-      }
-    }
-    return pending.length === observed.size;
+    return validGraph(trace, observed, keys);
   }
 
   /** Bound streamed bytes before assembly, strict UTF-8 decoding and JSON parsing. */

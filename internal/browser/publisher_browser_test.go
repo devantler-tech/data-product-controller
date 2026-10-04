@@ -164,16 +164,18 @@ func TestPublisherReviewWorkflow(t *testing.T) {
 		!strings.Contains(page.MustElement("#plan-edges").MustText(), "upstream") {
 		t.Fatal("named static plan missing")
 	}
-	page.MustElement("#theme").MustFocus()
-	page.Keyboard.MustType(input.End)
-	if page.MustEval(`()=>document.documentElement.dataset.theme`).Str() != "dark" {
-		t.Fatal("dark mode failed")
-	}
-	page.Keyboard.MustType(input.ArrowUp)
+	page.MustElement("#theme").MustSelect("Light")
+	page.MustElement("#theme").MustWait(`()=>this.value==='Light'`)
 	if page.MustEval(`()=>document.documentElement.dataset.theme`).Str() != "light" {
 		t.Fatal("light mode failed")
 	}
-	page.MustEval(`()=>{document.querySelector('#theme').focus();}`)
+	page.MustElement("#theme").MustSelect("Dark")
+	page.MustElement("#theme").MustWait(`()=>this.value==='Dark'`)
+	if page.MustEval(`()=>document.documentElement.dataset.theme`).Str() != "dark" {
+		t.Fatal("dark mode failed")
+	}
+	page.MustElement("#report-file").MustFocus()
+	page.KeyActions().Press(input.ShiftLeft).Type(input.Tab).Release(input.ShiftLeft).MustDo()
 	if page.MustEval(`()=>document.activeElement.id`).Str() != "theme" {
 		t.Fatal("theme is not keyboard focusable")
 	}
@@ -200,7 +202,9 @@ func TestPublisherSystemThemeWithDeniedStorage(t *testing.T) {
 	)
 	page.MustNavigate(host.URL + "/publisher-review").MustWaitLoad()
 	for _, preference := range []string{"dark", "light"} {
-		if err := (proto.EmulationSetEmulatedMedia{Features: []*proto.EmulationMediaFeature{{Name: "prefers-color-scheme", Value: preference}}}).Call(page); err != nil {
+		if err := (proto.EmulationSetEmulatedMedia{Features: []*proto.EmulationMediaFeature{{Name: "prefers-color-scheme", Value: preference}}}).Call(
+			page,
+		); err != nil {
 			t.Fatal(err)
 		}
 		page.MustWait(`theme=>document.documentElement.dataset.theme===theme`, preference)

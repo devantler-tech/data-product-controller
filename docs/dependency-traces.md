@@ -38,6 +38,15 @@ Node `state` and generation fields explain current readiness independently.
 remain `unobserved`; deleting producers are explicitly `deleting`.
 Independent `health` dimensions retain their own observation states.
 
+The browser validates each retained node against its containing product generation
+and the public text and URL profile. Failed lookups carry only their identity,
+fixed state and zero generations; they do not invent publisher metadata or contract
+compatibility. Every retained node must connect to the selected root. Resolved
+edges remain acyclic even beside incomplete branches, and depths must describe a
+possible bounded path. Shared dependencies may have several valid path lengths.
+Known version contradictions are rejected using exact integer comparisons; absent
+output declarations cannot establish output existence or protocol compatibility.
+
 `complete: true` means the permitted dependency graph was inspected. It does
 **not** mean every product is ready, every contract is compatible, an endpoint is
 reachable, or data access is authorized. Reads happen over time and are not an
