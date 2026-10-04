@@ -30,7 +30,10 @@ func richCode(t *testing.T, r BundleReport, code string) BundleDiagnostic {
 			return d
 		}
 	}
-	t.Fatalf("missing %s: %+v", code, r)
+	t.Fatalf(
+		"missing %s: valid=%t complete=%t diagnostics=%+v",
+		code, r.Valid, r.Complete, r.Diagnostics,
+	)
 	return BundleDiagnostic{}
 }
 
@@ -319,9 +322,10 @@ func TestBundleReportReservesJSONFraming(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			framed := append(encoded, '\n')
-			if len(encoded) != size || len(framed) != maxInputBytes {
-				t.Fatalf("unexpected payload/framing sizes: %d/%d", len(encoded), len(framed))
+			payloadBytes := len(encoded)
+			encoded = append(encoded, '\n')
+			if payloadBytes != size || len(encoded) != maxInputBytes {
+				t.Fatalf("unexpected payload/framing sizes: %d/%d", payloadBytes, len(encoded))
 			}
 		})
 	}

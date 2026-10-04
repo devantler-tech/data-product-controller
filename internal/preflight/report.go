@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+// The command appends a newline; reserve it within the saved report's 2 MiB limit.
+const maxReportJSONBytes = maxInputBytes - 1
+
 // Position identifies an explicit selection and physical YAML document without filenames.
 type Position struct {
 	Source   int `json:"source"`
@@ -140,7 +143,7 @@ func bundleReport(r Report) BundleReport {
 		result.Plan = r.plan
 	}
 	encoded, err := json.Marshal(result)
-	if err != nil || len(encoded) > maxInputBytes {
+	if err != nil || len(encoded) > maxReportJSONBytes {
 		r.add(0, "PreviewLimit", "")
 		result.Valid = false
 		result.Complete = false

@@ -152,7 +152,8 @@ Validation has one five-second context and a shared CEL cost budget. Reader
 cancellation is checked between reads; an arbitrary blocked library reader cannot
 be forcibly interrupted. Reports retain
 at most 128 diagnostics. Public fields are limited to 16 KiB, each encoded
-descriptor to 64 KiB, and a complete encoded report to 2 MiB. Select a smaller
+descriptor to 64 KiB, and a complete encoded report to 2 MiB including the
+command's trailing newline. Select a smaller
 bundle if a bound is exceeded.
 
 Source integration runs the real packaged command with networking disabled.

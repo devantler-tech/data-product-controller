@@ -176,7 +176,7 @@ func checkSelected(ctx context.Context, sources []io.Reader, namespace string) R
 			report.Descriptors = append(report.Descriptors, json.RawMessage(encoded))
 		}
 		encoded, err := json.Marshal(report)
-		if err != nil || len(encoded) > 2<<20 {
+		if err != nil || len(encoded) > maxReportJSONBytes {
 			report.Descriptors = nil
 			report.add(0, "PreviewLimit", "")
 		}
