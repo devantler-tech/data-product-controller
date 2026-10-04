@@ -30,6 +30,7 @@ type KitOptions struct {
 	ContractEnabled   func() bool
 	AppearanceEnabled func() bool
 	DiscoveryEnabled  func() bool
+	PublisherEnabled  func() bool
 }
 
 // KitHandlerWithOptions enables offline descriptor handoff without introducing registry or network access.
