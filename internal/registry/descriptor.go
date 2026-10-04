@@ -17,6 +17,7 @@ func PublicationPreview(product *datav1alpha1.DataProduct) ([]byte, error) {
 	preview := product.DeepCopy()
 	preview.Status = datav1alpha1.DataProductStatus{}
 	preview.Generation = 0
+	preview.DeletionTimestamp = nil
 	return encodePortableDescriptor(preview)
 }
 
