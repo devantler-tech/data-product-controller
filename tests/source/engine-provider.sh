@@ -9,7 +9,6 @@ engine_start_budget
 engine_product_file="$test_dir/engine-product.json"
 engine_cluster_file="$test_dir/engine-cluster.yaml"
 
-
 # Check both current-generation Kubernetes conditions and the public registry readiness projection.
 engine_ready() {
 	local status=$1 reason=$2

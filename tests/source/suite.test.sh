@@ -35,7 +35,10 @@ for invalid in '' unknown ALL 'sql document' '../graph'; do
 		[[ "$result" == 2 ]]
 		case "$(cat "$scratch/result")" in
 		*'unsupported SOURCE_TEST_SUITE'*) ;;
-		*) cat "$scratch/result" >&2; exit 1 ;;
+		*)
+			cat "$scratch/result" >&2
+			exit 1
+			;;
 		esac
 	done
 done
