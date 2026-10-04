@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // This builds the single example file outside the module to prove its independent boundary.
@@ -75,7 +76,10 @@ func TestIndependentPublisherReportReader(t *testing.T) {
 		URL:   "https://ui.example.test/view",
 		Title: strings.Repeat("ø", 200),
 	}
-	for index, report := range []BundleReport{complete, selected(t, bundle(t, c)), selected(t, "apiVersion: ["), selected(t, bundle(t, many)), selected(t, bundle(t, unicodeTitle))} {
+	deleting := product("deleting")
+	now := metav1.Now()
+	deleting.DeletionTimestamp = &now
+	for index, report := range []BundleReport{complete, selected(t, bundle(t, c)), selected(t, "apiVersion: ["), selected(t, bundle(t, many)), selected(t, bundle(t, unicodeTitle)), selected(t, bundle(t, deleting))} {
 		t.Run(fmt.Sprintf("emitted-%d", index), func(t *testing.T) {
 			encoded, err := json.Marshal(report)
 			if err != nil {

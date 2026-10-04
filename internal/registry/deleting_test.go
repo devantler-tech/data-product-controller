@@ -12,6 +12,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// TestPublicationPreviewIgnoresRuntimeDeletion preserves the offline unobserved profile.
+func TestPublicationPreviewIgnoresRuntimeDeletion(t *testing.T) {
+	product := registryProduct()
+	now := metav1.Now()
+	product.DeletionTimestamp = &now
+	encoded, err := PublicationPreview(product)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var descriptor portableDescriptor
+	if err := json.Unmarshal(encoded, &descriptor); err != nil {
+		t.Fatal(err)
+	}
+	if descriptor.Ready || descriptor.Generation != 0 || descriptor.ObservedGeneration != 0 ||
+		descriptor.Readiness.Reason != "unobserved" {
+		t.Fatalf("runtime deletion changed the offline publication profile: %s", encoded)
+	}
+}
+
 // TestDeletingProductsStayInspectableWithoutReadiness catches a finalizer-held resource retaining Ready=True.
 func TestDeletingProductsStayInspectableWithoutReadiness(t *testing.T) {
 	t.Parallel()
