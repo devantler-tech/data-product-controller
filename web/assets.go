@@ -30,22 +30,57 @@ type KitOptions struct {
 	ContractEnabled   func() bool
 	AppearanceEnabled func() bool
 	DiscoveryEnabled  func() bool
+	PublisherEnabled  func() bool
 }
 
 // KitHandlerWithOptions enables offline descriptor handoff without introducing registry or network access.
 func KitHandlerWithOptions(options KitOptions) http.Handler {
 	files := http.FileServerFS(Assets)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if options.ContractEnabled == nil || !options.ContractEnabled() ||
+		publisher := options.PublisherEnabled != nil && options.PublisherEnabled()
+		contract := options.ContractEnabled != nil && options.ContractEnabled()
+		reportAsset, sharedAsset, kitAsset := false, false, false
+		switch r.URL.Path {
+		case "/publisher-review",
+			"/publisher.html",
+			"/publisher.css",
+			"/publisher.js",
+			"/preflight-report.js":
+			reportAsset = true
+		case "/ui-contract.js", "/descriptor.js":
+			sharedAsset = true
+		case "/", "/index.html", "/kit.css", "/kit.js":
+			kitAsset = true
+		}
+		allowed := publisher && reportAsset || (publisher || contract) && sharedAsset ||
+			contract && kitAsset
+		if !allowed ||
 			(r.Method != http.MethodGet && r.Method != http.MethodHead) {
 			http.NotFound(w, r)
 			return
 		}
+		frames := "'none'"
+		if contract && !reportAsset {
+			frames = "https:"
+		}
 		w.Header().
-			Set("Content-Security-Policy", "default-src 'self'; connect-src 'none'; frame-src https:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'")
+			Set("Content-Security-Policy", "default-src 'self'; connect-src 'none'; frame-src "+frames+"; frame-ancestors 'none'; object-src 'none'; base-uri 'none'")
+		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if r.URL.Path == "/publisher-review" || r.URL.Path == "/publisher.html" {
+			page, err := Assets.ReadFile("publisher.html")
+			if err != nil {
+				http.Error(w, "publisher review unavailable", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			if r.Method == http.MethodGet {
+				_, _ = w.Write(page)
+			}
+			return
+		}
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
 			page, err := Assets.ReadFile("index.html")
 			if err != nil {

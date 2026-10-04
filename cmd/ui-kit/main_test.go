@@ -133,6 +133,72 @@ func TestUIKitDescriptorGate(t *testing.T) {
 	}
 }
 
+// TestUIKitPublisherGate proves the real command exposes report review independently of UI sessions.
+func TestUIKitPublisherGate(t *testing.T) {
+	for _, transport := range []string{"tls", "gateway"} {
+		for _, value := range []string{"", "false", "true"} {
+			t.Run(transport+"/"+value, func(t *testing.T) {
+				t.Setenv("PUBLISHER_PREFLIGHT_ENABLED", value)
+				address := availableAddress(t)
+				args := []string{"--listen-address", address}
+				client := &http.Client{Timeout: time.Second}
+				scheme := "http"
+				if transport == "tls" {
+					cert, key, trusted := hostCertificate(t)
+					args = append(args, "--tls-cert", cert, "--tls-key", key)
+					client.Transport = trusted
+					scheme = "https"
+				} else {
+					args = append(args, "--http-behind-gateway")
+				}
+				startHost(t, args, "false")
+				base := scheme + "://" + address
+				waitForHost(t, client, base+"/healthz")
+				status, body, headers := hostRequest(
+					t,
+					client,
+					http.MethodGet,
+					base+"/publisher-review",
+					"",
+				)
+				want := http.StatusNotFound
+				if value == "true" {
+					want = http.StatusOK
+				}
+				if status != want {
+					t.Fatalf("publisher=%q transport=%s status=%d", value, transport, status)
+				}
+				if value == "true" && (!strings.Contains(body, "preflight-report.js") ||
+					!strings.Contains(headers.Get("Content-Security-Policy"), "frame-src 'none'")) {
+					t.Fatal("real command lost offline publisher host policy")
+				}
+				status, _, _ = hostRequest(t, client, http.MethodGet, base+"/", "")
+				if status != 404 {
+					t.Fatal("publisher inspection enabled product-session kit")
+				}
+			})
+		}
+	}
+}
+
+// TestUIKitRejectsInvalidPublisherFlag refuses malformed opt-in before listening.
+func TestUIKitRejectsInvalidPublisherFlag(t *testing.T) {
+	t.Setenv("PUBLISHER_PREFLIGHT_ENABLED", "invalid")
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	defer cancel()
+	command := hostCommand(
+		t,
+		ctx,
+		[]string{"--http-behind-gateway", "--listen-address=" + availableAddress(t)},
+		"false",
+	)
+	output, err := command.CombinedOutput()
+	if err == nil || ctx.Err() != nil ||
+		!strings.Contains(string(output), "PUBLISHER_PREFLIGHT_ENABLED") {
+		t.Fatalf("invalid publisher opt-in did not fail before serving: %v %s", err, output)
+	}
+}
+
 // TestUIKitRejectsInvalidDescriptorFlag catches accepting a typo as an activated or ignored release flag.
 func TestUIKitRejectsInvalidDescriptorFlag(t *testing.T) {
 	t.Setenv("REGISTRY_DISCOVERY_ENABLED", "invalid")
