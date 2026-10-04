@@ -105,13 +105,18 @@ func run(args []string, getenv func(string) string) error {
 	if err != nil {
 		return err
 	}
+	publisherSetting := getenv("PUBLISHER_PREFLIGHT_ENABLED")
+	if publisherSetting != "" && publisherSetting != "true" && publisherSetting != "false" {
+		return errors.New("PUBLISHER_PREFLIGHT_ENABLED must be true or false")
+	}
 	client, err := featureflag.NewClient(
 		"ui-kit",
 		featureflag.NewProvider(
 			map[string]bool{
-				"ui-contract":        enabled,
-				"ui-appearance":      appearanceEnabled,
-				"registry-discovery": discoveryEnabled,
+				"ui-contract":         enabled,
+				"ui-appearance":       appearanceEnabled,
+				"registry-discovery":  discoveryEnabled,
+				"publisher-preflight": publisherSetting == "true",
 			},
 		),
 	)
@@ -124,6 +129,7 @@ func run(args []string, getenv func(string) string) error {
 		ContractEnabled:   func() bool { return featureflag.Enabled(context.Background(), client, "ui-contract") },
 		AppearanceEnabled: func() bool { return featureflag.Enabled(context.Background(), client, "ui-appearance") },
 		DiscoveryEnabled:  func() bool { return featureflag.Enabled(context.Background(), client, "registry-discovery") },
+		PublisherEnabled:  func() bool { return featureflag.Enabled(context.Background(), client, "publisher-preflight") },
 	}))
 	server := &http.Server{
 		Addr:              options.address,

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Publisher review · Data products</title>
+  <link rel="stylesheet" href="/publisher.css">
+  <script src="/ui-contract.js" defer></script>
+  <script src="/descriptor.js" defer></script>
+  <script src="/preflight-report.js" defer></script>
+  <script src="/publisher.js" defer></script>
+</head>
+<body>
+  <header class="app-header">
+    <div><span class="brand">Data products</span><h1>Publisher review</h1></div>
+    <label class="theme-control">Theme <select id="theme"><option>System</option><option>Light</option><option>Dark</option></select></label>
+  </header>
+  <main>
+    <section class="import-panel" aria-labelledby="import-title">
+      <h2 id="import-title">Open a saved report</h2>
+      <p>Use a product-check v2 report, up to 2 MiB. Your file stays in this browser.</p>
+      <form id="report-form">
+        <div class="import-fields">
+          <label>Local JSON file<input id="report-file" type="file" accept=".json,application/json"></label>
+          <details><summary>Or paste report JSON</summary><label class="sr-only" for="report-text">Report JSON</label><textarea id="report-text" rows="5" spellcheck="false"></textarea></details>
+        </div>
+        <div class="actions"><button id="read-report" type="submit">Read report</button><button id="clear-report" class="secondary" type="button">Clear</button></div>
+      </form>
+      <p id="report-status" role="status" aria-live="polite" data-state="empty">No report loaded.</p>
+    </section>
+    <div id="review" hidden>
+      <section class="summary-panel" aria-labelledby="outcome-title">
+        <h2 id="outcome-title">Report outcome</h2>
+        <div id="report-summary"></div>
+        <p class="muted">This is a saved validation result. Inspection does not rerun admission checks or establish current service health.</p>
+        <details><summary>Selected sources</summary><div class="table-wrap"><table><thead><tr><th>Source</th><th>Documents</th><th>Products</th></tr></thead><tbody id="source-list"></tbody></table></div></details>
+      </section>
+      <section class="requirements-panel" aria-labelledby="requirements-title">
+        <h2 id="requirements-title">Bundle requirements</h2>
+        <ul id="required-features" class="inline-list"></ul>
+        <p class="muted">Declared requirements. Deployment settings and feature enablement are checked separately.</p>
+        <details><summary>Requirements by source and document</summary><ul id="requirement-origins"></ul></details>
+      </section>
+      <section aria-labelledby="products-title">
+        <h2 id="products-title">Publication previews</h2>
+        <div class="workspace">
+          <aside aria-label="Product inventory">
+            <label for="product-search">Search products</label><input id="product-search" type="search" placeholder="Name, ID, owner or namespace">
+            <p id="product-count" class="muted" role="status"></p>
+            <ul id="product-list"></ul>
+          </aside>
+          <article id="product-detail">
+            <h3 id="preview-title" tabindex="-1">Select a product</h3>
+            <div id="preview-content"></div>
+            <h4>Product requirements</h4><p id="product-requirements">Select a product to inspect its requirements.</p>
+            <button id="export-preview" class="secondary" type="button" disabled>Download public descriptor</button>
+          </article>
+        </div>
+      </section>
+      <section class="findings-panel" aria-labelledby="findings-title">
+        <h2 id="findings-title">Findings</h2>
+        <div class="filters">
+          <label>Severity<select id="severity-filter"><option value="">All</option><option value="error">Errors</option><option value="warning">Warnings</option></select></label>
+          <label>Source<select id="source-filter"><option value="">All</option></select></label>
+          <label>Document<input id="document-filter" type="number" min="0" max="4097" placeholder="All"></label>
+          <label>Code<input id="code-filter" type="search" placeholder="Any code"></label>
+          <button id="reset-filters" class="secondary" type="button">Reset filters</button>
+        </div>
+        <p id="finding-count" role="status"></p><ol id="findings"></ol>
+      </section>
+      <section class="plan-panel" aria-labelledby="plan-title">
+        <h2 id="plan-title">Dependency plan</h2>
+        <p class="muted">Static producer-first order. This is not an apply order or an observation of runtime readiness.</p>
+        <ol id="plan-order"></ol><ul id="plan-edges"></ul>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

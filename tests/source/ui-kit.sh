@@ -54,12 +54,17 @@ request() {
 
 start_host() {
 	local mode=$1 state=$2 appearance=${3:-false} address deadline
+	local publisher=default
+	[[ $# -lt 4 ]] || publisher=$4
 	local -a options=(--detach --read-only --cap-drop ALL --security-opt no-new-privileges
 		--user 65532:65532 --memory 64m --cpus 1 --pids-limit 64
 		--publish 127.0.0.1::8443 --env "UI_APPEARANCE_ENABLED=$appearance")
 	local -a arguments=(--listen-address 0.0.0.0:8443)
 	if [[ "$state" != default ]]; then
 		options+=(--env "UI_CONTRACT_ENABLED=$state")
+	fi
+	if [[ "$publisher" != default ]]; then
+		options+=(--env "PUBLISHER_PREFLIGHT_ENABLED=$publisher")
 	fi
 	if [[ "$mode" == tls ]]; then
 		options+=(--mount "type=bind,source=$test_dir/tls,target=/tls,readonly")
@@ -91,6 +96,8 @@ for mode in tls gateway; do
 		request /healthz 200
 		[[ $(wc -c <"$test_dir/body") -eq 3 && $(cat "$test_dir/body") == ok ]]
 		grep -Fi 'cache-control: no-store' "$test_dir/headers" >/dev/null
+		request /publisher-review 404
+		request /publisher.js 404
 		if [[ "$state" == true ]]; then
 			request / 200
 			grep -F 'ui-contract.js' "$test_dir/body" >/dev/null
@@ -115,3 +122,29 @@ grep -F '<body data-appearance-enabled="true">' "$test_dir/body" >/dev/null
 request /ui-contract.js 200
 grep -F 'DataProductUI' "$test_dir/body" >/dev/null
 echo 'PASS: packaged UI host preserves explicit v2 appearance grants'
+
+docker rm --force "$container_id" >/dev/null
+container_id=''
+for mode in tls gateway; do
+	for publisher in default false true; do
+		start_host "$mode" false false "$publisher"
+		if [[ "$publisher" == true ]]; then
+			request /publisher-review 200
+			grep -F 'preflight-report.js' "$test_dir/body" >/dev/null
+			grep -F "frame-src 'none'" "$test_dir/headers" >/dev/null
+			grep -F "connect-src 'none'" "$test_dir/headers" >/dev/null
+			request /publisher.js 200
+			request /preflight-report.js 200
+			request /publisher.css 200
+			request /descriptor.js 200
+		else
+			request /publisher-review 404
+			request /publisher.js 404
+		fi
+		request / 404
+		request /kit.js 404
+		docker rm --force "$container_id" >/dev/null
+		container_id=''
+		echo "PASS: packaged publisher review ($mode, publisher preflight $publisher)"
+	done
+done

@@ -1,5 +1,36 @@
 # Check a product before publishing
 
+## Review a saved report in the browser
+
+The independent `ui-kit` host provides `/publisher-review`. Set
+`PUBLISHER_PREFLIGHT_ENABLED=true` on that host to opt in; unset and `false`
+states return 404. `UI_CONTRACT_ENABLED` can remain false. Use the host's documented
+TLS listener or explicit internal HTTP gateway transport.
+
+Choose one local v2 JSON report file or paste one report, up to 2 MiB. Files decode
+as strict UTF-8. Nothing is uploaded, fetched from a declared link, or mounted as a
+product UI. Unsupported versions, duplicate decoded keys, fractional numeric tokens,
+unknown fields, inconsistent counts, forged readiness, and inconsistent plan edges reject
+the whole import. Rejection or Clear withdraws earlier results and pending reads.
+
+The workspace shows the report's complete/incomplete and valid/invalid outcome, original
+error/warning totals, retained findings, omissions and source counts. Search public
+previews by identity or owner, inspect sorted requirements, follow named dependency edges,
+or download one selected descriptor. Previews remain unobserved at generation zero.
+Incomplete reports show numeric source/document requirements and witnesses without
+inventing product names or a plan. Severity, source, document and code filters affect
+only the retained findings list.
+
+Browser inspection checks the saved report's public profile and internal consistency.
+It does not rerun original admission or compatibility checks, enable deployment
+features, establish endpoint availability, or prove independent publisher adoption.
+System/Light/Dark works with or without browser storage; the interface reflows on narrow screens.
+
+The JSON scanner allows at most 64 nested levels, 1,024 array entries and 32 keys per
+object; the closed report shapes have stricter collection and field bounds. Reports
+retain at most 128 findings and 64 witness steps. Preview downloads retain the 64 KiB
+public descriptor bound and use bounded filenames.
+
 `product-check` checks explicitly selected local YAML or JSON files before they enter GitOps.
 It validates declarations and creates public descriptor previews. It never
 contacts Kubernetes, follows a URL, reads a Secret, or applies a resource.
