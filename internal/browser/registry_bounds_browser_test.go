@@ -43,6 +43,7 @@ func TestDeletingProductRevokesBrowserSurface(t *testing.T) {
 			}))
 			t.Cleanup(server.Close)
 			page := contractBrowser(t).MustPage().Timeout(15 * time.Second).MustNavigate(server.URL).MustWaitLoad()
+			page.MustElement(".product-card").MustClick()
 			page.MustElement("#product-surface").MustWaitVisible()
 			if err := reader.Delete(t.Context(), product); err != nil {
 				t.Fatal(err)
