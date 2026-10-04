@@ -1,5 +1,6 @@
 :root {
   color-scheme: light;
+
   --bg: #fafaf9;
   --panel: #fff;
   --text: #1c1917;
@@ -9,11 +10,13 @@
   --on-accent: #fff;
   --selected: #fff2e8;
   --focus: #9a3412;
+
   font: 15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
+
   --bg: #11100f;
   --panel: #1c1917;
   --text: #f5f5f4;
@@ -28,6 +31,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
+
     --bg: #11100f;
     --panel: #1c1917;
     --text: #f5f5f4;
@@ -129,7 +133,7 @@ input,textarea {
   width: 100%;
 }
 
-input[type=file] {
+input[type="file"] {
   padding: .35rem;
 }
 
@@ -197,7 +201,7 @@ summary {
   font-weight: 600;
 }
 
-#report-status[data-state=rejected] {
+#report-status[data-state="rejected"] {
   border-left: 3px solid var(--accent);
   padding-left: .6rem;
 }
@@ -306,7 +310,7 @@ article {
   overflow-wrap: anywhere;
 }
 
-#product-list button[aria-pressed=true] {
+#product-list button[aria-pressed="true"] {
   border-left: 3px solid var(--accent);
   background: var(--selected);
 }
@@ -362,33 +366,39 @@ article {
   clip-path: inset(50%);
 }
 
-@media (max-width: 760px) {
+@media (width <= 760px) {
   .workspace,.import-fields {
     grid-template-columns: 1fr;
   }
+
   aside {
     border-right: 0;
     border-bottom: 1px solid var(--border);
   }
+
   .filters {
     grid-template-columns: 1fr 1fr;
   }
+
   main {
     padding: .75rem;
   }
+
   section {
     padding: .8rem;
   }
 }
 
-@media (max-width: 430px) {
+@media (width <= 430px) {
   .filters {
     grid-template-columns: 1fr;
   }
+
   .app-header {
     padding: .75rem;
     align-items: flex-start;
   }
+
   .theme-control {
     flex-direction: column;
     align-items: flex-start;
