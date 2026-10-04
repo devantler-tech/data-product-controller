@@ -130,8 +130,8 @@ container root. Repeat the same test after changing its base, archive, compiler 
 pins. Keep the Apache checksum and detached signature verification, CNPG executables, synthetic
 acceptance credentials, and denial checks. See `docs/postgresql-age-image.md`.
 
-The required CI source-integration job runs `bash tests/source/run.sh` in an
-ephemeral KSail cluster with enforced NetworkPolicy. It requires Docker and several
+The required CI source-integration matrix runs `bash tests/source/run.sh` in four isolated
+ephemeral KSail clusters with enforced NetworkPolicy. It requires Docker and several
 gigabytes of free disk space; hosted execution supplies the real-cluster evidence
 when the local environment cannot run it. See `docs/source-integration-tests.md`.
 

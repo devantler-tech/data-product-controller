@@ -4,49 +4,10 @@
 : "${repo_root:?run through tests/source/run.sh}"
 : "${test_dir:?run through tests/source/run.sh}"
 
-# Each engine acceptance module gets its own bounded budget.
-engine_start_budget() {
-	engine_started_at=$SECONDS
-	engine_deadline=$((SECONDS + 480))
-}
 engine_start_budget
 engine_product_file="$test_dir/engine-product.json"
 engine_cluster_file="$test_dir/engine-cluster.yaml"
 
-# Report the shared acceptance budget, failing once the module has exhausted it.
-engine_remaining() {
-	local remaining=$((engine_deadline - SECONDS))
-	if ((remaining <= 0)); then
-		echo 'engine-provider acceptance exceeded its eight-minute bound' >&2
-		return 1
-	fi
-	printf '%s\n' "$remaining"
-}
-
-# Bound each asynchronous observation to both its polling allowance and the remaining module budget.
-engine_wait() {
-	local description=$1 remaining
-	shift
-	remaining=$(engine_remaining)
-	((remaining <= 45)) || remaining=45
-	wait_for "$description" "$remaining" "$@"
-}
-
-# Wait for gate changes to reach the actual controller Deployment within the shared budget.
-engine_rollout() {
-	local remaining
-	remaining=$(engine_remaining)
-	((remaining <= 60)) || remaining=60
-	kube --request-timeout=0 rollout status deployment/dpc --timeout="${remaining}s"
-}
-
-# Prevent a stuck finalizer from turning a lifecycle assertion into an unbounded deletion wait.
-engine_delete() {
-	local remaining
-	remaining=$(engine_remaining)
-	((remaining <= 20)) || remaining=20
-	kube delete "$@" --wait=true --timeout="${remaining}s"
-}
 
 # Check both current-generation Kubernetes conditions and the public registry readiness projection.
 engine_ready() {
@@ -57,26 +18,6 @@ engine_ready() {
       select(.status == $status and .observedGeneration == $product.metadata.generation)] | length == 2) and
     any(.status.conditions[]?; .type == "SourceReady" and .reason == $reason)' >/dev/null &&
 		registry_ready "$(if [[ "$status" == True ]]; then echo true; else echo false; fi)" engine-warehouse
-}
-
-# Count server-side schema rejection only; transport and authorization errors must fail acceptance.
-engine_reject() {
-	local description=$1 filter=$2
-	jq "$filter" "$engine_product_file" >"$test_dir/engine-invalid.json"
-	if kube apply --dry-run=server -f "$test_dir/engine-invalid.json" >"$test_dir/engine-admission.log" 2>&1; then
-		echo "engine admission unexpectedly accepted: $description" >&2
-		return 1
-	fi
-	# A transport or authorization failure must not count as a validation rejection.
-	case "$(cat "$test_dir/engine-admission.log")" in
-	*'(Invalid)'* | *'is invalid:'*) ;;
-	*)
-		cat "$test_dir/engine-admission.log" >&2
-		echo "engine admission did not report validation failure: $description" >&2
-		return 1
-		;;
-	esac
-	echo "PASS: engine admission rejects $description"
 }
 
 # Model an independent publisher binding synthetic credentials to the current source UID.
