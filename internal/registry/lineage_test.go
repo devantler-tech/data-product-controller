@@ -44,6 +44,7 @@ type traceResult struct {
 	} `json:"edges"`
 }
 
+// traceProduct creates a current public producer with compatible declared references for graph fixtures.
 func traceProduct(name string, targets ...string) *datav1alpha1.DataProduct {
 	p := registryProduct()
 	p.Name = name
@@ -63,6 +64,7 @@ func traceProduct(name string, targets ...string) *datav1alpha1.DataProduct {
 	return p
 }
 
+// traceReader counts lookup attempts per product and verifies the shared deadline on every read.
 func traceReader(
 	t *testing.T,
 	products ...*datav1alpha1.DataProduct,
@@ -91,6 +93,7 @@ func traceReader(
 	}, calls
 }
 
+// traceHandler opts into both trace prerequisites using the controller's canonical compatibility policy.
 func traceHandler(reader client.Reader) http.Handler {
 	return NewHandlerWithOptions(
 		reader,
@@ -102,6 +105,7 @@ func traceHandler(reader client.Reader) http.Handler {
 	)
 }
 
+// readTrace exercises the public route and requires a successful, non-cacheable observation.
 func readTrace(t *testing.T, h http.Handler) (traceResult, string) {
 	t.Helper()
 	r := discoveryRequest(t, h, "/api/v2/products/products/root/lineage")
@@ -118,7 +122,7 @@ func readTrace(t *testing.T, h http.Handler) (traceResult, string) {
 	return result, r.Body.String()
 }
 
-// Removing the transitive walk or caching only successful reads breaks the returned graph.
+// TestLineageTransitiveDiamond verifies complete transitive traversal without rereading a shared producer.
 func TestLineageTransitiveDiamond(t *testing.T) {
 	reader, calls := traceReader(
 		t,
@@ -149,6 +153,7 @@ func TestLineageTransitiveDiamond(t *testing.T) {
 	}
 }
 
+// TestLineagePartialBranchesAndPrivacy preserves failed branches without foreign reads or private diagnostics.
 func TestLineagePartialBranchesAndPrivacy(t *testing.T) {
 	root := traceProduct("root", "missing", "missing", "bad", "unavailable", "foreign", "healthy")
 	root.Spec.Inputs[4].ProductRef.Namespace = "foreign"
@@ -201,6 +206,7 @@ func TestLineagePartialBranchesAndPrivacy(t *testing.T) {
 	}
 }
 
+// TestLineageCompatibilityAndReadiness distinguishes contract requirements from current producer observations.
 func TestLineageCompatibilityAndReadiness(t *testing.T) {
 	for _, tc := range []struct{ name, version, protocol, want string }{
 		{"upgrade", "v1.3.0", "OpenAPI", "compatible"},
@@ -245,6 +251,7 @@ func TestLineageCompatibilityAndReadiness(t *testing.T) {
 	}
 }
 
+// TestLineageCyclesAndLimits requires explicit incomplete results for cycles, depth and read exhaustion.
 func TestLineageCyclesAndLimits(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
@@ -290,6 +297,7 @@ func TestLineageCyclesAndLimits(t *testing.T) {
 	}
 }
 
+// containsString checks unordered diagnostic sets without coupling assertions to presentation order.
 func containsString(values []string, want string) bool {
 	for _, v := range values {
 		if v == want {
@@ -299,6 +307,7 @@ func containsString(values []string, want string) bool {
 	return false
 }
 
+// TestLineageRootIdentityAndQueries rejects ambiguous requests before reads and verifies returned root identity.
 func TestLineageRootIdentityAndQueries(t *testing.T) {
 	reader, calls := traceReader(t, traceProduct("root"))
 	h := traceHandler(reader)
@@ -344,6 +353,7 @@ func TestLineageRootIdentityAndQueries(t *testing.T) {
 	}
 }
 
+// TestLineageFeatureStates requires both live release grants and the canonical evaluator on each request.
 func TestLineageFeatureStates(t *testing.T) {
 	for _, tc := range []struct {
 		name                          string
@@ -397,6 +407,7 @@ func TestLineageFeatureStates(t *testing.T) {
 	}
 }
 
+// TestLineagePublishedSchema validates real responses against the bundled closed public contract.
 func TestLineagePublishedSchema(t *testing.T) {
 	reader, _ := traceReader(
 		t,
@@ -435,6 +446,7 @@ func TestLineagePublishedSchema(t *testing.T) {
 	}
 }
 
+// TestLineageDeadlineAndConcurrentAdmission bounds stalled lookups and verifies that terminal paths release the slot.
 func TestLineageDeadlineAndConcurrentAdmission(t *testing.T) {
 	entered := make(chan struct{})
 	release := make(chan struct{})
@@ -506,6 +518,7 @@ func TestLineageDeadlineAndConcurrentAdmission(t *testing.T) {
 	}
 }
 
+// TestLineageGlobalEdgeAndMetadataBounds enforces whole-trace budgets across otherwise valid public products.
 func TestLineageGlobalEdgeAndMetadataBounds(t *testing.T) {
 	root := traceProduct("root")
 	products := []*datav1alpha1.DataProduct{root}

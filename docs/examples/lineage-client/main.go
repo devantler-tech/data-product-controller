@@ -54,6 +54,8 @@ type trace struct {
 	} `json:"edges"`
 }
 
+// readTraceFile confines a bounded regular-file read to its directory and rejects unknown JSON fields.
+// It checks the example's supported profile; untrusted traces also require the published schema.
 func readTraceFile(path string) (trace, error) {
 	var result trace
 	directory, name := filepath.Split(path)
@@ -94,6 +96,7 @@ func readTraceFile(path string) (trace, error) {
 	return result, nil
 }
 
+// main prints dependency observations without contacting Kubernetes, sources or product endpoints.
 func main() {
 	if len(os.Args) != 2 {
 		fmt.Fprintln(os.Stderr, "Usage: go run main.go trace.json")

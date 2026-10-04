@@ -1,4 +1,4 @@
-/* On-demand catalog metadata only. The host owns navigation and the product surface. */
+/** Manage on-demand catalog metadata; the host owns navigation and the product surface. */
 window.DataProductLineage = (() => {
   const states = {
     ready: "Ready", "not-ready": "Not ready", stale: "Stale",
@@ -13,17 +13,23 @@ window.DataProductLineage = (() => {
     compatible: "Compatible", "output-missing": "Output missing",
     "contract-incompatible": "Incompatible", "not-evaluated": "Not evaluated",
   };
+  /** Admit bounded Kubernetes labels before constructing catalog identities. */
   const labelValid = value => typeof value === "string" && /^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?$/.test(value);
+  /** Accept one namespace and a bounded dotted product name, never a publisher endpoint. */
   const keyValid = value => typeof value === "string" && value.length <= 317 &&
     value.split("/").length === 2 && labelValid(value.split("/")[0]) &&
     value.split("/")[1].length <= 253 && value.split("/")[1].split(".").every(labelValid);
+  /** Bound display metadata before rendering or retaining an export snapshot. */
   const textValid = value => typeof value === "string" && value.length <= 16384;
+  /** Reject absent required fields and extra fields outside the public trace profile. */
   const closed = (value, required, optional = []) => value && typeof value === "object" &&
     !Array.isArray(value) && required.every(key => Object.hasOwn(value, key)) &&
     Object.keys(value).every(key => required.includes(key) || optional.includes(key));
   const observedStates = new Set(["ready", "not-ready", "stale", "unobserved", "disabled", "deleting"]);
   const failures = new Set(["missing", "unavailable", "invalid", "identity-mismatch", "timeout", "metadata-limit", "product-limit", "depth-limit", "edge-limit", "cross-namespace", "cycle"]);
+  /** Preserve exact nonnegative generation comparisons in JavaScript. */
   const safeGeneration = value => Number.isSafeInteger(value) && value >= 0;
+  /** Validate fixed health dimensions and prevent stale generations from claiming readiness. */
   function validHealth(health) {
     return closed(health, ["source", "connector", "contracts", "composition"]) &&
       Object.values(health).every(check =>
@@ -33,6 +39,7 @@ window.DataProductLineage = (() => {
         (check.state !== "ready" || check.generation === check.observedGeneration));
   }
 
+  /** Check the closed, bounded graph and reject falsely complete references or cycles. */
   function validTrace(trace, root) {
     if (!closed(trace, ["apiVersion", "root", "complete", "issues", "nodes", "edges"]) ||
         trace.apiVersion !== "data-product-lineage/v1" || trace.root !== root ||
@@ -98,6 +105,7 @@ window.DataProductLineage = (() => {
     return pending.length === observed.size;
   }
 
+  /** Bound streamed bytes before assembly, strict UTF-8 decoding and JSON parsing. */
   async function boundedJSON(response) {
     const reader = response.body.getReader();
     const chunks = [];
@@ -117,6 +125,7 @@ window.DataProductLineage = (() => {
     return JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(data));
   }
 
+  /** Bind one trace panel to host-owned navigation without opening product data surfaces. */
   function create({navigate, linkFor}) {
     const section = document.querySelector("#dependency-trace");
     const status = document.querySelector("#trace-status");
@@ -127,6 +136,7 @@ window.DataProductLineage = (() => {
     const edges = document.querySelector("#trace-edges").createTBody();
     let selected = null, current = 0, controller = null, snapshot = null;
 
+    /** Cancel pending reads and invalidate all selection-bound results and export state. */
     function reset() {
       ++current;
       controller?.abort();
@@ -140,6 +150,7 @@ window.DataProductLineage = (() => {
       nodes.replaceChildren();
       edges.replaceChildren();
     }
+    /** Offer tracing for an admitted selection without performing a background lookup. */
     function select(product, enabled) {
       reset();
       const key = product.namespace + "/" + product.name;
@@ -148,11 +159,13 @@ window.DataProductLineage = (() => {
       section.hidden = false;
       status.textContent = "Trace this product's inputs to find upstream dependencies.";
     }
+    /** Render publisher text as inert table content. */
     const cell = value => {
       const element = document.createElement("td");
       element.textContent = value;
       return element;
     };
+    /** Present inspected health independently of declared compatibility and traversal gaps. */
     function render(trace) {
       for (const node of trace.nodes) {
         const row = document.createElement("tr");
@@ -207,6 +220,7 @@ window.DataProductLineage = (() => {
         " · " + trace.nodes.length + " products · " + trace.edges.length + " inputs.";
       result.hidden = save.hidden = false;
     }
+    /** Accept a bounded same-origin observation only while its original selection remains current. */
     async function load() {
       if (!selected) return;
       controller?.abort();

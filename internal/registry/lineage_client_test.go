@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// The independent sample consumes real complete and incomplete traces without controller imports.
+// TestLineageIndependentConsumer runs the standalone sample against complete and incomplete real handler outputs.
 func TestLineageIndependentConsumer(t *testing.T) {
 	for _, tc := range []struct {
 		name     string

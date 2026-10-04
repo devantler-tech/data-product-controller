@@ -21,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// lineageFixture serves the real workspace and API with synthetic public products and controllable failures.
 func lineageFixture(
 	t *testing.T,
 	override ...*atomic.Value,
@@ -100,7 +101,7 @@ func lineageFixture(
 	return server, calls, failed, delayed
 }
 
-// Exercise an unhealthy root through the real assets and handler, including export and upstream navigation.
+// TestLineageWorkspace exercises an unhealthy root through real assets, export and upstream navigation.
 func TestLineageWorkspace(t *testing.T) {
 	server, calls, _, _ := lineageFixture(t)
 	page := contractBrowser(
@@ -185,7 +186,7 @@ func TestLineageWorkspace(t *testing.T) {
 	}
 }
 
-// A failed attempt is retryable and a delayed response cannot repopulate a revoked selection.
+// TestLineageRecoveryAndRevocation ensures retries work and delayed responses cannot restore a revoked selection.
 func TestLineageRecoveryAndRevocation(t *testing.T) {
 	server, calls, failed, delayed := lineageFixture(t)
 	page := contractBrowser(
@@ -222,6 +223,7 @@ func TestLineageRecoveryAndRevocation(t *testing.T) {
 	}
 }
 
+// TestLineageRejectsFalseCompleteAndPrivateFields keeps malformed or private snapshots out of rendering and export.
 func TestLineageRejectsFalseCompleteAndPrivateFields(t *testing.T) {
 	override := &atomic.Value{}
 	server, _, _, _ := lineageFixture(t, override)

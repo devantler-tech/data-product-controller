@@ -170,6 +170,7 @@ func (s *server) productLineage(w http.ResponseWriter, r *http.Request) {
 	writeDiscoveryJSON(w, data)
 }
 
+// incomplete retains each distinct gap without hiding independently inspected branches.
 func (g *lineageWalk) incomplete(
 	reason string,
 ) {
@@ -250,6 +251,7 @@ func (g *lineageWalk) read(
 	return g.products[id], node.State
 }
 
+// distinctTracePorts rejects ambiguous port names before compatibility or graph traversal.
 func distinctTracePorts(p *datav1alpha1.DataProduct) bool {
 	names := map[string]bool{}
 	for _, input := range p.Spec.Inputs {
