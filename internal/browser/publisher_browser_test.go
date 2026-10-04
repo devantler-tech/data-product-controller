@@ -167,7 +167,7 @@ func TestPublisherReportAdmissionAndReadRace(t *testing.T) {
 		"r.plan.order.reverse()", "r.plan.edges=[]", "r.plan.edges[0].output='missing'",
 		"r.plan.order[0].source=1", "r.plan.edges[0].source=2",
 	} {
-		rejected := page.MustEval(`(wire,mutation)=>{let r=JSON.parse(wire);Function('r',mutation)(r);try{DataProductPreflightReport.parse(JSON.stringify(r));return false;}catch{return true;}}`, string(encoded), mutation).Bool()
+		rejected := page.MustEval(`wire=>{let r=JSON.parse(wire);`+mutation+`;try{DataProductPreflightReport.parse(JSON.stringify(r));return false;}catch{return true;}}`, string(encoded)).Bool()
 		if !rejected {
 			t.Fatalf("forged report accepted: %s", mutation)
 		}
