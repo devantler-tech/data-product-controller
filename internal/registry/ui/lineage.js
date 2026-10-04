@@ -62,14 +62,14 @@ window.DataProductLineage = (() => {
       keys.add(node.key);
     }
     const inputs = new Set();
-    return observed.has(root) && trace.edges.every(edge => {
+    if (!observed.has(root) || !trace.edges.every(edge => {
       const inputKey = edge.from + "/" + edge.input;
       if (!closed(edge, ["from", "to", "input", "output", "depth", "state", "compatibility"], ["requirement"]) ||
           !observed.has(edge.from) || !keyValid(edge.to) || !labelValid(edge.input) || !labelValid(edge.output) ||
           inputs.has(inputKey) || !Object.hasOwn(states, edge.state) ||
           !Object.hasOwn(contracts, edge.compatibility) ||
           !Number.isInteger(edge.depth) || edge.depth < 1 || edge.depth > 64 ||
-          (edge.requirement && (!closed(edge.requirement, ["protocol", "minimumVersion"]) ||
+          (Object.hasOwn(edge, "requirement") && (!closed(edge.requirement, ["protocol", "minimumVersion"]) ||
             !["OpenAPI", "AsyncAPI", "GraphQL", "DCAT", "ArrowFlight"].includes(edge.requirement.protocol) ||
             typeof edge.requirement.minimumVersion !== "string" || edge.requirement.minimumVersion.length > 64 ||
             !/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(edge.requirement.minimumVersion)))) return false;
@@ -79,7 +79,23 @@ window.DataProductLineage = (() => {
       if (edge.state !== "cross-namespace" && edge.to.split("/")[0] !== root.split("/")[0]) return false;
       inputs.add(inputKey);
       return true;
-    });
+    })) return false;
+    if (!trace.complete) return true;
+    // Complete traces cannot contain a cycle, even when every edge claims to be resolved.
+    const upstream = new Map([...observed].map(key => [key, []]));
+    const incoming = new Map([...observed].map(key => [key, 0]));
+    for (const edge of trace.edges) {
+      upstream.get(edge.from).push(edge.to);
+      incoming.set(edge.to, incoming.get(edge.to) + 1);
+    }
+    const pending = [...observed].filter(key => incoming.get(key) === 0);
+    for (let index = 0; index < pending.length; ++index) {
+      for (const key of upstream.get(pending[index])) {
+        incoming.set(key, incoming.get(key) - 1);
+        if (incoming.get(key) === 0) pending.push(key);
+      }
+    }
+    return pending.length === observed.size;
   }
 
   async function boundedJSON(response) {
