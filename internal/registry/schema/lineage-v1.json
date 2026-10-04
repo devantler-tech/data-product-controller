@@ -1,0 +1,298 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:devantler:data-product-lineage:v1",
+  "title": "Data product dependency trace v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "apiVersion",
+    "root",
+    "complete",
+    "issues",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "apiVersion": {
+      "const": "data-product-lineage/v1"
+    },
+    "root": {
+      "type": "string",
+      "maxLength": 317,
+      "pattern": "^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?/[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?)*$",
+      "allOf": [
+        {
+          "pattern": "/[^/]{1,253}$"
+        }
+      ]
+    },
+    "complete": {
+      "type": "boolean"
+    },
+    "issues": {
+      "type": "array",
+      "maxItems": 11,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "missing",
+          "unavailable",
+          "invalid",
+          "identity-mismatch",
+          "timeout",
+          "metadata-limit",
+          "product-limit",
+          "depth-limit",
+          "edge-limit",
+          "cross-namespace",
+          "cycle"
+        ]
+      }
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "state",
+          "generation",
+          "observedGeneration"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "maxLength": 317,
+            "pattern": "^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?/[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?)*$",
+            "allOf": [
+              {
+                "pattern": "/[^/]{1,253}$"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "ready",
+              "not-ready",
+              "stale",
+              "unobserved",
+              "disabled",
+              "deleting",
+              "missing",
+              "unavailable",
+              "invalid",
+              "identity-mismatch",
+              "timeout",
+              "metadata-limit"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "maxLength": 16384
+          },
+          "displayName": {
+            "type": "string",
+            "maxLength": 16384
+          },
+          "version": {
+            "type": "string",
+            "maxLength": 16384
+          },
+          "owner": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 16384
+              },
+              "url": {
+                "type": "string",
+                "maxLength": 16384
+              }
+            }
+          },
+          "generation": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "observedGeneration": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "health": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source",
+              "connector",
+              "contracts",
+              "composition"
+            ],
+            "properties": {
+              "source": {
+                "$ref": "#/$defs/health"
+              },
+              "connector": {
+                "$ref": "#/$defs/health"
+              },
+              "contracts": {
+                "$ref": "#/$defs/health"
+              },
+              "composition": {
+                "$ref": "#/$defs/health"
+              }
+            }
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "maxItems": 1024,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "input",
+          "output",
+          "depth",
+          "state",
+          "compatibility"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "maxLength": 317,
+            "pattern": "^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?/[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?)*$",
+            "allOf": [
+              {
+                "pattern": "/[^/]{1,253}$"
+              }
+            ]
+          },
+          "to": {
+            "type": "string",
+            "maxLength": 317,
+            "pattern": "^[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?/[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[-a-z0-9]{0,61}[a-z0-9])?)*$",
+            "allOf": [
+              {
+                "pattern": "/[^/]{1,253}$"
+              }
+            ]
+          },
+          "input": {
+            "type": "string",
+            "maxLength": 63,
+            "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$"
+          },
+          "output": {
+            "type": "string",
+            "maxLength": 63,
+            "pattern": "^[a-z0-9](?:[-a-z0-9]*[a-z0-9])?$"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64
+          },
+          "state": {
+            "enum": [
+              "resolved",
+              "missing",
+              "unavailable",
+              "invalid",
+              "identity-mismatch",
+              "timeout",
+              "metadata-limit",
+              "product-limit",
+              "depth-limit",
+              "edge-limit",
+              "cross-namespace",
+              "cycle"
+            ]
+          },
+          "compatibility": {
+            "enum": [
+              "compatible",
+              "output-missing",
+              "contract-incompatible",
+              "not-evaluated"
+            ]
+          },
+          "requirement": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "protocol",
+              "minimumVersion"
+            ],
+            "properties": {
+              "protocol": {
+                "enum": [
+                  "OpenAPI",
+                  "AsyncAPI",
+                  "GraphQL",
+                  "DCAT",
+                  "ArrowFlight"
+                ]
+              },
+              "minimumVersion": {
+                "type": "string",
+                "maxLength": 64,
+                "pattern": "^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "message",
+        "generation",
+        "observedGeneration"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "ready",
+            "not-ready",
+            "stale",
+            "unobserved",
+            "disabled",
+            "not-applicable"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "observedGeneration": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    }
+  }
+}

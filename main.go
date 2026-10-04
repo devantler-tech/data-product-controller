@@ -36,6 +36,7 @@ const (
 	uiContractFlag        = "ui-contract"
 	uiAppearanceFlag      = "ui-appearance"
 	registryDiscoveryFlag = "registry-discovery"
+	registryLineageFlag   = "registry-lineage"
 )
 
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
@@ -134,6 +135,13 @@ func main() {
 		setupLog.Error(err, "invalid registry discovery configuration")
 		os.Exit(1)
 	}
+	registryLineageEnabled, err := config.RegistryLineageEnabled(
+		os.Getenv("REGISTRY_LINEAGE_ENABLED"),
+	)
+	if err != nil {
+		setupLog.Error(err, "invalid registry lineage configuration")
+		os.Exit(1)
+	}
 	flagProvider := featureflag.NewProvider(
 		map[string]bool{
 			provisionedSourcesFlag: sourcesEnabled,
@@ -145,6 +153,7 @@ func main() {
 			uiContractFlag:         uiContractEnabled,
 			uiAppearanceFlag:       uiAppearanceEnabled,
 			registryDiscoveryFlag:  registryDiscoveryEnabled,
+			registryLineageFlag:    registryLineageEnabled,
 		},
 	)
 	flagClient, err := featureflag.NewClient("data-product-controller", flagProvider)
@@ -214,6 +223,10 @@ func main() {
 	registryHandler := registry.NewHandlerWithOptions(
 		controllerManager.GetAPIReader(),
 		registry.HandlerOptions{
+			InputCompatibility: productcontroller.DeclaredInputCompatibility,
+			LineageEnabled: func(ctx context.Context) bool {
+				return featureflag.Enabled(ctx, flagClient, registryLineageFlag)
+			},
 			DiscoveryEnabled: func(ctx context.Context) bool {
 				return featureflag.Enabled(ctx, flagClient, registryDiscoveryFlag)
 			},

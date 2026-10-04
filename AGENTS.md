@@ -70,6 +70,13 @@ Do not copy instructions into them.
 - A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
 - The default-off `ui-contract` feature permits bounded status and resize hints under v1. V2 adds only a Light/Dark appearance hint behind the additional default-off `ui-appearance` gate. Preserve opaque iframe origins, exact source/session/shape checks, publisher-owned host approval, grant intersection, navigation revocation, message bounds and timeout cleanup. See `docs/ui-contract.md`.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
+- The default-off `registry-lineage` gate also requires `registry-discovery` and the canonical
+  declared-compatibility evaluator. Trace declared same-namespace inputs only, verify returned
+  identities, cache failed reads, and keep public health separate from compatibility. Preserve
+  one concurrent trace, the shared five-second deadline, 256 read attempts, 1,024 edges,
+  64 product levels, 1-MiB retained public metadata and 2-MiB encoded response bounds.
+  Incomplete branches stay explicit. No schema, endpoint or data requests occur. Navigation
+  revokes browser work and export. See `docs/dependency-traces.md`.
 - DCAT publication requires the explicit `data.devantler.tech/dcat-type: Dataset` annotation and
   the default-off `dcat-catalog` gate. It projects public metadata only; a listing grants no access
   and asserts no readiness. Preserve the configured catalog identity, stable output identities,

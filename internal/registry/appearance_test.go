@@ -39,8 +39,8 @@ func TestAppearanceConfiguration(t *testing.T) {
 			if err := json.Unmarshal(response.Body.Bytes(), &config); err != nil {
 				t.Fatal(err)
 			}
-			if len(config) != 3 || config["uiAppearanceEnabled"] != (contract && appearance) ||
-				config["uiContractEnabled"] != contract || config["discoveryEnabled"] {
+			if len(config) != 4 || config["uiAppearanceEnabled"] != (contract && appearance) ||
+				config["uiContractEnabled"] != contract || config["discoveryEnabled"] || config["lineageEnabled"] {
 				t.Fatalf(
 					"incorrect presentation policy for contract=%t appearance=%t: %v",
 					contract,

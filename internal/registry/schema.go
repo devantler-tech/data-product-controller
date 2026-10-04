@@ -20,7 +20,7 @@ func (s *server) discoverySchema(writer http.ResponseWriter, request *http.Reque
 			writer,
 			http.StatusBadRequest,
 			"invalid-schema",
-			"Select descriptor or discovery schema.",
+			"Select descriptor, discovery or lineage schema.",
 		)
 		return
 	}
@@ -28,12 +28,12 @@ func (s *server) discoverySchema(writer http.ResponseWriter, request *http.Reque
 	if name == "" && len(values) == 0 {
 		name = "descriptor"
 	}
-	if name != "descriptor" && name != "discovery" {
+	if name != "descriptor" && name != "discovery" && name != "lineage" {
 		discoveryFailure(
 			writer,
 			http.StatusBadRequest,
 			"invalid-schema",
-			"Select descriptor or discovery schema.",
+			"Select descriptor, discovery or lineage schema.",
 		)
 		return
 	}
@@ -43,6 +43,12 @@ func (s *server) discoverySchema(writer http.ResponseWriter, request *http.Reque
 		data, err = discoverySchemas.ReadFile("schema/descriptor-v1.json")
 	case "discovery":
 		data, err = discoverySchemas.ReadFile("schema/discovery-v1.json")
+	case "lineage":
+		if !s.lineageAvailable(request.Context()) {
+			http.NotFound(writer, request)
+			return
+		}
+		data, err = discoverySchemas.ReadFile("schema/lineage-v1.json")
 	}
 	if err != nil {
 		readFailure(writer, err)
