@@ -4,14 +4,7 @@
   "title": "Data product dependency trace v1",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "apiVersion",
-    "root",
-    "complete",
-    "issues",
-    "nodes",
-    "edges"
-  ],
+  "required": ["apiVersion", "root", "complete", "issues", "nodes", "edges"],
   "properties": {
     "apiVersion": {
       "const": "data-product-lineage/v1"
@@ -55,12 +48,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": [
-          "key",
-          "state",
-          "generation",
-          "observedGeneration"
-        ],
+        "required": ["key", "state", "generation", "observedGeneration"],
         "properties": {
           "key": {
             "type": "string",
@@ -103,9 +91,7 @@
           "owner": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "name"
-            ],
+            "required": ["name"],
             "properties": {
               "name": {
                 "type": "string",
@@ -130,12 +116,7 @@
           "health": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "source",
-              "connector",
-              "contracts",
-              "composition"
-            ],
+            "required": ["source", "connector", "contracts", "composition"],
             "properties": {
               "source": {
                 "$ref": "#/$defs/health"
@@ -232,10 +213,7 @@
           "requirement": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "protocol",
-              "minimumVersion"
-            ],
+            "required": ["protocol", "minimumVersion"],
             "properties": {
               "protocol": {
                 "enum": [
@@ -261,12 +239,7 @@
     "health": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "state",
-        "message",
-        "generation",
-        "observedGeneration"
-      ],
+      "required": ["state", "message", "generation", "observedGeneration"],
       "properties": {
         "state": {
           "enum": [
