@@ -22,18 +22,27 @@ func TestPublisherReviewGate(t *testing.T) {
 					want = http.StatusOK
 				}
 				if response.Code != want {
-					t.Fatalf("contract=%t publisher=%t path=%s: %d", contract, publisher, path, response.Code)
+					t.Fatalf(
+						"contract=%t publisher=%t path=%s: %d",
+						contract,
+						publisher,
+						path,
+						response.Code,
+					)
 				}
-				if publisher && (!strings.Contains(response.Header().Get("Content-Security-Policy"), "frame-src 'none'") ||
-					!strings.Contains(response.Header().Get("Content-Security-Policy"), "connect-src 'none'") ||
-					response.Header().Get("Cache-Control") != "no-store") {
+				if publisher &&
+					(!strings.Contains(response.Header().Get("Content-Security-Policy"), "frame-src 'none'") ||
+						!strings.Contains(response.Header().Get("Content-Security-Policy"), "connect-src 'none'") ||
+						response.Header().Get("Cache-Control") != "no-store") {
 					t.Fatal("report host permits an active product surface or retained response")
 				}
 			}
 		}
 	}
 	response := httptest.NewRecorder()
-	KitHandlerWithOptions(KitOptions{}).ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), "GET", "/publisher-review", nil))
+	KitHandlerWithOptions(
+		KitOptions{},
+	).ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), "GET", "/publisher-review", nil))
 	if response.Code != 404 {
 		t.Fatal("nil publisher flag enables review")
 	}

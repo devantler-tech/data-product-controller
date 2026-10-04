@@ -52,7 +52,9 @@ func KitHandlerWithOptions(options KitOptions) http.Handler {
 		case "/", "/index.html", "/kit.css", "/kit.js":
 			kitAsset = true
 		}
-		if !(publisher && reportAsset || (publisher || contract) && sharedAsset || contract && kitAsset) ||
+		allowed := publisher && reportAsset || (publisher || contract) && sharedAsset ||
+			contract && kitAsset
+		if !allowed ||
 			(r.Method != http.MethodGet && r.Method != http.MethodHead) {
 			http.NotFound(w, r)
 			return
