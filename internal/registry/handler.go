@@ -230,7 +230,10 @@ func descriptorFor(product *datav1alpha1.DataProduct) productDescriptor {
 		Message: "The controller has not reported readiness yet.",
 	}
 	ready := false
-	if condition != nil {
+	if !product.DeletionTimestamp.IsZero() {
+		readiness.Reason = "ProductDeleting"
+		readiness.Message = "The product is being deleted."
+	} else if condition != nil {
 		if condition.ObservedGeneration != product.Generation {
 			readiness.Reason = "StatusStale"
 			readiness.Message = "The controller has not reconciled the current product generation."

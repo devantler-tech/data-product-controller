@@ -80,7 +80,17 @@ document.querySelector("#descriptor-form").addEventListener("submit", async (eve
       throw new Error("Choose one local descriptor file or paste one descriptor.");
     if (files.length && files[0].size > 65536)
       throw new Error("Keep the complete descriptor within 64 KiB.");
-    const text = files.length ? await files[0].text() : pasted;
+    let text = pasted;
+    if (files.length) {
+      const bytes = await files[0].arrayBuffer();
+      if (bytes.byteLength > 65536)
+        throw new Error("Keep the complete descriptor within 64 KiB.");
+      try {
+        text = new TextDecoder("utf-8", {fatal: true}).decode(bytes);
+      } catch {
+        throw new Error("Use a descriptor encoded as valid UTF-8.");
+      }
+    }
     // A slow local file read cannot revive a session after Close or a newer selection.
     if (current !== selection) return;
     openManifest(DataProductDescriptor.parse(text, location.origin));

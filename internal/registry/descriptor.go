@@ -68,6 +68,10 @@ func portableDescriptorFor(product *datav1alpha1.DataProduct) portableDescriptor
 		},
 	}
 	aggregate := publicHealth(product, datav1alpha1.ConditionReady, true)
+	if !product.DeletionTimestamp.IsZero() {
+		aggregate.State = "not-ready"
+		aggregate.Message = "The product is being deleted."
+	}
 	descriptor.ObservedGeneration = aggregate.ObservedGeneration
 	descriptor.Ready = aggregate.State == "ready"
 	descriptor.Readiness = readinessDescriptor{Reason: aggregate.State, Message: aggregate.Message}
