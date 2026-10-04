@@ -78,7 +78,7 @@ func (s *server) productLineage(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	if r.ContentLength > 0 || len(r.TransferEncoding) != 0 || r.URL.RawQuery != "" ||
+	if r.ContentLength != 0 || len(r.TransferEncoding) != 0 || r.URL.RawQuery != "" ||
 		!validPublicLabel(r.PathValue("namespace")) || !validProductName(r.PathValue("name")) {
 		discoveryFailure(
 			w,

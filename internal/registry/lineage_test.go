@@ -318,6 +318,20 @@ func TestLineageRootIdentityAndQueries(t *testing.T) {
 	if r.Code != http.StatusBadRequest || len(calls) != 0 {
 		t.Fatal("invalid trace request read products")
 	}
+	// HTTP/2 can carry an unknown-length body without HTTP/1 chunked transfer encoding.
+	req = httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"/api/v2/products/products/root/lineage",
+		strings.NewReader("{}"),
+	)
+	req.ContentLength = -1
+	req.Proto, req.ProtoMajor, req.ProtoMinor = "HTTP/2.0", 2, 0
+	r = httptest.NewRecorder()
+	h.ServeHTTP(r, req)
+	if r.Code != http.StatusBadRequest || len(calls) != 0 {
+		t.Fatalf("unknown-length body status=%d reads=%v", r.Code, calls)
+	}
 	wrong := discoveryReader{
 		get: func(_ context.Context, _ client.ObjectKey, out client.Object, _ ...client.GetOption) error {
 			*discoveryProductObject(t, out) = *traceProduct("wrong")
