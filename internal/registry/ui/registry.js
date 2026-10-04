@@ -43,6 +43,7 @@ const refresh = document.querySelector("#refresh-products");
 const clearFilters = document.querySelector("#clear-filters");
 let products = [];
 let inventoryLoaded = false;
+let documentActive = true;
 let selectedKey = "";
 let disposeSurface = () => {};
 let selection = 0;
@@ -213,6 +214,7 @@ function clearSelection() {
 
 /** Re-read a linked product; cached cards never authorize an iframe navigation. */
 async function navigateProduct(key, push = false) {
+  if (!documentActive) return;
   clearSelection();
   const selected = selection;
   if (push && key) {
@@ -320,6 +322,7 @@ function showLineage(product) {
 
 /** Select a descriptor and open its independent surface only while the product is ready. */
 async function selectProduct(product, button) {
+  if (!documentActive) return;
   selectedRead?.abort();
   selectedRead = new AbortController();
   dependencyTrace.select(product, discoveryEnabled && lineageEnabled);
@@ -516,6 +519,7 @@ async function boundedJSON(response, maximum) {
 
 /** Refresh invalidates the selected surface before re-reading readiness; failures remain retryable. */
 async function loadProducts() {
+  if (!documentActive) return;
   inventoryRead?.abort();
   inventoryRead = new AbortController();
   const signal = milliseconds => AbortSignal.any([inventoryRead.signal, AbortSignal.timeout(milliseconds)]);
@@ -580,6 +584,7 @@ async function loadProducts() {
 
 /** Load one explicit page; a failed page retains its cursor and all already loaded cards. */
 async function loadMore() {
+  if (!documentActive) return;
   if (!continuation || more.disabled) return;
   const request = inventoryRequest;
   const query = new URLSearchParams({limit: "16", continue: continuation});
@@ -645,6 +650,26 @@ document.querySelector("#catalog-scope").addEventListener("submit", event => {
   loadProducts();
 });
 addEventListener("popstate", () => { if (discoveryEnabled) navigateProduct(routeKey()); });
+/** A persisted history entry cannot retain an observed product, trace, cursor or active session. */
+addEventListener("pagehide", () => {
+  documentActive = false;
+  inventoryRead?.abort();
+  inventoryRead = null;
+  ++inventoryRequest;
+  clearSelection();
+  products = [];
+  inventoryLoaded = inventoryComplete = false;
+  continuation = "";
+  grid.replaceChildren();
+  more.hidden = scope.hidden = true;
+  refresh.disabled = false;
+  count.textContent = "Unavailable";
+  status.textContent = "Refresh products to read the current catalog.";
+});
+addEventListener("pageshow", event => {
+  documentActive = true;
+  if (event.persisted) loadProducts();
+});
 clearFilters.addEventListener("click", () => {
   search.value = "";
   readinessFilter.value = "all";

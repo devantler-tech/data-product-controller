@@ -169,6 +169,10 @@ rejects invalid UTF-8 before parsing: 64 KiB for an exact descriptor, 2 MiB for 
 and 4 KiB for host configuration. A malformed later page retains earlier validated cards
 and reports incomplete discovery. Refresh cancels earlier inventory and selected-product
 reads; selecting another product cancels the previous lookup and UI configuration read.
+Leaving the document also withdraws its product surface, descriptor and trace
+downloads, inventory cursor and pending reads. Restoring a persisted browser-history
+entry re-reads host configuration, the catalog and the selected product before
+displaying new observations or opening an interface.
 The browser requests 16 products per page, leaving room for the maximum-size descriptors
 and page envelope inside the response bound. Local descriptor files also use strict UTF-8
 decoding; malformed bytes reject the import and withdraw any earlier UI session.

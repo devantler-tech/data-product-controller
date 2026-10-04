@@ -17,30 +17,29 @@
     );
   }
 
-  /** HTTPS public metadata URLs never contain credentials, whitespace, or fragments. */
+  /** Validate the literal public HTTPS profile without normalizing malformed declarations or fetching them. */
   function httpsURL(value) {
-    if (
-      typeof value !== "string" ||
-      value.length > 2048 ||
-      /\s|\\/.test(value)
-    ) {
-      throw new Error(
-        "Use an absolute HTTPS URL without whitespace or credentials.",
-      );
+    const invalid = () => { throw new Error("Use a literal public HTTPS URL without credentials, whitespace or fragments."); };
+    if (typeof value !== "string" || new TextEncoder().encode(value).length > 16384 ||
+        !value.startsWith("https://") || /[^\x21-\x7e]|\\|#/.test(value)) invalid();
+    if (/%(?![0-9a-fA-F]{2})/.test(value.split("?", 1)[0])) invalid();
+    const authority = /^https:\/\/(\[[0-9A-Fa-f:.]+\]|[a-z0-9.-]+)(?::([0-9]+))?(?:[/?]|$)/.exec(value);
+    if (!authority || (authority[2] !== undefined &&
+        (Number(authority[2]) < 1 || Number(authority[2]) > 65535))) invalid();
+    if (!authority[1].startsWith("[") &&
+        (authority[1].length > 253 || !authority[1].split(".").every(label =>
+          label.length <= 63 && /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(label)))) invalid();
+    let parsed;
+    try { parsed = new URL(value); } catch { invalid(); }
+    if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.hash) invalid();
+    if (!authority[1].startsWith("[")) {
+      const labels = authority[1].split("."), last = labels.at(-1);
+      if (/^[0-9]+$/.test(last) || last.startsWith("0x")) {
+        if (labels.length !== 4 || labels.some(label =>
+          !/^(0|[1-9][0-9]*)$/.test(label) || Number(label) > 255) || parsed.hostname !== authority[1]) invalid();
+      }
     }
-    const url = new URL(value);
-    if (
-      url.protocol !== "https:" ||
-      url.username ||
-      url.password ||
-      url.hash ||
-      value.includes("#")
-    ) {
-      throw new Error(
-        "Use an absolute HTTPS URL without credentials or a fragment.",
-      );
-    }
-    return url;
+    return parsed;
   }
 
   /** Validate public presentation metadata without granting any host permission. */
@@ -53,6 +52,8 @@
         "Use a UI manifest with only url, title and contract, at most 16 KiB.",
       );
     }
+    if (typeof manifest.url !== "string" || manifest.url.length > 2048)
+      throw new Error("Keep the UI URL within 2048 characters.");
     httpsURL(manifest.url);
     if (
       typeof manifest.title !== "string" ||
@@ -276,5 +277,5 @@
     return dispose;
   }
 
-  window.DataProductUI = Object.freeze({ validateMetadata, validate, mount });
+  window.DataProductUI = Object.freeze({ validateMetadata, validate, mount, validateURL: httpsURL });
 })();

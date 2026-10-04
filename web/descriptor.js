@@ -40,29 +40,7 @@
   /** URL parsing validates metadata only; no declared URL is fetched here. */
   function url(value) {
     text(value, true);
-    if (!value.startsWith("https://") || /[^\x21-\x7e]|\\|#/.test(value))
-      throw new Error("Use literal public HTTPS metadata URLs without credentials, whitespace or fragments.");
-    if (/%(?![0-9a-fA-F]{2})/.test(value.split("?", 1)[0]))
-      throw new Error("Use valid percent escapes in public HTTPS metadata paths.");
-    const authority = /^https:\/\/(\[[0-9A-Fa-f:.]+\]|[a-z0-9.-]+)(?::([0-9]+))?(?:[/?]|$)/.exec(value);
-    if (!authority || (authority[2] !== undefined &&
-        (Number(authority[2]) < 1 || Number(authority[2]) > 65535)))
-      throw new Error("Use a valid public HTTPS host and port from 1 to 65535.");
-    if (!authority[1].startsWith("[")) fullName(authority[1]);
-    let parsed;
-    try { parsed = new URL(value); } catch { throw new Error("Use absolute public HTTPS metadata URLs."); }
-    if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.hash || /\s|\\|#/.test(value))
-      throw new Error("Use public HTTPS metadata URLs without credentials, whitespace or fragments.");
-    if (!authority[1].startsWith("[")) {
-      const labels = authority[1].split(".");
-      const last = labels.at(-1);
-      if (/^[0-9]+$/.test(last) || last.startsWith("0x")) {
-        if (labels.length !== 4 || labels.some(label =>
-          !/^(0|[1-9][0-9]*)$/.test(label) || Number(label) > 255) ||
-            parsed.hostname !== authority[1])
-          throw new Error("Use canonical numeric IP addresses in public metadata URLs.");
-      }
-    }
+    DataProductUI.validateURL(value);
   }
 
   function owner(value) {

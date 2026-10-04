@@ -79,7 +79,12 @@ Do not copy instructions into them.
   one concurrent trace, the shared five-second deadline, 256 read attempts, 1,024 edges,
   64 product levels, 1-MiB retained public metadata and 2-MiB encoded response bounds.
   Incomplete branches stay explicit. No schema, endpoint or data requests occur. Navigation
-  revokes browser work and export. See `docs/dependency-traces.md`.
+  revokes browser work and export. Admit only reachable nodes, generation-bound health,
+  bounded public UTF-8/URL metadata, consistent failed reads, acyclic resolved paths,
+  feasible depths and declared version verdicts. Page exit withdraws all registry
+  sessions and snapshots; persisted history restoration performs fresh reads. The
+  compatibility kit also revokes on declaration edits and grant changes. See
+  `docs/dependency-traces.md` and `docs/ui-contract.md`.
 - DCAT publication requires the explicit `data.devantler.tech/dcat-type: Dataset` annotation and
   the default-off `dcat-catalog` gate. It projects public metadata only; a listing grants no access
   and asserts no readiness. Preserve the configured catalog identity, stable output identities,

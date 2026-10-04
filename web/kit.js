@@ -102,8 +102,16 @@ document.querySelector("#descriptor-form").addEventListener("submit", async (eve
   }
 });
 
-document.querySelector("#close").addEventListener("click", () => {
+/** Editing declarations or policy withdraws the previous session before native form validation. */
+function closeInterface() {
   revoke();
   status.dataset.state = "closed";
   status.textContent = "Interface closed. Its session and grants are revoked.";
-});
+}
+
+document.querySelector("#close").addEventListener("click", closeInterface);
+for (const id of ["manifest", "descriptor"])
+  document.getElementById(id).addEventListener("input", closeInterface);
+for (const id of ["descriptor-file", "grant-status", "grant-resize", "grant-appearance"])
+  document.getElementById(id).addEventListener("change", closeInterface);
+window.addEventListener("pagehide", closeInterface);
