@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Resolve only the selector before prerequisites, scratch space or runtime actions.
-source "${BASH_SOURCE[0]%/*}/suite.sh"
+source_suite_dir=${BASH_SOURCE[0]%/*}
+[[ "$source_suite_dir" != "${BASH_SOURCE[0]}" ]] || source_suite_dir=.
+source "$source_suite_dir/suite.sh"
+unset source_suite_dir
 source_suite_validate
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
