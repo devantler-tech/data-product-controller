@@ -172,6 +172,15 @@ func (r *DataProductReconciler) Reconcile(
 		if namespace == "" {
 			namespace = product.Namespace
 		}
+		if namespace != product.Namespace {
+			setReadiness(
+				product,
+				metav1.ConditionFalse,
+				"CrossNamespaceDependencyDenied",
+				"Dependencies require producers in the same namespace; cross-namespace producer authorization is not supported.",
+			)
+			return result, r.updateStatusIfChanged(ctx, product, previousStatus)
+		}
 
 		dependency := &datav1alpha1.DataProduct{}
 		dependencyKey := client.ObjectKey{Name: input.ProductRef.Name, Namespace: namespace}
@@ -192,45 +201,16 @@ func (r *DataProductReconciler) Reconcile(
 				return result, r.updateStatusIfChanged(ctx, product, previousStatus)
 			}
 
-			if meta.FindStatusCondition(
-				product.Status.Conditions,
-				datav1alpha1.ConditionSourceReady,
-			) != nil ||
-				meta.FindStatusCondition(
-					previousStatus.Conditions,
-					datav1alpha1.ConditionSourceReady,
-				) != nil ||
-				len(product.Spec.ContractChecks) != 0 ||
-				meta.FindStatusCondition(
-					previousStatus.Conditions,
-					datav1alpha1.ConditionContractsReady,
-				) != nil ||
-				product.Spec.Connector != nil ||
-				meta.FindStatusCondition(
-					previousStatus.Conditions,
-					datav1alpha1.ConditionConnectorReady,
-				) != nil {
-				setReadiness(
-					product,
-					metav1.ConditionFalse,
-					"DependencyUnavailable",
-					"A referenced data product could not be observed; check Kubernetes API availability and controller access.",
-				)
-				return result, errors.Join(
-					err,
-					r.updateStatusIfChanged(ctx, product, previousStatus),
-				)
-			}
-			return ctrl.Result{}, err
+			setReadiness(
+				product,
+				metav1.ConditionFalse,
+				"DependencyUnavailable",
+				"A referenced data product could not be observed; check Kubernetes API availability and controller access.",
+			)
+			return result, errors.Join(err, r.updateStatusIfChanged(ctx, product, previousStatus))
 		}
 
-		readyCondition := meta.FindStatusCondition(
-			dependency.Status.Conditions,
-			datav1alpha1.ConditionReady,
-		)
-		if readyCondition == nil ||
-			readyCondition.Status != metav1.ConditionTrue ||
-			readyCondition.ObservedGeneration != dependency.Generation {
+		if !producerReady(dependency) {
 			setReadiness(
 				product,
 				metav1.ConditionFalse,
