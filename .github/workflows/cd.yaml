@@ -63,7 +63,7 @@ jobs:
           digest=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')
           [[ "$digest" =~ ^ghcr.io/devantler-tech/data-product-controller@sha256:[a-f0-9]{64}$ ]]
           cosign verify \
-            --certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@df7fd4f83edade31c121a9de563d9a7b9b1f900d \
+            --certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@1d726483facb9340655489913f609082677be8f5 \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             --certificate-github-workflow-repository devantler-tech/data-product-controller \
             --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
