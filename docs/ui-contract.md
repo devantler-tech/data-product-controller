@@ -86,7 +86,7 @@ Every message is an object with exactly the documented keys. All messages carry
 versions, unknown fields, stale sessions, and ungranted hints are ignored.
 
 | Direction      | Type     | Additional fields             | Meaning                                                                        |
-|----------------|----------|-------------------------------|--------------------------------------------------------------------------------|
+| -------------- | -------- | ----------------------------- | ------------------------------------------------------------------------------ |
 | Host → product | `init`   | `capabilities: []`            | Fresh UUID session and intersection of requested capabilities with host policy |
 | Product → host | `ready`  | None                          | This document accepted initialization and speaks v1                            |
 | Product → host | `status` | `state: "ready"` or `"error"` | Optional interface status hint; requires `status` grant                        |
@@ -180,8 +180,10 @@ Platform owns its production activation and readback in
 Another host opts in with `appearanceEnabled: true`, an `appearance` grant and
 `appearance: "light"` or `"dark"` when calling `mount`. Its returned disposer has
 `setAppearance(value)` for later changes; dispose before another mount. The kit
-reveals its v2 checkbox and Light/Dark selector only with the additional gate,
-and grants appearance only when the operator checks that box. A static kit host
+offers System, Light and Dark for its own workspace in either gate state. It reveals
+the v2 checkbox only with the additional gate and sends appearance hints only when
+the operator checks that box. The optional preference survives reload when browser
+storage is available; denied storage does not prevent live changes. A static kit host
 opts in by setting `data-appearance-enabled="true"` on its body; this is an
 explicit deployment choice, just as serving the static kit itself is.
 
@@ -213,7 +215,13 @@ closes the active interface and cancels pending imports. Choose **Validate and o
 or **Import and open** again to use the revised declaration and permissions. Leaving
 the page closes its session; restoring browser history does not reopen it automatically.
 
-Alternatively, serve `web/index.html`, `kit.css`, `kit.js`, and `ui-contract.js`
+Local JSON imports reject duplicate decoded fields, including escaped aliases, before
+navigation. **Clear file** withdraws the selection and any unfinished file read. Selecting
+a file clears pasted JSON; typing JSON clears the selected file. Protocol closure offers
+**Retry descriptor** or **Retry manifest** for the last input format; retry validates the
+current input and grants and establishes a new session only after that explicit action.
+
+Alternatively, serve `web/index.html`, `kit.css`, `kit.js`, `descriptor.js`, and `ui-contract.js`
 from any HTTPS static host. Apply the policy in `web.KitHandler`: same-origin
 scripts/styles, no host connections, HTTPS frames, no ancestors, objects or base
 URI, no referrers, and no camera, microphone or geolocation permissions. That
