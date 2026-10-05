@@ -39,9 +39,10 @@ docker run --rm --network none --read-only \
   --catalog /input/catalog.json --bindings /input/bindings.json
 ```
 
-Both arguments must name readable local regular files. Stdin, URLs and streamed
-inputs are unsupported. All validation completes before output starts; an input
-failure exits nonzero, writes a value-free diagnostic to stderr and writes no
+Both arguments must name readable local regular files, directly or through symlinks.
+Special files, including FIFOs, are rejected without waiting for a writer. Stdin,
+URLs and streamed inputs are unsupported. All validation completes before output
+starts; an input failure exits nonzero, writes a value-free diagnostic to stderr and writes no
 catalog bytes. A downstream output-device failure can still interrupt writing;
 check the exit status before publishing the file. Shell redirection truncates its
 destination before execution, so write to a new temporary file and move it into

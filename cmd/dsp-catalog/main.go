@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"syscall"
 
 	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
@@ -70,17 +71,22 @@ func run(args []string, setting string, out io.Writer) error {
 
 // Inputs are operator-selected public regular files, never URLs or stdin streams.
 func openInput(path string) (*os.File, error) {
-	info, err := os.Stat(path)
-	if err != nil || !info.Mode().IsRegular() {
-		return nil, errors.New("open input: provide a readable regular file")
-	}
+	return openInputWith(path, os.OpenFile)
+}
+
+// openInputWith validates the opened descriptor, including a replaced selection.
+func openInputWith(
+	path string,
+	open func(string, int, os.FileMode) (*os.File, error),
+) (*os.File, error) {
 	// #nosec G304 -- an operator explicitly selects both local input paths; no
 	// network request or catalog content influences filesystem access.
-	f, err := os.Open(path)
+	// Nonblocking open lets descriptor validation reject a replaced FIFO without a writer.
+	f, err := open(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, errors.New("open input: unable to read file")
 	}
-	info, err = f.Stat()
+	info, err := f.Stat()
 	if err != nil || !info.Mode().IsRegular() {
 		_ = f.Close()
 		return nil, errors.New("open input: provide a readable regular file")
