@@ -17,7 +17,10 @@ done
 for name in 123 null yes; do
 	rendered=$(render_source "$name")
 	tag=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.volumes[]? | select(.name == "source-config") | .secret.secretName | tag' -)
-	[ "$tag" = '!!str' ] || { printf '%s\n' "valid Secret name lost its string type: $name ($tag)" >&2; exit 1; }
+	[ "$tag" = '!!str' ] || {
+		printf '%s\n' "valid Secret name lost its string type: $name ($tag)" >&2
+		exit 1
+	}
 done
 helm template source-config "$chart" >/dev/null
 printf '%s\n' 'HTTP source Secret name schema checks passed'
