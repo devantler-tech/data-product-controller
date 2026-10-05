@@ -32,6 +32,15 @@ func TestTraceSnapshotIntegrity(t *testing.T) {
 		valid          bool
 	}{
 		{"canonical graph", "", true},
+		{"stale current aggregate", `trace.nodes[0].state='stale';`, false},
+		{"not-ready old aggregate", `trace.nodes[0].state='not-ready';trace.nodes[0].observedGeneration=2;`, false},
+		{"disabled old aggregate", `trace.nodes[0].state='disabled';trace.nodes[0].observedGeneration=2;`, false},
+		{"deleting old aggregate", `trace.nodes[0].state='deleting';trace.nodes[0].observedGeneration=2;`, true},
+		{"stale current dimension", `trace.nodes[0].health=health(3);trace.nodes[0].health.source.state='stale';`, false},
+		{"disabled old dimension", `trace.nodes[0].health=health(3);trace.nodes[0].health.source.state='disabled';trace.nodes[0].health.source.observedGeneration=2;`, false},
+		{"not-applicable observed dimension", `trace.nodes[0].health=health(3);trace.nodes[0].health.source.state='not-applicable';`, false},
+		{"unobserved absent dimension", `trace.nodes[0].health=health(3);trace.nodes[0].health.source.state='unobserved';trace.nodes[0].health.source.observedGeneration=0;`, true},
+		{"independent disabled dimension", `trace.nodes[0].health=health(3);trace.nodes[0].health.source.state='disabled';`, true},
 		{"disconnected product", `trace.nodes.push(node('products/unrelated'));`, false},
 		{"health generation mismatch", `trace.nodes[0].health=health(2);`, false},
 		{"resolved cycle in incomplete trace", `trace.complete=false;trace.issues=['missing'];trace.edges.push({...edge('products/upstream','products/root'),depth:2});`, false},

@@ -513,7 +513,7 @@ async function boundedJSON(response, maximum) {
   let offset = 0;
   for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.byteLength; }
   try {
-    return JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(data));
+    return DataProductDescriptor.parseJSON(new TextDecoder("utf-8", {fatal: true}).decode(data), maximum);
   } catch { throw new Error("The registry returned invalid public metadata."); }
 }
 

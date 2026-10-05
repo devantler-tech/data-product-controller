@@ -107,6 +107,13 @@ dimension, and consumers must display that dimension without inventing a success
 All generation values must be nonnegative integers no larger than 9,007,199,254,740,991,
 so independent JavaScript clients can compare them exactly.
 
+Browser admission checks numeric tokens before floating-point conversion can round a
+fraction into an integer. Integral decimal and exponent spellings remain supported.
+Independent `ready`, `not-ready` and `disabled` observations must be current; `stale`
+observations must differ from the current generation. An absent `unobserved` condition
+and every `not-applicable` observation use zero; a current inconclusive condition may
+also be `unobserved`.
+
 A product with a deletion timestamp remains inspectable but is never aggregate-ready,
 even while its last Ready condition is current and true. Its public message is
 "The product is being deleted." Independent health dimensions retain their observed
@@ -167,7 +174,13 @@ The reference workspace validates every discovery descriptor against the closed 
 profile before rendering, selection, or export. It bounds streamed response bytes and
 rejects invalid UTF-8 before parsing: 64 KiB for an exact descriptor, 2 MiB for a page,
 and 4 KiB for host configuration. A malformed later page retains earlier validated cards
-and reports incomplete discovery. Refresh cancels earlier inventory and selected-product
+and reports incomplete discovery.
+
+All registry, exact-descriptor and dependency-trace responses reject duplicate decoded
+JSON fields, including escaped aliases, and nonintegral or unsafe numeric tokens before
+retaining metadata for rendering or export.
+
+Refresh cancels earlier inventory and selected-product
 reads; selecting another product cancels the previous lookup and UI configuration read.
 Leaving the document also withdraws its product surface, descriptor and trace
 downloads, inventory cursor and pending reads. Restoring a persisted browser-history

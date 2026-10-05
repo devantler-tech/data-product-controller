@@ -42,7 +42,7 @@ window.DataProductLineage = (() => {
         closed(check, ["state", "message", "generation", "observedGeneration"]) &&
         (observedStates.has(check.state) && check.state !== "deleting" || check.state === "not-applicable") &&
         textValid(check.message) && check.generation === generation && safeGeneration(check.observedGeneration) &&
-        (check.state !== "ready" || check.generation === check.observedGeneration));
+        DataProductDescriptor.validObservation(check.state, check.generation, check.observedGeneration));
   }
 
   /** Mirror the canonical stable-version comparison without rounding numeric components. */
@@ -119,7 +119,8 @@ window.DataProductLineage = (() => {
           !keyValid(node.key) || node.key.split("/")[0] !== root.split("/")[0] ||
           keys.has(node.key) || (!observedStates.has(node.state) && !failures.has(node.state)) ||
           !safeGeneration(node.generation) || !safeGeneration(node.observedGeneration) ||
-          (node.state === "ready" && node.generation !== node.observedGeneration) ||
+          (observedStates.has(node.state) && node.state !== "deleting" &&
+            !DataProductDescriptor.validObservation(node.state, node.generation, node.observedGeneration)) ||
           (node.displayName !== undefined && (!textValid(node.displayName) || !node.displayName)) ||
           (node.version !== undefined && (!textValid(node.version) || !node.version)) ||
           (node.id !== undefined && !identityValid(node.id)) ||
@@ -179,7 +180,7 @@ window.DataProductLineage = (() => {
     const data = new Uint8Array(bytes);
     let offset = 0;
     for (const chunk of chunks) { data.set(chunk, offset); offset += chunk.byteLength; }
-    return JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(data));
+    return DataProductDescriptor.parseJSON(new TextDecoder("utf-8", {fatal: true}).decode(data), 2 * 1024 * 1024);
   }
 
   /** Bind one trace panel to host-owned navigation without opening product data surfaces. */

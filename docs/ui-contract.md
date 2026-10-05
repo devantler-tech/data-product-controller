@@ -216,7 +216,9 @@ or **Import and open** again to use the revised declaration and permissions. Lea
 the page closes its session; restoring browser history does not reopen it automatically.
 
 Local JSON imports reject duplicate decoded fields, including escaped aliases, before
-navigation. **Clear file** withdraws the selection and any unfinished file read. Selecting
+navigation. Numeric metadata must be mathematically integral and within JavaScript's safe
+integer range before rounding; integral decimal and exponent notation remain supported.
+**Clear file** withdraws the selection and any unfinished file read. Selecting
 a file clears pasted JSON; typing JSON clears the selected file. Protocol closure offers
 **Retry descriptor** or **Retry manifest** for the last input format; retry validates the
 current input and grants and establishes a new session only after that explicit action.
