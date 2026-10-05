@@ -272,6 +272,13 @@ func TestHybridObservation(t *testing.T) {
 				if got.Reason != tc.reason || got.Ready != (tc.reason == "SourceReady") {
 					t.Fatalf("observation=%+v, want %s", got, tc.reason)
 				}
+				if tc.name == "malformed configured reference" &&
+					!strings.Contains(
+						got.Message,
+						"Check the Cluster's configured publication references",
+					) {
+					t.Fatalf("malformed configuration guidance=%q", got.Message)
+				}
 			}
 			if clusterReads.Load() != 2 || secretReads.Load() != 2*tc.secretReads {
 				t.Fatalf("reads: Cluster=%d Secret=%d", clusterReads.Load(), secretReads.Load())

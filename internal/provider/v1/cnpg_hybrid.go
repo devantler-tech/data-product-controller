@@ -72,7 +72,7 @@ func (c *CloudNativePGHybrid) Observe(
 	if !hybridConfiguredReader(cluster, source.ConnectionSecretRef.Name) {
 		return unavailable(
 			"SourceInvalid",
-			"Use a dedicated application reader publication outside the Cluster's configured operator publications.",
+			"Check the Cluster's configured publication references and use a dedicated application reader publication outside its operator publications.",
 		)
 	}
 	if !hybridSourceProfile(cluster, source.Engine.Type) {
