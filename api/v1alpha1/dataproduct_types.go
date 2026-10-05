@@ -29,8 +29,8 @@ type ProductOwner struct {
 // ProductReference selects an output port on another DataProduct.
 type ProductReference struct {
 	// Name is the referenced DataProduct name.
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?(\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*$`
 	Name string `json:"name"`
 
 	// Namespace defaults to the consuming product's namespace.

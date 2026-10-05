@@ -40,7 +40,11 @@ Use your deployment's secret-management system to create a Secret in the release
 Keep this file and its values out of Git, terminal output, and product descriptors. The HTTPS URL
 must contain a host and no embedded credentials, query string, or fragment. The token must use
 bearer-token characters without whitespace. Configuration is limited to 16 KiB; missing fields,
-unknown fields, malformed JSON, and trailing documents make the source unavailable.
+unknown or duplicate fields (including escaped key aliases), invalid UTF-8, malformed JSON,
+and trailing documents make the source unavailable. A literal fragment delimiter is rejected;
+an encoded `%23` in the path remains valid. Configuration must resolve to a regular file.
+Nonblocking open and descriptor checks reject FIFOs and devices without occupying a worker;
+projected Secret symlinks and atomic replacement remain supported.
 
 The chart references an existing Secret; it never creates one or reads its values during rendering.
 It mounts the directory read-only without `subPath`. Every source access reopens the file, so
@@ -116,9 +120,10 @@ credentials fail closed; the next successful access restores observed readiness.
 controls how long old credentials remain valid during rotation.
 
 `http_source_requests_total` uses `operation="query"` or `operation="probe"` and fixed result values:
-`success`, `disabled`, `configuration_error`, `upstream_error`, `invalid_response`, or `busy`.
+`success`, `disabled`, `configuration_error`, `upstream_error`, `invalid_response`, `busy`, or `cancelled`.
 `http_source_ready` is zero before the first observation and otherwise reflects the most recently
-completed access or configuration check. A busy response does not change it. Use
+completed access or configuration check. Saturation and caller cancellation preserve that
+health sample and its timestamp. The connector's own request timeout records a source failure. Use
 `http_source_last_observation_timestamp_seconds` to distinguish recent evidence from an old sample;
 metrics collection itself never contacts the source.
 

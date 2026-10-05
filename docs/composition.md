@@ -16,13 +16,16 @@ inputs:
       minimumVersion: v1.1.0
 ```
 
-The namespace defaults to the consumer's namespace. A required OpenAPI contract
+The namespace defaults to the consumer's namespace. Product names accept canonical dotted
+DNS names up to 253 characters; namespaces and output ports remain single DNS labels.
+A required OpenAPI contract
 at `v1.1.0` accepts `v1.1.0`, `v1.2.0` and later stable versions within major 1.
 It rejects older versions, major 2, pre-releases and build metadata. Major-zero
 contracts require an exact match because their compatibility is not stable.
 The producer's selected output must declare the same protocol.
 
-Composition is restricted to producers in the consumer's namespace. Every edge,
+Dependencies are restricted to producers in the consumer's namespace, including when
+composition observation is disabled. Every edge,
 including transitive dependencies, is checked before looking up the producer.
 Cross-namespace edges report `CrossNamespaceDependencyDenied` regardless of
 whether the producer exists, and never copy its version, owner, identity or output
@@ -34,7 +37,9 @@ access policy and is not a tenant-filtered catalog.
 This checks the publisher's version declaration. It does not download schemas,
 prove semantic compatibility, execute queries, or move data. Product workloads
 implement the actual composition and their own authentication and access policy.
-An unversioned input still requires an existing named output on a Ready product.
+An unversioned input still requires an existing named output on a current-generation Ready
+product that is not being deleted. A failed Kubernetes read withdraws consumer readiness
+and persists stale-lineage removal before retrying with the original API error.
 
 ## Enable observation
 
