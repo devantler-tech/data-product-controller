@@ -140,6 +140,7 @@ func (s *Service) fetch(ctx context.Context) string {
 	target, err := url.Parse(s.target)
 	if err != nil || target.Scheme != "https" || target.Hostname() == "" ||
 		target.User != nil || strings.Contains(s.target, "$(") ||
+		strings.ContainsAny(s.target, "#\\") ||
 		target.RawQuery != "" || target.ForceQuery ||
 		target.Fragment != "" ||
 		target.Opaque != "" {
@@ -162,8 +163,9 @@ func (s *Service) fetch(ctx context.Context) string {
 	if response.StatusCode != http.StatusOK {
 		return "ContractUnavailable"
 	}
-	encoding := response.Header.Get("Content-Encoding")
-	if response.ContentLength > 1<<20 || (encoding != "" && encoding != "identity") {
+	encodings := response.Header.Values("Content-Encoding")
+	if response.ContentLength > 1<<20 ||
+		(len(encodings) != 0 && (len(encodings) != 1 || encodings[0] != "identity")) {
 		return "ContractInvalidResponse"
 	}
 	size, err := io.Copy(io.Discard, io.LimitReader(response.Body, (1<<20)+1))

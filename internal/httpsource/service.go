@@ -9,11 +9,13 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 	"unicode/utf8"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
 )
 
 const (
@@ -23,15 +25,16 @@ const (
 
 // Service separates the source's public query API from management endpoints.
 type Service struct {
-	client     *http.Client
-	enabled    func(context.Context) bool
-	configPath string
-	queries    chan struct{}
-	probes     chan struct{}
-	metrics    *prometheus.Registry
-	requests   *prometheus.CounterVec
-	ready      prometheus.Gauge
-	observed   prometheus.Gauge
+	client        *http.Client
+	enabled       func(context.Context) bool
+	configPath    string
+	queries       chan struct{}
+	probes        chan struct{}
+	metrics       *prometheus.Registry
+	requests      *prometheus.CounterVec
+	ready         prometheus.Gauge
+	observed      prometheus.Gauge
+	observationMu sync.Mutex
 }
 
 // NewService constructs a default-off source connector.
@@ -105,7 +108,7 @@ func (s *Service) ManagementHandler() http.Handler {
 		}
 	})
 	mux.HandleFunc("/readyz", s.readiness)
-	metrics := promhttp.HandlerFor(s.metrics, promhttp.HandlerOpts{})
+	metrics := promhttp.HandlerFor(s, promhttp.HandlerOpts{})
 	mux.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
 		if readRequest(w, r) {
 			metrics.ServeHTTP(w, r)
@@ -208,10 +211,14 @@ func (s *Service) fetch(ctx context.Context, slots chan struct{}) (body []byte, 
 	if response.StatusCode != http.StatusOK {
 		return nil, "upstream_error"
 	}
-	contentType, _, err := mime.ParseMediaType(response.Header.Get("Content-Type"))
-	encoding := response.Header.Get("Content-Encoding")
+	contentTypes := response.Header.Values("Content-Type")
+	if len(contentTypes) != 1 {
+		return nil, "invalid_response"
+	}
+	contentType, _, err := mime.ParseMediaType(contentTypes[0])
+	encodings := response.Header.Values("Content-Encoding")
 	if err != nil || contentType != "application/json" ||
-		(encoding != "" && encoding != "identity") ||
+		(len(encodings) != 0 && (len(encodings) != 1 || encodings[0] != "identity")) ||
 		response.ContentLength > maxResponseBytes {
 		return nil, "invalid_response"
 	}
@@ -231,12 +238,22 @@ func (s *Service) record(operation, result string) {
 	if result == "busy" || result == "cancelled" {
 		return
 	}
+	s.observationMu.Lock()
+	defer s.observationMu.Unlock()
 	s.observed.SetToCurrentTime()
 	if result == "success" {
 		s.ready.Set(1)
 	} else {
 		s.ready.Set(0)
 	}
+}
+
+// Gather holds the observation boundary through metric serialization, so a
+// scrape cannot pair one completed observation's readiness with another's time.
+func (s *Service) Gather() ([]*dto.MetricFamily, error) {
+	s.observationMu.Lock()
+	defer s.observationMu.Unlock()
+	return s.metrics.Gather()
 }
 
 // readRequest rejects writes and caller-supplied query or body inputs before contacting a source.

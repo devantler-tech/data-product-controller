@@ -11,6 +11,7 @@ import (
 	"time"
 
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/catalog"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -143,6 +144,10 @@ func checkSelected(ctx context.Context, sources []io.Reader, namespace string) R
 			continue
 		}
 		if _, err := registry.PublicationPreview(product); err != nil {
+			report.add(index+1, "InvalidPublicMetadata", "spec")
+			continue
+		}
+		if err := catalog.ValidatePublication(*product); err != nil {
 			report.add(index+1, "InvalidPublicMetadata", "spec")
 			continue
 		}

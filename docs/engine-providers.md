@@ -187,11 +187,13 @@ reference with API `psmdb.percona.com/v1`, kind, name and UID. This is a control
 requirement; Percona documentation does not promise that ownership automatically. Do not modify
 operator-managed system or connection-string Secrets to satisfy it. Admission rejects the default
 system Secret. Initial runtime validation also rejects it as `SourceInvalid`, before any reads.
-The configured `spec.secrets.users`, internal system Secrets, operator-generated passwords,
+Configured operator credential roles under `spec.secrets` and `spec.vault`, internal system Secrets, operator-generated passwords,
 connection-string Secrets, system accounts, duplicate usernames, multiple users sharing the password
 Secret, custom roles and privileged roles report `ConnectionPublicationUnsupported`. Reserved publication names follow
 Percona's [connection-Secret naming contract](https://docs.percona.com/percona-operator-for-mongodb/1.23.0/connection-secrets.html#secret-names);
 a manual password binding cannot reuse another declared user's generated connection-Secret name.
+The supported operator's [Secrets and Vault API sections](https://docs.percona.com/percona-operator-for-mongodb/1.23.0/operator.html#secrets-section)
+define these credential roles; their references are checked before any application Secret metadata read.
 
 Apply the [Document observer Role](examples/document-provider-observer-rbac.yaml), adjusting its
 ServiceAccount for your installation. It grants only the named source and password Secret GETs.

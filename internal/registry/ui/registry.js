@@ -528,6 +528,8 @@ async function loadProducts() {
   clearSelection();
   continuation = "";
   inventoryComplete = false;
+  scope.hidden = true;
+  scope.textContent = "";
   rejectedProducts = 0;
   pageFailure = "";
   more.hidden = true;

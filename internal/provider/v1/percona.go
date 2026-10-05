@@ -212,16 +212,45 @@ func perconaNotReady() provisionerv1.Observation {
 
 // perconaApplicationPassword verifies declarations, not actual credentials or effective database privileges.
 func perconaApplicationPassword(cluster *unstructured.Unstructured, secretName string) bool {
-	systemSecret, _, err := unstructured.NestedString(cluster.Object, "spec", "secrets", "users")
-	if err != nil || secretName == systemSecret || secretName == perconaSystemPublication {
+	if secretName == perconaSystemPublication {
 		return false
 	}
+	// Reserved credential roles follow the pinned operator's Secrets and Vault
+	// API sections; inspecting these references never reads their Secret values.
+	for _, fields := range [][]string{
+		{"spec", "secrets", "users"},
+		{"spec", "secrets", "keyFile"},
+		{"spec", "secrets", "sse"},
+		{"spec", "secrets", "ssl"},
+		{"spec", "secrets", "sslInternal"},
+		{"spec", "secrets", "encryptionKey"},
+		{"spec", "secrets", "vault"},
+		{"spec", "secrets", "ldapSecret"},
+		{"spec", "vault", "tlsSecret"},
+		{"spec", "vault", "syncUsers", "tokenSecret"},
+	} {
+		operatorSecret, _, err := unstructured.NestedString(
+			cluster.Object,
+			fields...,
+		)
+		if err != nil || secretName == operatorSecret {
+			return false
+		}
+	}
 	clusterName := cluster.GetName()
-	if secretName == "internal-"+clusterName+"-users" ||
-		secretName == clusterName+"-databaseadmin-conn-str" ||
-		secretName == clusterName+"-custom-user-secret" ||
-		secretName == clusterName+"-custom-user-secret-conn-str" {
-		return false
+	for _, reserved := range []string{
+		"internal-" + clusterName + "-users",
+		clusterName + "-databaseadmin-conn-str",
+		clusterName + "-custom-user-secret",
+		clusterName + "-custom-user-secret-conn-str",
+		clusterName + "-mongodb-keyfile",
+		clusterName + "-mongodb-encryption-key",
+		clusterName + "-ssl",
+		clusterName + "-ssl-internal",
+	} {
+		if secretName == reserved {
+			return false
+		}
 	}
 	users, found, err := unstructured.NestedSlice(cluster.Object, "spec", "users")
 	if err != nil || !found {
