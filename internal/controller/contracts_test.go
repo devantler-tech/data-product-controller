@@ -9,6 +9,7 @@ import (
 	"time"
 
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	connectorv1 "github.com/devantler-tech/data-product-controller/internal/connector/v1"
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,6 +42,41 @@ func TestDeclaredContractChecksFailClosedByDefault(t *testing.T) {
 		readyCondition(t, product).Status != metav1.ConditionFalse ||
 		result.RequeueAfter == 0 {
 		t.Fatalf("declared contract checks were ignored: %+v / %+v", product.Status, result)
+	}
+}
+
+// TestContractProbeDollarBinding rejects runtime expansion before reads and preserves escaped URLs.
+func TestContractProbeDollarBinding(t *testing.T) {
+	t.Parallel()
+	for _, target := range []string{"https://example.test/$$schema", "https://example.test/%24%24schema"} {
+		t.Run(target, func(t *testing.T) {
+			t.Parallel()
+			product, deployment := contractFixture(t)
+			deployment.Spec.Template.Spec.Containers[0].Env[0].Value = target
+			_, store := connectorReconciler(t, product, deployment)
+			reads := 0
+			reader := interceptor.NewClient(store, interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, object client.Object, options ...client.GetOption) error {
+					reads++
+					return c.Get(ctx, key, object, options...)
+				},
+			})
+			observer := connectorv1.Deployment{Reader: reader}
+			result := observer.ObserveContract(
+				t.Context(),
+				product.Namespace,
+				product.Spec.ContractChecks[0].ResourceRef,
+				target,
+			)
+			if strings.Contains(target, "$$") {
+				if result.Ready || result.Reason != "ContractProbeConfigurationMismatch" ||
+					reads != 0 {
+					t.Fatalf("expanded target admitted: %+v reads=%d", result, reads)
+				}
+			} else if !result.Ready || reads != 1 {
+				t.Fatalf("literal escaped target rejected: %+v reads=%d", result, reads)
+			}
+		})
 	}
 }
 
@@ -157,6 +193,10 @@ func TestContractCheckRejectsMisconfiguredAndStaleProbes(t *testing.T) {
 		reason string
 	}{
 		{"missing output", func(p *datav1alpha1.DataProduct, _ *appsv1.Deployment) { p.Spec.ContractChecks[0].Output = "missing" }, "ContractOutputNotFound"},
+		{"doubled dollars alter runtime target", func(p *datav1alpha1.DataProduct, d *appsv1.Deployment) {
+			p.Spec.Outputs[0].ContractURL = "https://example.test/$$schema"
+			d.Spec.Template.Spec.Containers[0].Env[0].Value = p.Spec.Outputs[0].ContractURL
+		}, "ContractProbeConfigurationMismatch"},
 		{"cross namespace", func(p *datav1alpha1.DataProduct, _ *appsv1.Deployment) {
 			p.Spec.ContractChecks[0].ResourceRef.Namespace = "other"
 		}, "ContractProbeInvalid"},

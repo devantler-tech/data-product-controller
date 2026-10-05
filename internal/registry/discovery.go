@@ -46,7 +46,7 @@ func (s *server) discoveryAllowed(writer http.ResponseWriter, request *http.Requ
 		http.NotFound(writer, request)
 		return false
 	}
-	if request.ContentLength > 0 || len(request.TransferEncoding) != 0 {
+	if request.ContentLength != 0 || len(request.TransferEncoding) != 0 {
 		discoveryFailure(
 			writer,
 			http.StatusBadRequest,

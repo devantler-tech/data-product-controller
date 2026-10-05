@@ -202,8 +202,14 @@
     status.dataset.state = "selected";
     status.textContent = "Selection changed. Read the report to inspect it.";
   }
-  get("report-file").addEventListener("change", replaceSelection);
-  get("report-text").addEventListener("input", replaceSelection);
+  get("report-file").addEventListener("change", () => {
+    get("report-text").value = "";
+    replaceSelection();
+  });
+  get("report-text").addEventListener("input", () => {
+    get("report-file").value = "";
+    replaceSelection();
+  });
   get("report-form").addEventListener("submit", async event => {
     event.preventDefault();
     const current = revoke();

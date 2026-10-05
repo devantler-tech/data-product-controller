@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"unicode/utf16"
@@ -171,10 +172,11 @@ func readValue(decoder *json.Decoder, depth int) (any, error) {
 type (
 	sourceSummary struct{ documents, products int }
 	publicProduct struct {
-		key     string
-		id      string
-		inputs  []map[string]any
-		outputs map[string]bool
+		key              string
+		id               string
+		inputs           []map[string]any
+		outputs          map[string]bool
+		requiredFeatures map[string]bool
 	}
 )
 
@@ -227,7 +229,7 @@ func readiness(value any) error {
 // descriptor checks the example's closed publication-preview profile.
 // Schema validation and the publisher's full API/public-metadata checks remain separate.
 func descriptor(value any) (publicProduct, error) {
-	result := publicProduct{outputs: map[string]bool{}}
+	result := publicProduct{outputs: map[string]bool{}, requiredFeatures: map[string]bool{}}
 	object, err := exact(
 		value,
 		"apiVersion kind namespace name id displayName description version owner outputs ready readiness generation observedGeneration health",
@@ -346,6 +348,9 @@ func descriptor(value any) (publicProduct, error) {
 			}
 			result.inputs = append(result.inputs, input)
 		}
+		if len(result.inputs) != 0 {
+			result.requiredFeatures["composition"] = true
+		}
 	}
 	if value, exists := object["composition"]; exists {
 		if err := readiness(value); err != nil {
@@ -378,6 +383,10 @@ func descriptor(value any) (publicProduct, error) {
 			version := contract["apiVersion"]
 			if version != "data-product-ui/v1" && version != "data-product-ui/v2" {
 				return result, errUnsupported
+			}
+			result.requiredFeatures["ui-contract"] = true
+			if version == "data-product-ui/v2" {
+				result.requiredFeatures["ui-appearance"] = true
 			}
 			origins, err := array(contract["hostOrigins"], 16)
 			if err != nil || len(origins) == 0 {
@@ -503,7 +512,7 @@ func validateReport(value any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	featurePositions := map[string]bool{}
+	featurePositions := map[string]map[string]bool{}
 	union := map[string]bool{}
 	featureCounts := map[int]int{}
 	for _, value := range features {
@@ -512,16 +521,16 @@ func validateReport(value any) (map[string]any, error) {
 			return nil, err
 		}
 		key, err := position(entry["source"], entry["document"], false)
-		if err != nil || featurePositions[key] {
+		if err != nil || featurePositions[key] != nil {
 			return nil, errUnsupported
 		}
-		featurePositions[key] = true
 		source, _ := integer(entry["source"], 32)
 		featureCounts[source]++
 		set, err := featureSet(entry["requiredFeatures"])
 		if err != nil {
 			return nil, err
 		}
+		featurePositions[key] = set
 		for key := range set {
 			union[key] = true
 		}
@@ -681,8 +690,13 @@ func validateReport(value any) (map[string]any, error) {
 			return nil, errUnsupported
 		}
 		at, err := position(entry["source"], entry["document"], false)
-		if err != nil || !featurePositions[at] || usedPositions[at] {
+		if err != nil || featurePositions[at] == nil || usedPositions[at] {
 			return nil, errUnsupported
+		}
+		for feature := range byKey[key].requiredFeatures {
+			if !featurePositions[at][feature] {
+				return nil, errUnsupported
+			}
 		}
 		usedPositions[at] = true
 		rank[key] = index
@@ -776,7 +790,7 @@ func readReportFile(path string) (map[string]any, error) {
 		return nil, errUnsupported
 	}
 	data, err := io.ReadAll(io.LimitReader(file, (2<<20)+1))
-	if err != nil || len(data) > 2<<20 || !utf8.Valid(data) {
+	if err != nil || len(data) > 2<<20 || !utf8.Valid(data) || !validUnicodeEscapes(data) {
 		return nil, errUnsupported
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -789,6 +803,49 @@ func readReportFile(path string) (map[string]any, error) {
 		return nil, errUnsupported
 	}
 	return validateReport(value)
+}
+
+// validUnicodeEscapes rejects decoding that would replace an unpaired escaped surrogate.
+// This independent reader preserves deliberate U+FFFD, paired surrogates and escaped backslashes.
+func validUnicodeEscapes(data []byte) bool {
+	inString := false
+	for index := 0; index < len(data); index++ {
+		if data[index] == '"' {
+			inString = !inString
+			continue
+		}
+		if !inString || data[index] != '\\' {
+			continue
+		}
+		index++
+		if index >= len(data) {
+			return false
+		}
+		if data[index] != 'u' {
+			continue
+		}
+		if index+4 >= len(data) {
+			return false
+		}
+		code, err := strconv.ParseUint(string(data[index+1:index+5]), 16, 16)
+		if err != nil {
+			return false
+		}
+		index += 4
+		if code >= 0xD800 && code <= 0xDBFF {
+			if index+6 >= len(data) || data[index+1] != '\\' || data[index+2] != 'u' {
+				return false
+			}
+			low, err := strconv.ParseUint(string(data[index+3:index+7]), 16, 16)
+			if err != nil || low < 0xDC00 || low > 0xDFFF {
+				return false
+			}
+			index += 6
+		} else if code >= 0xDC00 && code <= 0xDFFF {
+			return false
+		}
+	}
+	return true
 }
 
 // main prints bounded report claims and a static review order, or a fixed rejection message.

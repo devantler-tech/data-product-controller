@@ -148,6 +148,8 @@
     if (!Array.isArray(value) || value.length > 1024)
       throw new Error("Descriptor arrays may contain up to 1024 entries.");
     value.forEach(check);
+    if (new Set(value.map(entry => entry.name)).size !== value.length)
+      throw new Error("Descriptor collections require unique names.");
   }
 
   function input(value) {

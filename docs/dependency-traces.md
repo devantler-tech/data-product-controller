@@ -57,6 +57,9 @@ Incomplete traces retain useful branches and a fixed `issues` list: missing or
 unavailable products, invalid public metadata, unexpected identities, foreign
 namespace references, cycles, timeouts and traversal limits. An edge may name a
 target that was not inspected; never infer its readiness from its reference.
+The browser requires a cycle verdict to close a resolved return path, and failed-read
+edges to agree with retained cached failure nodes. Traversal limits and failures of the
+compatibility evaluator remain distinct from cached read failures.
 
 ## Inspect a saved trace offline
 

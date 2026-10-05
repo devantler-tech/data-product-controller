@@ -9,7 +9,9 @@ TLS listener or explicit internal HTTP gateway transport.
 
 Choose one local v2 JSON report file or paste one report, up to 2 MiB. Files decode
 as strict UTF-8. Nothing is uploaded, fetched from a declared link, or mounted as a
-product UI. Unsupported versions, duplicate decoded keys, fractional numeric tokens,
+product UI. Selecting a file clears pasted text; editing pasted text clears the selected file.
+The latest selection also withdraws results from any earlier pending read. Unsupported versions,
+duplicate decoded keys, fractional numeric tokens,
 unknown fields, inconsistent counts, forged readiness, and inconsistent plan edges reject
 the whole import. Rejection or Clear withdraws earlier results and pending reads.
 
@@ -128,7 +130,10 @@ both documents locally and refuse unresolved schema references. The
 [independent reader](examples/preflight-client/main.go) uses only the Go standard
 library. It checks its bounded report/preview profile, diagnostic counts, feature
 union, source membership and dependency plan. It rejects duplicate keys, unknown
-fields, unsupported versions, null required values and trailing data. It displays
+fields, unsupported versions, null required values, malformed Unicode escapes and trailing data.
+Both readers require the plan origin's feature list to include requirements visible in its preview:
+composition for inputs, ui-contract for a UI contract and ui-appearance for v2.
+Additional requirements from omitted private declarations remain permitted. It displays
 the report's claimed declaration result rather than revalidating the original bundle.
 It is not a generic JSON Schema or Kubernetes admission validator. The published
 schemas check their structural profiles; full API admission and public-metadata
