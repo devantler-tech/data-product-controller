@@ -86,7 +86,7 @@ Every message is an object with exactly the documented keys. All messages carry
 versions, unknown fields, stale sessions, and ungranted hints are ignored.
 
 | Direction      | Type     | Additional fields             | Meaning                                                                        |
-| -------------- | -------- | ----------------------------- | ------------------------------------------------------------------------------ |
+|----------------|----------|-------------------------------|--------------------------------------------------------------------------------|
 | Host → product | `init`   | `capabilities: []`            | Fresh UUID session and intersection of requested capabilities with host policy |
 | Product → host | `ready`  | None                          | This document accepted initialization and speaks v1                            |
 | Product → host | `status` | `state: "ready"` or `"error"` | Optional interface status hint; requires `status` grant                        |

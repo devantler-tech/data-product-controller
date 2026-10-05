@@ -1,5 +1,6 @@
 :root {
   color-scheme: light dark;
+
   --canvas: light-dark(#fff, #000);
   --surface: light-dark(#f6f6f6, #151515);
   --text: light-dark(#181818, #f4f4f4);
@@ -7,6 +8,7 @@
   --line: light-dark(#858585, #767676);
   --accent: light-dark(#b7430b, #ff8b3d);
   --on-accent: light-dark(#fff, #000);
+
   font:
     15px/1.5 -apple-system,
     BlinkMacSystemFont,
@@ -15,22 +17,28 @@
   color: var(--text);
   background: var(--canvas);
 }
+
 :root[data-appearance="light"] {
   color-scheme: light;
 }
+
 :root[data-appearance="dark"] {
   color-scheme: dark;
 }
+
 * {
   box-sizing: border-box;
 }
+
 body {
   margin: 0;
 }
+
 main {
   width: min(76rem, calc(100% - 2rem));
   margin: 2rem auto;
 }
+
 .workspace-header {
   display: flex;
   justify-content: space-between;
@@ -39,25 +47,31 @@ main {
   padding-bottom: 1.5rem;
   border-bottom: 3px solid var(--accent);
 }
+
 .brand {
   color: var(--accent);
   font-weight: 700;
 }
+
 h1 {
   font-size: 1.65rem;
   line-height: 1.25;
   margin: 0.4rem 0;
 }
+
 h2 {
   font-size: 1.1rem;
   margin: 0 0 1rem;
 }
+
 p {
   max-width: 72ch;
 }
+
 .workspace-header p {
   margin: 0;
 }
+
 .toolbar,
 .actions {
   display: flex;
@@ -65,33 +79,40 @@ p {
   gap: 0.75rem;
   align-items: end;
 }
+
 .import-workspace {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   margin: 1.5rem 0;
 }
+
 .import-workspace > * {
   min-width: 0;
 }
+
 form {
   padding: 1.25rem;
   border: 1px solid var(--line);
   background: var(--surface);
 }
+
 #descriptor-import {
   padding: 1.25rem;
   border: 1px solid var(--line);
   background: var(--surface);
 }
+
 #descriptor-form {
   padding: 0;
   border: 0;
 }
+
 label {
   display: block;
   font-weight: 600;
 }
+
 textarea,
 select,
 input[type="file"] {
@@ -103,6 +124,7 @@ input[type="file"] {
   border: 1px solid var(--line);
   font: inherit;
 }
+
 textarea {
   margin: 0.4rem 0 1rem;
   font:
@@ -112,29 +134,36 @@ textarea {
     monospace;
   resize: vertical;
 }
+
 select {
   min-height: 44px;
 }
+
 input[type="file"] {
   margin: 0.4rem 0 1rem;
 }
+
 fieldset {
   margin: 1rem 0;
   padding: 0.75rem 0;
   border: 0;
   border-top: 1px solid var(--line);
 }
+
 legend {
   padding-right: 0.5rem;
   font-weight: 600;
 }
+
 fieldset label {
   margin: 0.5rem 0;
   font-weight: 400;
 }
+
 input[type="checkbox"] {
   accent-color: var(--accent);
 }
+
 button {
   min-height: 44px;
   padding: 0.65rem 1rem;
@@ -145,19 +174,23 @@ button {
   font: inherit;
   font-weight: 600;
 }
+
 button.secondary {
   color: var(--text);
   background: var(--canvas);
   border-color: var(--line);
 }
+
 button:disabled {
   color: var(--muted);
   cursor: default;
 }
+
 :focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
+
 iframe {
   display: block;
   width: 100%;
@@ -167,31 +200,38 @@ iframe {
   border: 1px solid var(--line);
   background: var(--canvas);
 }
+
 #kit-status {
   padding: 1rem;
   border-left: 3px solid var(--accent);
   background: var(--surface);
   overflow-wrap: anywhere;
 }
+
 .note,
 #manifest-help,
 #descriptor-help {
   color: var(--muted);
   font-size: 0.9rem;
 }
+
 [hidden] {
   display: none !important;
 }
-@media (max-width: 52rem) {
+
+@media (width <= 52rem) {
   main {
     margin: 1rem auto;
   }
+
   .workspace-header {
     flex-direction: column;
   }
+
   .import-workspace {
     grid-template-columns: 1fr;
   }
+
   .toolbar {
     width: 100%;
   }
