@@ -110,7 +110,9 @@ The [owned image guide](postgresql-age-image.md) describes those steps. Real acc
 both query languages and reader roles; metadata-only observation cannot establish them.
 
 Use dedicated reader Secrets. Bootstrap-owner, superuser, replication, server, CA and client
-credential names are rejected before any reads. An independent publisher verifies application
+credential names are rejected before any reads. Configured superuser, bootstrap
+application and certificate references are also excluded after reading the Cluster
+and before reading publication metadata. An independent publisher verifies application
 queries and effective read-only grants, then adds metadata and the current Cluster owner reference:
 
 ```yaml

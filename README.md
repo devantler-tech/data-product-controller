@@ -181,6 +181,11 @@ both `uiContract.enabled` and the separately default-off `uiAppearance.enabled`
 in the host and sample, plus publisher-approved host origins. The new gate is a
 long-lived operator choice over a cosmetic grant, not permission to query data.
 
+The sample product and standalone UI kit handle SIGTERM and interrupt by closing
+their listeners and waiting up to ten seconds for active responses to finish.
+They close remaining connections on timeout and exit unsuccessfully if shutdown
+fails.
+
 ## Install
 
 Install the chart with an existing Gateway API listener.

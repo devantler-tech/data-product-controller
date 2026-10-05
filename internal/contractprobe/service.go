@@ -119,6 +119,11 @@ func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 	if s.enabled != nil && s.enabled(r.Context()) {
 		reason = s.fetch(r.Context())
 	}
+	if r.Context().Err() != nil {
+		s.requests.WithLabelValues("ContractProbeCancelled").Inc()
+		http.Error(w, "ContractProbeCancelled", http.StatusServiceUnavailable)
+		return
+	}
 	s.requests.WithLabelValues(reason).Inc()
 	s.observed.SetToCurrentTime()
 	s.ready.Set(0)

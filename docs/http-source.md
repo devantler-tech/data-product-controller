@@ -137,6 +137,9 @@ HTTP_SOURCE_ENABLED=true /tmp/http-source \
   --source-config /path/to/private-config.json
 ```
 
+Only named options are accepted; positional arguments or extra arguments after
+`--` stop startup before configuration or listener setup.
+
 Unset or false `HTTP_SOURCE_ENABLED` keeps the API and contract unavailable and makes no source
 requests. An invalid boolean stops startup. Both listeners close on SIGTERM, and active source reads
 are cancelled. Bind local development listeners to loopback; the binary does not authenticate peers.

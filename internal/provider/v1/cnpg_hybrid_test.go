@@ -159,6 +159,37 @@ func TestHybridObservation(t *testing.T) {
 		{name: "null catalog declaration", reason: "SourceProfileUnsupported", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			_ = unstructured.SetNestedField(c.Object, nil, "spec", "imageCatalogRef")
 		}},
+		{name: "configured superuser publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, true, "spec", "enableSuperuserAccess")
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "superuserSecret", "name")
+		}},
+		{name: "configured bootstrap publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "bootstrap", "initdb", "secret", "name")
+		}},
+		{name: "configured recovery publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "bootstrap", "recovery", "secret", "name")
+		}},
+		{name: "configured basebackup publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "bootstrap", "pg_basebackup", "secret", "name")
+		}},
+		{name: "configured server CA publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "certificates", "serverCASecret")
+		}},
+		{name: "configured server TLS publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "certificates", "serverTLSSecret")
+		}},
+		{name: "configured client CA publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "certificates", "clientCASecret")
+		}},
+		{name: "configured replication TLS publication", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, s *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, s.Name, "spec", "certificates", "replicationTLSSecret")
+		}},
+		{name: "malformed configured reference", reason: "SourceInvalid", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, int64(1), "spec", "superuserSecret", "name")
+		}},
+		{name: "unrelated configured publication", reason: "SourceReady", secretReads: 1, mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
+			_ = unstructured.SetNestedField(c.Object, "another-publication", "spec", "superuserSecret", "name")
+		}},
 		{name: "unready source", reason: "SourceNotReady", mutate: func(c *unstructured.Unstructured, _ *metav1.PartialObjectMetadata) {
 			_ = unstructured.SetNestedField(c.Object, int64(0), "status", "readyInstances")
 		}},

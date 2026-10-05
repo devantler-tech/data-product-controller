@@ -69,6 +69,12 @@ func (c *CloudNativePGHybrid) Observe(
 			"The source is being deleted; restore or replace its reference.",
 		)
 	}
+	if !hybridConfiguredReader(cluster, source.ConnectionSecretRef.Name) {
+		return unavailable(
+			"SourceInvalid",
+			"Use a dedicated application reader publication outside the Cluster's configured operator publications.",
+		)
+	}
 	if !hybridSourceProfile(cluster, source.Engine.Type) {
 		return unavailable(
 			"SourceProfileUnsupported",
@@ -117,6 +123,27 @@ func (c *CloudNativePGHybrid) Observe(
 		Reason:  "SourceReady",
 		Message: "The hybrid source is ready and its current application reader capability is published.",
 	}
+}
+
+// hybridConfiguredReader excludes configured bootstrap and operator references without reading their Secrets.
+func hybridConfiguredReader(cluster *unstructured.Unstructured, secret string) bool {
+	paths := [][]string{
+		{"spec", "superuserSecret", "name"},
+		{"spec", "bootstrap", "initdb", "secret", "name"},
+		{"spec", "bootstrap", "recovery", "secret", "name"},
+		{"spec", "bootstrap", "pg_basebackup", "secret", "name"},
+		{"spec", "certificates", "serverCASecret"},
+		{"spec", "certificates", "serverTLSSecret"},
+		{"spec", "certificates", "clientCASecret"},
+		{"spec", "certificates", "replicationTLSSecret"},
+	}
+	for _, path := range paths {
+		name, _, err := unstructured.NestedString(cluster.Object, path...)
+		if err != nil || name == secret {
+			return false
+		}
+	}
+	return true
 }
 
 // hybridReaderSecret excludes bootstrap, replication, server and operator credential publications.

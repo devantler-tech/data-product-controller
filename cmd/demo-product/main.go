@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/devantler-tech/data-product-controller/internal/config"
 	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
+	"github.com/devantler-tech/data-product-controller/internal/httpserver"
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 )
 
@@ -72,24 +72,6 @@ func run() error {
 	stopContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	go func() {
-		<-stopContext.Done()
-
-		shutdownContext, cancel := context.WithTimeout(
-			context.WithoutCancel(stopContext),
-			10*time.Second,
-		)
-		defer cancel()
-
-		if err := server.Shutdown(shutdownContext); err != nil {
-			slog.Error("shut down demo product", "error", err)
-		}
-	}()
-
 	slog.Info("starting demo data product", "address", *address)
-	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("listen and serve: %w", err)
-	}
-
-	return nil
+	return httpserver.Run(stopContext, server, server.ListenAndServe, 10*time.Second)
 }

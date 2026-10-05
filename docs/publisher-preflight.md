@@ -118,7 +118,9 @@ product identities in a stable order with producers before consumers, plus every
 named input/output edge. Several inputs may select one producer. This is a static
 review aid: it runs nothing, establishes no access or readiness, and prescribes no
 Kubernetes apply order. Per-product requirements describe products that passed
-publication validation; their sorted union is `requiredFeatures`.
+publication validation; their sorted union is `requiredFeatures`. Every
+`data-product-ui/v2` declaration requires both `ui-contract` and
+`ui-appearance`, including interfaces that request no appearance hints.
 
 The [v2 report schema](../internal/preflight/schema/report-v2.json) references the
 [public descriptor schema](../internal/registry/schema/descriptor-v1.json). Register

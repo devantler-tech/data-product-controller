@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"strconv"
+	"strings"
 
 	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	yamlv2 "go.yaml.in/yaml/v2"
@@ -168,6 +169,11 @@ func parseSource(
 			object["kind"] != "DataProduct" {
 			return fail("UnsupportedResource", number)
 		}
+		fields := map[string]Position{}
+		validator, admissionErr := loadAdmission()
+		if admissionErr == nil && len(node.Content) > 0 {
+			collectPositions(node.Content[0], validator.schema, "", origin, fields)
+		}
 		var product data.DataProduct
 		// Kubernetes treats JSON field names as case-sensitive, including metadata.
 		// Keep strict errors private: their field names and values are untrusted.
@@ -176,11 +182,21 @@ func parseSource(
 			return fail("AdmissionInvalid", number)
 		}
 		if len(strictErrors) != 0 {
+			var field strictjson.FieldError
+			if errors.As(strictErrors[0], &field) && admissionErr == nil {
+				path, _ := unknownContainer(
+					node.Content[0],
+					validator.schema,
+					"",
+					"",
+					field.FieldPath(),
+				)
+				if position, found := fields[path]; found {
+					origin = position
+				}
+				origin.path = path
+			}
 			return fail("UnknownField", number)
-		}
-		fields := map[string]Position{}
-		if validator, err := loadAdmission(); err == nil && len(node.Content) > 0 {
-			collectPositions(node.Content[0], validator.schema, "", origin, fields)
 		}
 		documents = append(
 			documents,
@@ -189,6 +205,65 @@ func parseSource(
 		summary.Products++
 	}
 	return documents, summary, "", 0, Position{}
+}
+
+// unknownContainer matches literal unknown keys, never interpreting their punctuation as a path.
+// Open/implicit schema objects (including ObjectMeta) conservatively retain their known container.
+func unknownContainer(
+	node *yaml.Node,
+	shape *structural.Structural,
+	path, raw, target string,
+) (string, bool) {
+	if node.Kind == yaml.MappingNode {
+		if len(shape.Properties) == 0 {
+			return path, target == raw || strings.HasPrefix(target, raw+".")
+		}
+		for i := 0; i < len(node.Content); i += 2 {
+			key := node.Content[i].Value
+			_, known := shape.Properties[key]
+			candidate := key
+			if raw != "" {
+				candidate = raw + "." + key
+			}
+			if !known && candidate == target {
+				return path, true
+			}
+		}
+		for i := 0; i < len(node.Content); i += 2 {
+			key := node.Content[i].Value
+			child, known := shape.Properties[key]
+			if !known {
+				continue
+			}
+			candidate := key
+			if raw != "" {
+				candidate = raw + "." + key
+			}
+			if found, ok := unknownContainer(
+				node.Content[i+1],
+				&child,
+				path+"/"+key,
+				candidate,
+				target,
+			); ok {
+				return found, true
+			}
+		}
+	} else if node.Kind == yaml.SequenceNode && shape.Items != nil {
+		for i, child := range node.Content {
+			index := strconv.Itoa(i)
+			if found, ok := unknownContainer(
+				child,
+				shape.Items,
+				path+"/"+index,
+				raw+"["+index+"]",
+				target,
+			); ok {
+				return found, true
+			}
+		}
+	}
+	return "", false
 }
 
 // Positions retain only schema-known names and numeric array indexes.

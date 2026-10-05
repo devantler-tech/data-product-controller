@@ -70,7 +70,7 @@ func checkSelected(ctx context.Context, sources []io.Reader, namespace string) R
 	report.sources = summaries
 	report.failure = failure
 	if code != "" {
-		report.add(number, code, "")
+		report.addAt(number, "error", code, "", failure.path)
 		return report
 	}
 	report.documents = documents
@@ -242,10 +242,8 @@ func declaredFeatures(product *data.DataProduct) []string {
 	}
 	if product.Spec.UI != nil && product.Spec.UI.Contract != nil {
 		required["ui-contract"] = true
-		for _, capability := range product.Spec.UI.Contract.Capabilities {
-			if capability == "appearance" {
-				required["ui-appearance"] = true
-			}
+		if product.Spec.UI.Contract.APIVersion == "data-product-ui/v2" {
+			required["ui-appearance"] = true
 		}
 	}
 	if product.Annotations["data.devantler.tech/dcat-type"] == "Dataset" {
