@@ -111,7 +111,8 @@ are discarded and never copied to logs, status or metrics.
 `/healthz` reports process health. `/readyz` returns 200 with `ContractReachable`
 only for a complete, nonempty HTTP 200 response within those limits. Failures
 return 503 with `FeatureDisabled`, `ContractConfigurationInvalid`,
-`ContractUnavailable`, `ContractInvalidResponse`, or `ContractProbeBusy`.
+`ContractUnavailable`, `ContractInvalidResponse`, `ContractProbeBusy`, or
+`ContractProbeCancelled`.
 Unsupported methods, query parameters and request bodies are rejected without
 fetching the contract. `/metrics` does not trigger a fetch and exposes:
 
@@ -119,7 +120,8 @@ fetching the contract. `/metrics` does not trigger a fetch and exposes:
 - `contract_probe_last_observation_timestamp_seconds`: freshness of that result;
 - `contract_probe_requests_total{result}`: counters using only fixed reason labels.
 
-A busy request does not replace the last completed result. Readiness evaluates
+A busy or caller-cancelled request does not replace the last completed result or
+its timestamp. A probe's own upstream timeout remains a completed failure. Readiness evaluates
 fresh network access; metrics describe the last completed observation.
 
 Reachability is from the probe's network vantage point. It proves neither protocol

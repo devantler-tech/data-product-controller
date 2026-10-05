@@ -40,6 +40,9 @@ func run() error {
 		"Projected source configuration file.",
 	)
 	flag.Parse()
+	if flag.NArg() != 0 {
+		return errors.New("unsupported HTTP source arguments")
+	}
 	enabled := false
 	if raw := os.Getenv("HTTP_SOURCE_ENABLED"); raw != "" {
 		var err error

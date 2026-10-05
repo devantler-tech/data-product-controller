@@ -17,6 +17,7 @@ type Position struct {
 	Document int `json:"document"`
 	Line     int `json:"line"`
 	Column   int `json:"column"`
+	path     string
 }
 
 // SourceSummary counts documents, including empty documents, in one selected source.

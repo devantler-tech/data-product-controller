@@ -11,10 +11,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/devantler-tech/data-product-controller/internal/config"
+	"github.com/devantler-tech/data-product-controller/internal/httpserver"
 	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 	"github.com/devantler-tech/data-product-controller/web"
 )
@@ -140,15 +143,20 @@ func run(args []string, getenv func(string) string) error {
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    16 << 10,
 	}
-	if options.httpBehindGateway {
-		err = server.ListenAndServe()
-	} else {
-		err = server.ListenAndServeTLS(options.cert, options.key)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	// Own the listener even when TLS loading has not yet registered it with Serve.
+	listener, err := (&net.ListenConfig{}).Listen(ctx, "tcp", options.address)
+	if err != nil {
+		return fmt.Errorf("listen for UI host: %w", err)
 	}
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("serve kit: %w", err)
-	}
-	return nil
+	defer func() { _ = listener.Close() }()
+	return httpserver.Run(ctx, server, func() error {
+		if options.httpBehindGateway {
+			return server.Serve(listener)
+		}
+		return server.ServeTLS(listener, options.cert, options.key)
+	}, 10*time.Second)
 }
 
 // health reports process availability without consulting flags or accepting input.
