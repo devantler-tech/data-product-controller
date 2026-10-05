@@ -170,7 +170,14 @@ func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 }
 
 // fetch uses fresh Secret configuration for one bounded source read, without queueing excess work.
-func (s *Service) fetch(ctx context.Context, slots chan struct{}) ([]byte, string) {
+func (s *Service) fetch(ctx context.Context, slots chan struct{}) (body []byte, result string) {
+	// Cancellation can race a successful transport return or a clean body EOF. Classify
+	// it at completion so an abandoned caller never becomes a source-health observation.
+	defer func() {
+		if ctx.Err() != nil {
+			body, result = nil, "cancelled"
+		}
+	}()
 	if ctx.Err() != nil {
 		return nil, "cancelled"
 	}
@@ -195,9 +202,6 @@ func (s *Service) fetch(ctx context.Context, slots chan struct{}) ([]byte, strin
 	// cannot choose destinations; the workload's NetworkPolicy restricts source egress.
 	response, err := s.client.Do(request)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, "cancelled"
-		}
 		return nil, "upstream_error"
 	}
 	defer func() { _ = response.Body.Close() }()
@@ -211,11 +215,8 @@ func (s *Service) fetch(ctx context.Context, slots chan struct{}) ([]byte, strin
 		response.ContentLength > maxResponseBytes {
 		return nil, "invalid_response"
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
+	body, err = io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, "cancelled"
-		}
 		return nil, "upstream_error"
 	}
 	if len(body) > maxResponseBytes || !utf8.Valid(body) || !json.Valid(body) {

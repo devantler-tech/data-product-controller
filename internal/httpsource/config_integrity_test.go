@@ -229,6 +229,99 @@ func TestConnectorTimeoutWithdrawsCompletedSourceHealth(t *testing.T) {
 	}
 }
 
+func TestCancellationAtResponseBoundaryPreservesSourceHealth(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name, contentType, body string
+		status                  int
+		cancelOnBody            bool
+	}{
+		{"status", "application/json", `{}`, 503, false},
+		{"headers", "text/plain", `{}`, 200, false},
+		{"empty-body", "application/json", ``, 200, true},
+		{"invalid-body", "application/json", `{`, 200, true},
+		{"valid-body", "application/json", `{}`, 200, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			source := httptest.NewTLSServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = io.WriteString(w, `{}`)
+				}),
+			)
+			defer source.Close()
+			service, _ := fixture(t, source)
+			if got := request(
+				service.PublicHandler(),
+				http.MethodGet,
+				"/api/data",
+				"",
+			); got.Code != 200 {
+				t.Fatal("initial healthy query failed")
+			}
+			before := sourceHealthMetrics(t, service)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			service.client.CloseIdleConnections()
+			service.client.Transport = responseBoundaryTransport(
+				func(*http.Request) (*http.Response, error) {
+					body := io.NopCloser(strings.NewReader(test.body))
+					if test.cancelOnBody {
+						body = &cancelledResponseBody{ReadCloser: body, cancel: cancel}
+					} else {
+						cancel()
+					}
+					return &http.Response{
+						StatusCode: test.status,
+						Header:     http.Header{"Content-Type": []string{test.contentType}},
+						Body:       body,
+					}, nil
+				},
+			)
+			service.PublicHandler().ServeHTTP(httptest.NewRecorder(),
+				httptest.NewRequestWithContext(ctx, http.MethodGet, "/api/data", nil))
+			metrics := request(
+				service.ManagementHandler(),
+				http.MethodGet,
+				"/metrics",
+				"",
+			).Body.String()
+			if after := sourceHealthMetrics(t, service); after != before ||
+				!strings.Contains(
+					metrics,
+					`http_source_requests_total{operation="query",result="cancelled"} 1`,
+				) ||
+				len(service.queries) != 0 {
+				t.Fatalf(
+					"response-boundary cancellation changed health or retained work: before=%v after=%v metrics=%s",
+					before,
+					after,
+					metrics,
+				)
+			}
+		})
+	}
+}
+
+type responseBoundaryTransport func(*http.Request) (*http.Response, error)
+
+func (transport responseBoundaryTransport) RoundTrip(
+	request *http.Request,
+) (*http.Response, error) {
+	return transport(request)
+}
+
+type cancelledResponseBody struct {
+	io.ReadCloser
+	cancel context.CancelFunc
+}
+
+func (body *cancelledResponseBody) Read(buffer []byte) (int, error) {
+	body.cancel()
+	return body.ReadCloser.Read(buffer)
+}
+
 type completedSourceHealth struct{ ready, observed float64 }
 
 func sourceHealthMetrics(t *testing.T, service *Service) completedSourceHealth {

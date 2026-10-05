@@ -1,10 +1,29 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
+
+  --canvas: light-dark(#fff, #000);
+  --surface: light-dark(#f6f6f6, #151515);
+  --text: light-dark(#181818, #f4f4f4);
+  --muted: light-dark(#616161, #b5b5b5);
+  --line: light-dark(#858585, #767676);
+  --accent: light-dark(#b7430b, #ff8b3d);
+  --on-accent: light-dark(#fff, #000);
+
   font:
-    17px/1.5 system-ui,
+    15px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     sans-serif;
-  color: #173f4d;
-  background: #f0f5f1;
+  color: var(--text);
+  background: var(--canvas);
+}
+
+:root[data-appearance="light"] {
+  color-scheme: light;
+}
+
+:root[data-appearance="dark"] {
+  color-scheme: dark;
 }
 
 * {
@@ -16,27 +35,77 @@ body {
 }
 
 main {
-  width: min(64rem, calc(100% - 2rem));
-  margin: 3rem auto;
+  width: min(76rem, calc(100% - 2rem));
+  margin: 2rem auto;
+}
+
+.workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 3px solid var(--accent);
+}
+
+.brand {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 h1 {
-  font:
-    500 clamp(2.5rem, 7vw, 4.5rem)/1.1 Georgia,
-    serif;
-  margin: 1rem 0;
+  font-size: 1.65rem;
+  line-height: 1.25;
+  margin: 0.4rem 0;
 }
 
-.eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
+h2 {
+  font-size: 1.1rem;
+  margin: 0 0 1rem;
+}
+
+p {
+  max-width: 72ch;
+}
+
+.workspace-header p {
+  margin: 0;
+}
+
+.toolbar,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.import-workspace {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.import-workspace > * {
+  min-width: 0;
 }
 
 form {
-  padding: clamp(1rem, 4vw, 2rem);
-  border: 1px solid #9db9ac;
-  background: white;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+#descriptor-import {
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+#descriptor-form {
+  padding: 0;
+  border: 0;
 }
 
 label {
@@ -44,20 +113,46 @@ label {
   font-weight: 600;
 }
 
-textarea {
+textarea,
+select,
+input[type="file"] {
   width: 100%;
-  padding: 0.75rem;
+  max-width: 100%;
+  padding: 0.7rem;
+  color: var(--text);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  font: inherit;
+}
+
+textarea {
+  margin: 0.4rem 0 1rem;
   font:
     0.85rem/1.5 ui-monospace,
+    SFMono-Regular,
+    Consolas,
     monospace;
   resize: vertical;
-  border: 1px solid #5d7a6a;
+}
+
+select {
+  min-height: 44px;
+}
+
+input[type="file"] {
+  margin: 0.4rem 0 1rem;
 }
 
 fieldset {
   margin: 1rem 0;
-  padding: 1rem;
-  border: 1px solid #9db9ac;
+  padding: 0.75rem 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+legend {
+  padding-right: 0.5rem;
+  font-weight: 600;
 }
 
 fieldset label {
@@ -65,50 +160,79 @@ fieldset label {
   font-weight: 400;
 }
 
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
 button {
   min-height: 44px;
   padding: 0.65rem 1rem;
-  color: white;
-  background: #173f4d;
-  border: 2px solid #173f4d;
+  color: var(--on-accent);
+  background: var(--accent);
+  border: 1px solid var(--accent);
   cursor: pointer;
   font: inherit;
+  font-weight: 600;
 }
 
-#close {
-  color: #173f4d;
-  background: white;
+button.secondary {
+  color: var(--text);
+  background: var(--canvas);
+  border-color: var(--line);
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+button:disabled {
+  color: var(--muted);
+  cursor: default;
 }
 
 :focus-visible {
-  outline: 3px solid #b45125;
+  outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
 
 iframe {
+  display: block;
   width: 100%;
   height: 700px;
   min-height: 240px;
-  border: 1px solid #5d7a6a;
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  background: var(--canvas);
 }
 
 #kit-status {
   padding: 1rem;
-  background: #e0ece5;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
   overflow-wrap: anywhere;
 }
 
 .note,
-#manifest-help {
+#manifest-help,
+#descriptor-help {
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
 [hidden] {
   display: none !important;
+}
+
+@media (width <= 52rem) {
+  main {
+    margin: 1rem auto;
+  }
+
+  .workspace-header {
+    flex-direction: column;
+  }
+
+  .import-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    width: 100%;
+  }
 }
