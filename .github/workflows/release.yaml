@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: write # Create the release commit, tag, and GitHub release.
       id-token: write # Mint the reusable workflow's GitHub App identity.
-    uses: devantler-tech/.github/.github/workflows/create-release.yaml@e271b7ff25d4ce97b067612e7ba0c5d657b6a17a # v6.1.0
+    uses: devantler-tech/.github/.github/workflows/create-release.yaml@498fb4b11f129928d3af9a90e9c5a46f1c4dbd77 # v7.0.0
     with:
       disable-issue-side-effects: true
     secrets:
