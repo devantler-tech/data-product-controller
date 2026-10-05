@@ -116,6 +116,12 @@ func (d *Deployment) observe(
 			)
 		}
 	}
+	if readContext.Err() != nil {
+		return unavailable(
+			"ConnectorUnavailable",
+			"The Deployment could not be observed; check API availability and controller access.",
+		)
+	}
 	if workload.DeletionTimestamp != nil {
 		return unavailable(
 			"ConnectorDeleting",

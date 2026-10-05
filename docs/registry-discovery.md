@@ -67,6 +67,9 @@ the same registry identity. No registry-side cursor state or secret is required.
 Duplicate, malformed and unsupported query parameters return `400`. Requests
 with a body, including unknown-length HTTP/2 bodies, return `400` before metadata reads.
 Public descriptor outputs, inputs and lineage each require unique names.
+Each observed lineage entry must match its declared input, effective namespace,
+producer and selected output. Contradictory entries reject the descriptor rather
+than publishing metadata that independent consumers cannot accept.
 A namespace without products is a successful empty page, not an unavailable backend. An expired
 Kubernetes continuation returns `410`; discard the partial snapshot and restart from
 the first page. Never merge pages from different restarted snapshots as one complete

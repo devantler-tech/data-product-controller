@@ -40,7 +40,8 @@ Use your deployment's secret-management system to create a Secret in the release
 Keep this file and its values out of Git, terminal output, and product descriptors. The HTTPS URL
 must contain a host and no embedded credentials, query string, or fragment. The token must use
 bearer-token characters without whitespace. Configuration is limited to 16 KiB; missing fields,
-unknown or duplicate fields (including escaped key aliases), invalid UTF-8, malformed JSON,
+unknown or duplicate fields (including escaped key aliases), invalid UTF-8, unpaired
+Unicode escapes, malformed JSON,
 and trailing documents make the source unavailable. A literal fragment delimiter is rejected;
 an encoded `%23` in the path remains valid. Configuration must resolve to a regular file.
 Nonblocking open and descriptor checks reject FIFOs and devices without occupying a worker;

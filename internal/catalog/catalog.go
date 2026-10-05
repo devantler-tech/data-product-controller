@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -394,6 +395,15 @@ func validIRI(value string) bool {
 	}
 	if strings.ContainsAny(parsed.RawPath+parsed.RawQuery+parsed.RawFragment, "[]") {
 		return false
+	}
+	if strings.HasSuffix(parsed.Host, ":") {
+		return false
+	}
+	if port := parsed.Port(); port != "" {
+		number, err := strconv.Atoi(port)
+		if err != nil || number < 1 || number > 65535 {
+			return false
+		}
 	}
 	return parsed.Scheme == "https" && parsed.Hostname() != "" && parsed.Opaque == ""
 }

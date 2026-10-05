@@ -51,6 +51,9 @@ external identities must survive. Controller output must contain neither project
 fixture records. The complete source/Secret audit must contain observed GET requests for only
 the declared namespace, API group, resource and object names, and no mutation attempts, including
 denied requests. List or watch access also fails this scoped profile.
+Subresource requests are not declared main-resource GETs and fail the same audit.
+Every retry checks its remaining phase budget before starting an observation;
+an expired phase starts no callback and retains the cleanup reserve.
 Cleanup removes only the run's disposable cluster and storage; cleanup failure
 is a failed acceptance result.
 

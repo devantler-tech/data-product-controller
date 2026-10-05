@@ -11,6 +11,8 @@ import (
 	"strings"
 	"syscall"
 	"unicode/utf8"
+
+	"github.com/devantler-tech/data-product-controller/internal/jsoninput"
 )
 
 var (
@@ -37,7 +39,8 @@ func readConfig(path string) (sourceConfig, error) {
 		return invalid, errInvalidConfig
 	}
 	data, err := io.ReadAll(io.LimitReader(file, (16<<10)+1))
-	if err != nil || len(data) > 16<<10 || !utf8.Valid(data) {
+	if err != nil || len(data) > 16<<10 || !utf8.Valid(data) ||
+		!jsoninput.ValidUnicodeEscapes(data) {
 		return invalid, errInvalidConfig
 	}
 	decoder := json.NewDecoder(bytes.NewReader(data))

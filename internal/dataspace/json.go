@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"strconv"
 	"unicode/utf8"
+
+	"github.com/devantler-tech/data-product-controller/internal/jsoninput"
 )
 
 // checkJSON rejects ambiguity that encoding/json normally accepts, including
@@ -15,7 +16,7 @@ func checkJSON(b []byte) error {
 	if !utf8.Valid(b) {
 		return errors.New("input must be UTF-8")
 	}
-	if !validUnicodeEscapes(b) {
+	if !jsoninput.ValidUnicodeEscapes(b) {
 		return errors.New("input contains an unpaired Unicode escape")
 	}
 	d := json.NewDecoder(bytes.NewReader(b))
@@ -80,49 +81,6 @@ func value(d *json.Decoder, depth int) error {
 		return errors.New("null values are unsupported")
 	}
 	return nil
-}
-
-// validUnicodeEscapes checks the raw spelling before encoding/json replaces
-// unpaired surrogates. Deliberate U+FFFD and escaped backslashes stay lossless.
-func validUnicodeEscapes(b []byte) bool {
-	inString := false
-	for i := 0; i < len(b); i++ {
-		if b[i] == '"' {
-			inString = !inString
-			continue
-		}
-		if !inString || b[i] != '\\' {
-			continue
-		}
-		i++
-		if i >= len(b) {
-			return false
-		}
-		if b[i] != 'u' {
-			continue
-		}
-		if i+4 >= len(b) {
-			return false
-		}
-		code, err := strconv.ParseUint(string(b[i+1:i+5]), 16, 16)
-		if err != nil {
-			return false
-		}
-		i += 4
-		if code >= 0xD800 && code <= 0xDBFF {
-			if i+6 >= len(b) || b[i+1] != '\\' || b[i+2] != 'u' {
-				return false
-			}
-			low, err := strconv.ParseUint(string(b[i+3:i+7]), 16, 16)
-			if err != nil || low < 0xDC00 || low > 0xDFFF {
-				return false
-			}
-			i += 6
-		} else if code >= 0xDC00 && code <= 0xDFFF {
-			return false
-		}
-	}
-	return true
 }
 
 // knownKey forbids case aliases; typed decoding then checks each key's exact location.

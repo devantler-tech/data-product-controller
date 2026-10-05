@@ -63,6 +63,8 @@ Publishers are responsible for using a registered URN namespace according to its
 assignment rules. `urn:example:...` values in fixtures are examples, not production
 namespace assignments. Identities and public links are limited to 2,048 bytes;
 credentials, whitespace and control characters are rejected.
+An explicit HTTPS port must be between 1 and 65535; an empty port delimiter is
+invalid. Invalid links reject the complete catalog before publication.
 
 Raw brackets in URL paths, queries or fragments are rejected consistently with the
 Dataspace consumer profile. Percent-encoded brackets and IPv6 authority brackets remain

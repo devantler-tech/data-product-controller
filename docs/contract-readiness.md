@@ -120,6 +120,8 @@ fetching the contract. `/metrics` does not trigger a fetch and exposes:
 - `contract_probe_last_observation_timestamp_seconds`: freshness of that result;
 - `contract_probe_requests_total{result}`: counters using only fixed reason labels.
 
+A metrics scrape observes the completed result, timestamp and result counter as one
+snapshot, including when it overlaps publication of a new result.
 A busy or caller-cancelled request does not replace the last completed result or
 its timestamp. A probe's own upstream timeout remains a completed failure. Readiness evaluates
 fresh network access; metrics describe the last completed observation.

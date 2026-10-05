@@ -40,6 +40,9 @@ implement the actual composition and their own authentication and access policy.
 An unversioned input still requires an existing named output on a current-generation Ready
 product that is not being deleted. A failed Kubernetes read withdraws consumer readiness
 and persists stale-lineage removal before retrying with the original API error.
+Every producer observed in the transitive traversal must satisfy that readiness
+requirement. A previously ready intermediate product cannot hide a leaf failure
+already observed by the consumer. Structural and contract failures keep precedence.
 
 ## Enable observation
 
