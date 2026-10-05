@@ -37,6 +37,16 @@
       throw new Error(
         "Descriptor text must be bounded public strings (up to 16 KiB each).",
       );
+    unicodeScalars(value);
+  }
+
+  /** Reject unpaired UTF-16 before encoding can silently replace public text. */
+  function unicodeScalars(value) {
+    for (const scalar of value) {
+      const code = scalar.codePointAt(0);
+      if (code >= 0xd800 && code <= 0xdfff)
+        throw new Error("Use valid Unicode scalars in JSON text.");
+    }
   }
 
   function integer(value) {
@@ -48,10 +58,12 @@
 
   /** Health states follow the producer's observations independently of aggregate readiness. */
   function validObservation(state, generation, observedGeneration) {
-    if (["ready", "not-ready", "disabled"].includes(state)) return observedGeneration === generation;
+    if (["ready", "not-ready", "disabled"].includes(state))
+      return observedGeneration === generation;
     if (state === "stale") return observedGeneration !== generation;
     if (state === "not-applicable") return observedGeneration === 0;
-    if (state === "unobserved") return observedGeneration === 0 || observedGeneration === generation;
+    if (state === "unobserved")
+      return observedGeneration === 0 || observedGeneration === generation;
     return false;
   }
 
@@ -62,8 +74,12 @@
     if (!digits) return; // Zero stays exact, including negative zero and exponent notation.
     const exponent = Number(parts[4] || "0");
     const scale = exponent - (parts[3] || "").length;
-    if (parts[1] || !Number.isSafeInteger(exponent) ||
-        (scale < 0 && (-scale > digits.length || !/^0+$/.test(digits.slice(scale)))))
+    if (
+      parts[1] ||
+      !Number.isSafeInteger(exponent) ||
+      (scale < 0 &&
+        (-scale > digits.length || !/^0+$/.test(digits.slice(scale))))
+    )
       throw new Error("JSON numbers must be exact nonnegative safe integers.");
     if (scale < 0) digits = digits.slice(0, scale);
     if (digits.length + Math.max(scale, 0) > 16)
@@ -162,7 +178,7 @@
     reference(value.productRef);
     if (typeof value.ready !== "boolean")
       throw new Error("Descriptor readiness must be boolean.");
-    if (!["InputReady", "InputNotReady"].includes(value.reason))
+    if (value.reason !== (value.ready ? "InputReady" : "InputNotReady"))
       throw new Error("Use a supported public lineage reason.");
     for (const key of ["productID", "version"])
       if (Object.hasOwn(value, key)) text(value[key], true);
@@ -216,6 +232,21 @@
     if (Object.hasOwn(value, "documentationUrl")) url(value.documentationUrl);
     if (Object.hasOwn(value, "inputs")) array(value.inputs, input);
     if (Object.hasOwn(value, "lineage")) array(value.lineage, lineage);
+    for (const observed of value.lineage || []) {
+      const declared = (value.inputs || []).filter(
+        (input) => input.name === observed.name,
+      );
+      if (
+        declared.length !== 1 ||
+        declared[0].productRef.name !== observed.productRef.name ||
+        declared[0].productRef.output !== observed.productRef.output ||
+        (declared[0].productRef.namespace || value.namespace) !==
+          (observed.productRef.namespace || value.namespace) ||
+        (Object.hasOwn(observed, "output") &&
+          observed.output.name !== observed.productRef.output)
+      )
+        throw new Error("Lineage must describe its declared input and output.");
+    }
     readiness(value.readiness);
     if (Object.hasOwn(value, "composition")) readiness(value.composition);
     if (Object.hasOwn(value, "ui")) {
@@ -248,7 +279,11 @@
       integer(dimension.observedGeneration);
       if (
         dimension.generation !== value.generation ||
-        !validObservation(dimension.state, dimension.generation, dimension.observedGeneration)
+        !validObservation(
+          dimension.state,
+          dimension.generation,
+          dimension.observedGeneration,
+        )
       )
         throw new Error(
           "Health readiness must describe this descriptor generation.",
@@ -268,9 +303,16 @@
 
   /** Preserve raw declarations under each caller's bounded public metadata budget. */
   function parseJSON(source, maximum = 65536) {
-    if (!Number.isSafeInteger(maximum) || maximum < 1 || maximum > 2097152 ||
-        typeof source !== "string" || encoder.encode(source).length > maximum)
-      throw new Error("Keep the JSON document within its selected metadata budget.");
+    if (
+      !Number.isSafeInteger(maximum) ||
+      maximum < 1 ||
+      maximum > 2097152 ||
+      typeof source !== "string" ||
+      encoder.encode(source).length > maximum
+    )
+      throw new Error(
+        "Keep the JSON document within its selected metadata budget.",
+      );
     const value = JSON.parse(source);
     const stack = [];
     // Syntax is already validated. Tokens retain object keys that JSON.parse would overwrite.
@@ -284,7 +326,8 @@
       } else if (token === "}" || token === "]") {
         stack.pop();
       } else {
-        if (!token.startsWith('"') && /^-?\d/.test(token)) integerToken(token);
+        if (token.startsWith('"')) unicodeScalars(JSON.parse(token));
+        else if (/^-?\d/.test(token)) integerToken(token);
         const object = stack.at(-1);
         if (!object) continue;
         if (token === ",") object.key = true;
@@ -328,5 +371,10 @@
     return DataProductUI.validate(value.ui, hostOrigin);
   }
 
-  window.DataProductDescriptor = Object.freeze({ validate, parse, parseJSON, validObservation });
+  window.DataProductDescriptor = Object.freeze({
+    validate,
+    parse,
+    parseJSON,
+    validObservation,
+  });
 })();

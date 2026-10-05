@@ -132,19 +132,14 @@ func readProducts(
 			)
 		}
 		for _, product := range list.Items {
-			profile, declared := product.Annotations[profileAnnotation]
+			declared, err := validatePublication(product, &metadata)
+			if err != nil {
+				return nil, http.StatusUnprocessableEntity, err
+			}
 			if !declared {
 				continue
 			}
-			if profile != "Dataset" {
-				return nil, http.StatusUnprocessableEntity, errors.New(
-					"catalog profile must be Dataset; remove the annotation to exclude a product",
-				)
-			}
 			spec := product.Spec
-			if err := validateMetadata(spec, &metadata); err != nil {
-				return nil, http.StatusUnprocessableEntity, err
-			}
 			outputs += len(spec.Outputs)
 			if outputs > maxOutputs {
 				return nil, http.StatusUnprocessableEntity, errors.New(
@@ -309,6 +304,31 @@ func optionalReference(value string) *reference {
 		return nil
 	}
 	return &reference{ID: value}
+}
+
+// ValidatePublication checks the static Dataset profile used by the catalog.
+// An unannotated product is excluded and retains ordinary registry admission.
+// Aggregate identity collisions and deployment configuration remain catalog checks.
+func ValidatePublication(product datav1.DataProduct) error {
+	metadata := 0
+	_, err := validatePublication(product, &metadata)
+	return err
+}
+
+func validatePublication(product datav1.DataProduct, metadata *int) (bool, error) {
+	profile, declared := product.Annotations[profileAnnotation]
+	if !declared {
+		return false, nil
+	}
+	if profile != "Dataset" {
+		return true, errors.New(
+			"catalog profile must be Dataset; remove the annotation to exclude a product",
+		)
+	}
+	if !validIRI(product.Spec.ID) {
+		return true, errors.New("catalog contains an invalid product identity")
+	}
+	return true, validateMetadata(product.Spec, metadata)
 }
 
 // validateMetadata bounds public data before building an RDF graph; backend diagnostics are never echoed.

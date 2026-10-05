@@ -36,7 +36,13 @@ grep -F 'enable-caller-pin: true' "$workflow" >/dev/null ||
 	fail 'CD must require an immutable caller identity before signing'
 publisher=$(yq '.jobs.publish.uses' "$workflow")
 smoke=$(yq '.jobs.smoke.steps[] | select(.run != null) | .run' "$workflow")
-printf '%s\n' "$smoke" | grep -F -- "--certificate-identity https://github.com/$publisher " >/dev/null ||
+
+identity=$(cd "$repo_root" && go run ./scripts/publisher-identity)
+[ "$identity" = "https://github.com/$publisher" ] ||
+	fail 'publisher identity must resolve from the immutable workflow declaration'
+printf '%s\n' "$smoke" | grep -F 'publisher_identity=$(go run ./scripts/publisher-identity)' >/dev/null ||
+	fail 'published-image verification must resolve its signer from the released workflow'
+printf '%s\n' "$smoke" | grep -F -- '--certificate-identity "$publisher_identity"' >/dev/null ||
 	fail 'published-image verification must trust the exact immutable publisher used by CD'
 
 [ -f "$deployment" ] || fail 'deploy/deployment.yaml is required by publish-app'

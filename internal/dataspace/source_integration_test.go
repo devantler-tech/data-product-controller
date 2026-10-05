@@ -32,6 +32,11 @@ func TestControllerSnapshotToProviderCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	controllerRoundTrip(t, &product, "urn:example:controller-catalog", http.StatusOK)
+	t.Run("deliberate replacement scalar", func(t *testing.T) {
+		changed := product.DeepCopy()
+		changed.Spec.Description = "Sensor label � retained"
+		controllerRoundTrip(t, changed, "urn:example:controller-catalog", http.StatusOK)
+	})
 	for _, tc := range []struct {
 		name   string
 		mutate func(*datav1.DataProduct, string)

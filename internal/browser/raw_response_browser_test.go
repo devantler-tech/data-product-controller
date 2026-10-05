@@ -24,7 +24,7 @@ func TestRegistryRawResponseAdmission(t *testing.T) {
 			if !discovery && scope != "first" {
 				continue
 			}
-			for _, mutation := range []string{"duplicate envelope", "duplicate nested", "rounded fraction"} {
+			for _, mutation := range []string{"duplicate envelope", "duplicate nested", "rounded fraction", "lone surrogate"} {
 				if scope == "exact" && mutation == "duplicate envelope" {
 					continue
 				}
@@ -55,6 +55,17 @@ func TestRegistryRawResponseAdmission(t *testing.T) {
 						}
 						mutate := func(wire string) string {
 							switch mutation {
+							case "lone surrogate":
+								changed := strings.Replace(
+									wire,
+									`"displayName":"`,
+									`"displayName":"\ud800`,
+									1,
+								)
+								if changed == wire {
+									t.Error("raw Unicode response fixture was not substituted")
+								}
+								return changed
 							case "duplicate envelope":
 								if discovery {
 									return strings.Replace(
@@ -180,6 +191,7 @@ func TestTraceRawResponseAdmission(t *testing.T) {
 		{`"state":"ready"`, `"st\u0061te":"stale","state":"ready"`},
 		{`"generation":3`, `"generation":3.0000000000000000001`},
 		{`"depth":1`, `"depth":1.0000000000000000001`},
+		{`"key":"products/root"`, `"key":"products/root","displayName":"Root\ud800"`},
 	} {
 		t.Run(tc.new, func(t *testing.T) {
 			override.Store([]byte(strings.Replace(canonical, tc.old, tc.new, 1)))
