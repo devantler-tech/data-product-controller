@@ -265,7 +265,7 @@ func TestCompositionDisabledFailsClosed(t *testing.T) {
 	if readyCondition(t, got).Status != metav1.ConditionTrue {
 		t.Fatal("legacy input lost existing behavior")
 	}
-	// The namespace restriction belongs to the opt-in feature, not legacy readiness.
+	// Disabling graph observation does not grant permission to read a foreign producer.
 	foreign := p.DeepCopy()
 	foreign.Namespace = "upstream"
 	foreign.ResourceVersion = ""
@@ -280,8 +280,12 @@ func TestCompositionDisabledFailsClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	got = reconcileComposition(t, r, consumer)
-	if readyCondition(t, got).Status != metav1.ConditionTrue || len(got.Status.Inputs) != 0 {
-		t.Fatal("disabled composition changed legacy cross-namespace readiness or copied metadata")
+	if readyCondition(t, got).Status != metav1.ConditionFalse ||
+		readyCondition(
+			t,
+			got,
+		).Reason != "CrossNamespaceDependencyDenied" || len(got.Status.Inputs) != 0 {
+		t.Fatal("disabled composition permitted a cross-namespace dependency or copied metadata")
 	}
 }
 

@@ -201,8 +201,8 @@ spec:
                       properties:
                         name:
                           description: Name is the referenced DataProduct name.
-                          maxLength: 63
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?(\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*$
                           type: string
                         namespace:
                           description: Namespace defaults to the consuming product's
@@ -623,8 +623,8 @@ spec:
                       properties:
                         name:
                           description: Name is the referenced DataProduct name.
-                          maxLength: 63
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?(\.[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?)*$
                           type: string
                         namespace:
                           description: Namespace defaults to the consuming product's

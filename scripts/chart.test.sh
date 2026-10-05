@@ -195,6 +195,7 @@ if helm template data-product-controller "$chart" --set dcatCatalog.enabled=true
 fi
 
 sh "$repo_root/scripts/http-source-chart.test.sh"
+sh "$repo_root/scripts/http-source-config-chart.test.sh"
 sh "$repo_root/scripts/connector-chart.test.sh"
 sh "$repo_root/scripts/contract-chart.test.sh"
 sh "$repo_root/scripts/composition-chart.test.sh"

@@ -85,7 +85,7 @@ spec:
       volumes:
         - name: source-config
           secret:
-            secretName: {{ .Values.httpSource.secretName }}
+            secretName: {{ .Values.httpSource.secretName | quote }}
             defaultMode: 0440
             items:
               - key: config.json
