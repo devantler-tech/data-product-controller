@@ -116,7 +116,7 @@ func TestOfflineDescriptorHandoff(t *testing.T) {
 	descriptorObject(t, expanded, "health", "source")["state"] = "unobserved"
 	descriptorObject(t, expanded, "health", "source")["observedGeneration"] = 0
 	descriptorObject(t, expanded, "health", "connector")["state"] = "disabled"
-	descriptorObject(t, expanded, "health", "connector")["observedGeneration"] = 0
+	descriptorObject(t, expanded, "health", "connector")["observedGeneration"] = 7
 	expanded["documentationUrl"] = product.URL + "/documentation"
 	expanded["composition"] = map[string]any{
 		"reason":  "ready",

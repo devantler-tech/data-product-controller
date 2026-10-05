@@ -46,6 +46,32 @@
       );
   }
 
+  /** Health states follow the producer's observations independently of aggregate readiness. */
+  function validObservation(state, generation, observedGeneration) {
+    if (["ready", "not-ready", "disabled"].includes(state)) return observedGeneration === generation;
+    if (state === "stale") return observedGeneration !== generation;
+    if (state === "not-applicable") return observedGeneration === 0;
+    if (state === "unobserved") return observedGeneration === 0 || observedGeneration === generation;
+    return false;
+  }
+
+  /** Check decimal digits before binary floating-point rounding loses fractional precision. */
+  function integerToken(token) {
+    const parts = /^(-?)(\d+)(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/.exec(token);
+    let digits = (parts[2] + (parts[3] || "")).replace(/^0+/, "");
+    if (!digits) return; // Zero stays exact, including negative zero and exponent notation.
+    const exponent = Number(parts[4] || "0");
+    const scale = exponent - (parts[3] || "").length;
+    if (parts[1] || !Number.isSafeInteger(exponent) ||
+        (scale < 0 && (-scale > digits.length || !/^0+$/.test(digits.slice(scale)))))
+      throw new Error("JSON numbers must be exact nonnegative safe integers.");
+    if (scale < 0) digits = digits.slice(0, scale);
+    if (digits.length + Math.max(scale, 0) > 16)
+      throw new Error("JSON numbers must be exact nonnegative safe integers.");
+    if (BigInt(digits + "0".repeat(Math.max(scale, 0))) > 9007199254740991n)
+      throw new Error("JSON numbers must be exact nonnegative safe integers.");
+  }
+
   function name(value) {
     text(value, true);
     if (value.length > 63 || !/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value))
@@ -222,8 +248,7 @@
       integer(dimension.observedGeneration);
       if (
         dimension.generation !== value.generation ||
-        (dimension.state === "ready" &&
-          dimension.observedGeneration !== value.generation)
+        !validObservation(dimension.state, dimension.generation, dimension.observedGeneration)
       )
         throw new Error(
           "Health readiness must describe this descriptor generation.",
@@ -241,15 +266,16 @@
     return structuredClone(value);
   }
 
-  /** Preserve literal JSON declarations: reject duplicate decoded keys before using any value. */
-  function parseJSON(source) {
-    if (typeof source !== "string" || encoder.encode(source).length > 65536)
-      throw new Error("Keep the JSON document within 64 KiB.");
+  /** Preserve raw declarations under each caller's bounded public metadata budget. */
+  function parseJSON(source, maximum = 65536) {
+    if (!Number.isSafeInteger(maximum) || maximum < 1 || maximum > 2097152 ||
+        typeof source !== "string" || encoder.encode(source).length > maximum)
+      throw new Error("Keep the JSON document within its selected metadata budget.");
     const value = JSON.parse(source);
     const stack = [];
     // Syntax is already validated. Tokens retain object keys that JSON.parse would overwrite.
     for (const [token] of source.matchAll(
-      /"(?:\\[\s\S]|[^"\\])*"|[{}\[\]:,]/g,
+      /"(?:\\[\s\S]|[^"\\])*"|[{}\[\]:,]|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/g,
     )) {
       if (token === "{" || token === "[") {
         if (stack.length >= 128)
@@ -258,6 +284,7 @@
       } else if (token === "}" || token === "]") {
         stack.pop();
       } else {
+        if (!token.startsWith('"') && /^-?\d/.test(token)) integerToken(token);
         const object = stack.at(-1);
         if (!object) continue;
         if (token === ",") object.key = true;
@@ -301,5 +328,5 @@
     return DataProductUI.validate(value.ui, hostOrigin);
   }
 
-  window.DataProductDescriptor = Object.freeze({ validate, parse, parseJSON });
+  window.DataProductDescriptor = Object.freeze({ validate, parse, parseJSON, validObservation });
 })();

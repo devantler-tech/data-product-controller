@@ -372,6 +372,9 @@ func validIRI(value string) bool {
 	if parsed.Scheme == "urn" {
 		return urnPattern.MatchString(value)
 	}
+	if strings.ContainsAny(parsed.RawPath+parsed.RawQuery+parsed.RawFragment, "[]") {
+		return false
+	}
 	return parsed.Scheme == "https" && parsed.Hostname() != "" && parsed.Opaque == ""
 }
 

@@ -64,6 +64,10 @@ assignment rules. `urn:example:...` values in fixtures are examples, not product
 namespace assignments. Identities and public links are limited to 2,048 bytes;
 credentials, whitespace and control characters are rejected.
 
+Raw brackets in URL paths, queries or fragments are rejected consistently with the
+Dataspace consumer profile. Percent-encoded brackets and IPv6 authority brackets remain
+supported. Rejected product metadata yields no partial catalog.
+
 The configured catalog ID is independent of the request URL, proxy headers and
 public routing host. Keep it stable across redeployments. The controller never
 constructs it from `Host` or `X-Forwarded-Host`.

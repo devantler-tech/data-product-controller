@@ -31,15 +31,59 @@ func TestControllerSnapshotToProviderCatalog(t *testing.T) {
 	if err := yaml.Unmarshal(b, &product); err != nil {
 		t.Fatal(err)
 	}
+	controllerRoundTrip(t, &product, "urn:example:controller-catalog", http.StatusOK)
+	for _, tc := range []struct {
+		name   string
+		mutate func(*datav1.DataProduct, string)
+	}{
+		{"output", func(p *datav1.DataProduct, u string) { p.Spec.Outputs[0].URL = u }},
+		{"contract", func(p *datav1.DataProduct, u string) { p.Spec.Outputs[0].ContractURL = u }},
+		{"owner", func(p *datav1.DataProduct, u string) { p.Spec.Owner.URL = u }},
+		{"documentation", func(p *datav1.DataProduct, u string) { p.Spec.DocumentationURL = u }},
+		{"identity", func(p *datav1.DataProduct, u string) { p.Spec.ID = u }},
+	} {
+		for _, urlCase := range []struct {
+			name, url string
+			status    int
+		}{
+			{"raw path", "https://example.test/item[0]", http.StatusUnprocessableEntity},
+			{"raw query", "https://example.test/query?fields[]=temperature", http.StatusUnprocessableEntity},
+			{"raw fragment", "https://example.test/openapi#part[0]", http.StatusUnprocessableEntity},
+			{"encoded", "https://example.test/item%5B0%5D?fields%5B%5D=temperature#part%5B0%5D", http.StatusOK},
+			{"IPv6", "https://[2001:db8::1]/query", http.StatusOK},
+		} {
+			t.Run(tc.name+"/"+urlCase.name, func(t *testing.T) {
+				t.Parallel()
+				changed := product.DeepCopy()
+				tc.mutate(changed, urlCase.url)
+				controllerRoundTrip(t, changed, "urn:example:controller-catalog", urlCase.status)
+			})
+		}
+	}
+	for _, id := range []string{"https://example.test/catalog[0]", "https://example.test/catalog?group[]=data", "https://example.test/catalog#part[0]"} {
+		if _, err := catalog.NewHandler(nil, catalog.Options{ID: id}); err == nil {
+			t.Fatalf("configured catalog accepted incompatible ID: %q", id)
+		}
+	}
+	controllerRoundTrip(
+		t,
+		&product,
+		"https://[2001:db8::1]/catalog%5B0%5D#part%5B0%5D",
+		http.StatusOK,
+	)
+}
+
+func controllerRoundTrip(t *testing.T, product *datav1.DataProduct, id string, wantStatus int) {
+	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := datav1.AddToScheme(scheme); err != nil {
 		t.Fatal(err)
 	}
-	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&product).Build()
+	reader := fake.NewClientBuilder().WithScheme(scheme).WithObjects(product).Build()
 	handler, err := catalog.NewHandler(
 		reader,
 		catalog.Options{
-			ID:      "urn:example:controller-catalog",
+			ID:      id,
 			Enabled: func(context.Context) bool { return true },
 		},
 	)
@@ -51,8 +95,14 @@ func TestControllerSnapshotToProviderCatalog(t *testing.T) {
 		response,
 		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/catalog", nil),
 	)
-	if response.Code != http.StatusOK {
+	if response.Code != wantStatus {
 		t.Fatalf("producer failed: %s", response.Body)
+	}
+	if wantStatus != http.StatusOK {
+		if strings.Contains(response.Body.String(), "dcat:dataset") {
+			t.Fatal("rejected metadata exposed a partial catalog")
+		}
+		return
 	}
 	var source struct {
 		Datasets []struct {
