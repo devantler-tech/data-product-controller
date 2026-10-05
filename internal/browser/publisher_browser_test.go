@@ -335,6 +335,7 @@ func TestPublisherReportAdmissionAndReadRace(t *testing.T) {
 		"r.descriptors[0].health.source.state='ready'", "r.descriptors[0].outputs.push(r.descriptors[0].outputs[0])",
 		"r.plan.order.reverse()", "r.plan.edges=[]", "r.plan.edges[0].output='missing'",
 		"r.plan.order[0].source=1", "r.plan.edges[0].source=2",
+		"r.productFeatures.forEach(entry=>entry.requiredFeatures=[]);r.requiredFeatures=[]",
 	} {
 		rejected := page.MustEval(`wire=>{let r=JSON.parse(wire);`+mutation+`;try{DataProductPreflightReport.parse(JSON.stringify(r));return false;}catch{return true;}}`, string(encoded)).
 			Bool()
@@ -401,5 +402,121 @@ func TestPublisherReportAdmissionAndReadRace(t *testing.T) {
 	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='rejected'`)
 	if !page.MustEval(`()=>document.querySelector('#review').hidden`).Bool() {
 		t.Fatal("rejected file retained report state")
+	}
+}
+
+// TestPublisherVisibleUIRequirements joins mandatory visible gates to their declaration origins.
+func TestPublisherVisibleUIRequirements(t *testing.T) {
+	host := publisherHost(t)
+	page := contractBrowser(
+		t,
+	).MustPage().
+		MustNavigate(host.URL + "/publisher-review").
+		MustWaitLoad()
+	page.MustWait(`()=>typeof DataProductPreflightReport==='object'`)
+	for _, version := range []string{"data-product-ui/v1", "data-product-ui/v2"} {
+		p := workspaceProduct("https://product.example.test")
+		p.TypeMeta = metav1.TypeMeta{
+			APIVersion: "data.devantler.tech/v1alpha1",
+			Kind:       "DataProduct",
+		}
+		p.Spec.UI.Contract = &data.UIContract{
+			APIVersion:   version,
+			HostOrigins:  []data.UIHostOrigin{"https://host.example.test"},
+			Capabilities: []data.UICapability{},
+		}
+		wire, err := json.Marshal(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		report := preflight.CheckBundle(
+			t.Context(),
+			[]io.Reader{strings.NewReader(string(wire))},
+			"",
+		)
+		if !report.Valid || !report.Complete {
+			t.Fatalf("invalid report fixture: %+v", report.Diagnostics)
+		}
+		encoded, err := json.Marshal(report)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !page.MustEval(`wire=>{try{DataProductPreflightReport.parse(wire);return true;}catch{return false;}}`, string(encoded)).
+			Bool() {
+			t.Fatal("actual emitted report rejected")
+		}
+		required := []string{"ui-contract"}
+		if version == "data-product-ui/v2" {
+			required = append(required, "ui-appearance")
+		}
+		for _, feature := range required {
+			if !page.MustEval(`(wire,feature)=>{const r=JSON.parse(wire);r.productFeatures.forEach(entry=>entry.requiredFeatures=entry.requiredFeatures.filter(f=>f!==feature));r.requiredFeatures=r.requiredFeatures.filter(f=>f!==feature);try{DataProductPreflightReport.parse(JSON.stringify(r));return false;}catch{return true;}}`, string(encoded), feature).
+				Bool() {
+				t.Fatalf("missing %s accepted for %s", feature, version)
+			}
+		}
+	}
+}
+
+// TestPublisherInputSwitching makes the newest explicit selection win, including during a delayed read.
+func TestPublisherInputSwitching(t *testing.T) {
+	complete, err := json.Marshal(publisherReport(t, false, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	incomplete, err := json.Marshal(publisherReport(t, true, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := publisherHost(t)
+	page := contractBrowser(
+		t,
+	).MustPage().
+		MustNavigate(host.URL + "/publisher-review").
+		MustWaitLoad()
+	page.MustElement(".import-fields details summary").MustClick()
+	page.MustElement("#report-text").MustInput(string(complete))
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+	file := filepath.Join(t.TempDir(), "incomplete.json")
+	if err := os.WriteFile(file, incomplete, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	page.MustElement("#report-file").MustSetFiles(file)
+	if page.MustEval(`()=>document.querySelector('#report-text').value`).Str() != "" {
+		t.Error("file selection retained pasted input")
+	}
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").
+		MustWait(`()=>['accepted','rejected'].includes(this.dataset.state)`)
+	if page.MustElement("#report-status").MustAttribute("data-state") == nil ||
+		!strings.Contains(page.MustElement("#report-summary").MustText(), "Incomplete") {
+		t.Error("latest file report was not inspected")
+	}
+	page.MustElement("#report-text").MustSelectAllText().MustInput(string(complete))
+	if page.MustEval(`()=>document.querySelector('#report-file').files.length`).Int() != 0 {
+		t.Error("pasted selection retained file")
+	}
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").
+		MustWait(`()=>['accepted','rejected'].includes(this.dataset.state)`)
+	if !strings.Contains(page.MustElement("#report-summary").MustText(), "Complete") {
+		t.Error("latest pasted report was not inspected")
+	}
+	page.MustEval(
+		`()=>{const f=new File(['{}'],'slow.json');f.arrayBuffer=()=>new Promise(resolve=>window.finishRead=resolve);const transfer=new DataTransfer();transfer.items.add(f);const field=document.querySelector('#report-file');field.files=transfer.files;field.dispatchEvent(new Event('change',{bubbles:true}));document.querySelector('#report-form').requestSubmit();}`,
+	)
+	page.MustWait(`()=>typeof window.finishRead==='function'`)
+	page.MustElement("#report-text").MustSelectAllText().MustInput(string(incomplete))
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").
+		MustWait(`()=>['accepted','rejected'].includes(this.dataset.state)`)
+	page.MustEval(
+		`async wire=>{finishRead(new TextEncoder().encode(wire).buffer);await new Promise(resolve=>setTimeout(resolve,30));}`,
+		string(complete),
+	)
+	if !strings.Contains(page.MustElement("#report-summary").MustText(), "Incomplete") ||
+		!page.MustEval(`()=>document.querySelector('#export-preview').disabled`).Bool() {
+		t.Error("late file read restored the obsolete complete report")
 	}
 }

@@ -132,6 +132,10 @@ func TestIndependentPublisherReportReader(t *testing.T) {
 		}},
 		{"false feature union", func(v map[string]any) { v["requiredFeatures"] = []any{} }},
 		{
+			"omitted visible composition",
+			func(v map[string]any) { omitReportFeature(t, v, "composition") },
+		},
+		{
 			"null nested descriptor",
 			func(v map[string]any) { reportObject(t, reportArray(t, v["descriptors"])[0])["owner"] = nil },
 		},
@@ -169,12 +173,81 @@ func TestIndependentPublisherReportReader(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, data := range map[string][]byte{
-		"duplicate field":   []byte(strings.Replace(string(encoded), "\"valid\":true", "\"valid\":true,\"valid\":false", 1)),
-		"case-varied field": []byte(strings.Replace(string(encoded), "\"valid\":true", "\"Valid\":true", 1)),
-		"trailing value":    append(append([]byte{}, encoded...), []byte(" {}")...),
-		"invalid UTF-8":     []byte("{\"apiVersion\":\"\xff\"}"),
-		"oversized":         []byte(strings.Repeat(" ", (2<<20)+1)),
+		"duplicate field":         []byte(strings.Replace(string(encoded), "\"valid\":true", "\"valid\":true,\"valid\":false", 1)),
+		"case-varied field":       []byte(strings.Replace(string(encoded), "\"valid\":true", "\"Valid\":true", 1)),
+		"trailing value":          append(append([]byte{}, encoded...), []byte(" {}")...),
+		"invalid UTF-8":           []byte("{\"apiVersion\":\"\xff\"}"),
+		"oversized":               []byte(strings.Repeat(" ", (2<<20)+1)),
+		"unpaired high surrogate": []byte(strings.Replace(string(encoded), `"displayName":"Example"`, `"displayName":"\ud800"`, 1)),
+		"unpaired low surrogate":  []byte(strings.Replace(string(encoded), `"displayName":"Example"`, `"displayName":"\udc00"`, 1)),
 	} {
 		t.Run(name, func(t *testing.T) { read(t, data, false) })
 	}
+	for _, label := range []string{`"Label �"`, `"Label \ufffd"`, `"Wave \ud83c\udf0a"`, `"Literal \\ud800"`} {
+		wire := strings.Replace(
+			string(encoded),
+			`"displayName":"Example"`,
+			`"displayName":`+label,
+			1,
+		)
+		if wire == string(encoded) {
+			t.Fatal("Unicode mutation did not reach the report")
+		}
+		t.Run(label, func(t *testing.T) { read(t, []byte(wire), true) })
+	}
+	for _, version := range []string{"data-product-ui/v1", "data-product-ui/v2"} {
+		p := product("with-ui")
+		p.Spec.UI = &data.ProductUI{
+			URL:   "https://ui.example.test/view",
+			Title: "Product",
+			Contract: &data.UIContract{
+				APIVersion:   version,
+				HostOrigins:  []data.UIHostOrigin{"https://host.example.test"},
+				Capabilities: []data.UICapability{},
+			},
+		}
+		report := selected(t, bundle(t, p))
+		original, err := json.Marshal(report)
+		if err != nil {
+			t.Fatal(err)
+		}
+		read(t, original, true)
+		features := []string{"ui-contract"}
+		if version == "data-product-ui/v2" {
+			features = append(features, "ui-appearance")
+		}
+		for _, feature := range features {
+			t.Run(version+"/"+feature, func(t *testing.T) {
+				value := reportValue(t, report)
+				omitReportFeature(t, value, feature)
+				wire, err := json.Marshal(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				read(t, wire, false)
+			})
+		}
+	}
+}
+
+// omitReportFeature preserves the old union and provenance checks while removing one visible requirement.
+func omitReportFeature(t *testing.T, value map[string]any, removed string) {
+	t.Helper()
+	for _, entry := range reportArray(t, value["productFeatures"]) {
+		product := reportObject(t, entry)
+		retained := []any{}
+		for _, feature := range reportArray(t, product["requiredFeatures"]) {
+			if feature != removed {
+				retained = append(retained, feature)
+			}
+		}
+		product["requiredFeatures"] = retained
+	}
+	retained := []any{}
+	for _, feature := range reportArray(t, value["requiredFeatures"]) {
+		if feature != removed {
+			retained = append(retained, feature)
+		}
+	}
+	value["requiredFeatures"] = retained
 }

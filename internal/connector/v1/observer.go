@@ -40,7 +40,7 @@ func (d *Deployment) ObserveContract(
 	ref datav1alpha1.ConnectorResourceReference,
 	target string,
 ) Observation {
-	if target == "" || strings.Contains(target, "$(") {
+	if target == "" || strings.Contains(target, "$(") || strings.Contains(target, "$$") {
 		return unavailable(
 			"ContractProbeConfigurationMismatch",
 			"Select an output with a contract URL.",

@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -253,7 +254,9 @@ func claim(ids map[string]bool, id string) error {
 }
 
 // validID implements the catalog's restricted HTTPS and URN identity profile.
-func validID(s string) bool { return urnPattern.MatchString(s) || publicURL(s, false) }
+func validID(s string) bool {
+	return len(s) <= 2048 && (urnPattern.MatchString(s) || publicURL(s, false))
+}
 
 // publicURL validates public HTTPS IRIs, with stricter rules for connector base addresses.
 func publicURL(s string, base bool) bool {
@@ -271,6 +274,17 @@ func publicURL(s string, base bool) bool {
 	}
 	if strings.ContainsAny(u.RawPath+u.RawQuery+u.RawFragment, "[]") {
 		return false
+	}
+	if base {
+		if strings.HasSuffix(u.Host, ":") {
+			return false
+		}
+		if port := u.Port(); port != "" {
+			number, err := strconv.Atoi(port)
+			if err != nil || number < 1 || number > 65535 {
+				return false
+			}
+		}
 	}
 	return !base ||
 		(u.RawQuery == "" && !u.ForceQuery && u.Fragment == "" && !strings.Contains(s, "#"))

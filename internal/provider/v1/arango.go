@@ -226,6 +226,8 @@ func arangoReadiness(d *arangov1.ArangoDeployment) provisionerv1.Observation {
 		member.Conditions.IsTrue(arangov1.ConditionTypeUpdating) ||
 		member.Conditions.IsTrue(arangov1.ConditionTypeRestart) ||
 		member.Conditions.IsTrue(arangov1.ConditionTypePendingRestart) ||
+		member.Conditions.IsTrue(arangov1.ConditionTypeTerminating) ||
+		member.Conditions.IsTrue(arangov1.ConditionTypeTerminated) ||
 		member.Conditions.IsTrue(arangov1.ConditionTypePVCResizePending) {
 		return arangoNotReady()
 	}

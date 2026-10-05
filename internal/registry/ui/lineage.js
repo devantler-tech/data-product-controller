@@ -82,6 +82,16 @@ window.DataProductLineage = (() => {
       }
     }
     if (reached.size !== keys.size) return false;
+    // A cycle verdict must close a return path in the inspected resolved graph.
+    for (const edge of trace.edges.filter(edge => edge.state === "cycle")) {
+      const visited = new Set([edge.to]), pending = [edge.to];
+      for (let index = 0; index < pending.length && !visited.has(edge.from); ++index) {
+        for (const key of upstream.get(pending[index]) || []) {
+          if (!visited.has(key)) { visited.add(key); pending.push(key); }
+        }
+      }
+      if (!visited.has(edge.from)) return false;
+    }
     const pending = [...observed].filter(key => incoming.get(key) === 0);
     // Each bit records a possible path length, allowing shared products first visited by different paths.
     const depths = new Map([...observed].map(key => [key, key === trace.root ? 1n : 0n]));
@@ -154,6 +164,9 @@ window.DataProductLineage = (() => {
           edge.compatibility !== "not-evaluated") return false;
       if (["missing", "invalid", "identity-mismatch", "metadata-limit"].includes(edge.state) &&
           nodes.get(edge.to)?.state !== edge.state) return false;
+      if (["missing", "unavailable", "invalid", "identity-mismatch", "timeout", "metadata-limit", "product-limit"].includes(edge.state) &&
+          nodes.has(edge.to) && !observed.has(edge.to) &&
+          nodes.get(edge.to).state !== edge.state) return false;
       if (edge.compatibility === "contract-incompatible" && !edge.requirement) return false;
       if (edge.compatibility === "compatible" && edge.requirement && nodes.get(edge.to)?.version !== undefined &&
           !versionCompatible(nodes.get(edge.to).version, edge.requirement.minimumVersion)) return false;

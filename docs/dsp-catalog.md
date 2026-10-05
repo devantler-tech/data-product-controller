@@ -84,7 +84,9 @@ authority, negotiation endpoints or transfer support. Source and emitted resourc
 IDs must be globally distinct except for intentionally preserved dataset IDs;
 the participant identity cannot collide with resources.
 
-IDs use HTTPS or the restricted URN profile described in the DCAT guide. Actions,
+IDs use HTTPS or the restricted URN profile described in the DCAT guide, up to
+2,048 bytes per identity. Connector base URLs reject empty explicit ports and
+ports outside 1–65535. Actions,
 left operands and formats may also use HTTP vocabulary IRIs, such as the ODRL
 namespace. No IRI is fetched. Whitespace, control characters and invalid raw URI
 characters are rejected.

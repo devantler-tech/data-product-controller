@@ -58,6 +58,8 @@ func TestArangoBoundaries(t *testing.T) {
 		{name: "upgrade in progress", reason: "SourceNotReady", mutate: arangoCondition("UpgradeInProgress", "True")},
 		{name: "pending member update", reason: "SourceNotReady", mutate: arangoMemberCondition("PendingUpdate")},
 		{name: "member updating", reason: "SourceNotReady", mutate: arangoMemberCondition("Updating")},
+		{name: "member terminating despite Ready", reason: "SourceNotReady", mutate: arangoMemberCondition("Terminating")},
+		{name: "member terminated despite Ready", reason: "SourceNotReady", mutate: arangoMemberCondition("Terminated")},
 		{name: "member update failed despite Ready", reason: "SourceNotReady", mutate: arangoMemberCondition("UpdateFailed")},
 		{name: "member upgrade failed despite Ready", reason: "SourceNotReady", mutate: arangoMemberCondition("UpgradeFailed")},
 		{name: "stale pod image", reason: "SourceNotReady", mutate: arangoMemberField("sha256:old-image", "image-id")},

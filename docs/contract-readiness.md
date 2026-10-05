@@ -99,7 +99,7 @@ create a cycle in which Kubernetes removes the endpoint needed for recovery.
 ## Probe results and limits
 
 The binary reads `CONTRACT_PROBE_URL` once from operator configuration. The chart
-and controller reject `$(...)` environment expansion in URLs so the checked target
+and controller reject `$(...)` expansion and `$$` collapsing in URLs so the checked target
 stays literal; percent-encode those characters if they belong in a URL path. It accepts
 HTTPS URLs without embedded credentials, query strings or fragments, verifies
 certificate chains and hostnames, disables ambient proxies, and refuses redirects.

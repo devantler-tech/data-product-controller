@@ -25,6 +25,18 @@ var portableURN = regexp.MustCompile(`^urn:[A-Za-z0-9][A-Za-z0-9:._-]+$`)
 
 // validPortableMetadata validates the public schema without loading external documents or data.
 func validPortableMetadata(descriptor portableDescriptor) bool {
+	if !distinctTracePorts(&datav1alpha1.DataProduct{Spec: datav1alpha1.DataProductSpec{
+		Inputs: descriptor.Inputs, Outputs: descriptor.Outputs,
+	}}) {
+		return false
+	}
+	observations := make(map[string]bool, len(descriptor.Lineage))
+	for _, edge := range descriptor.Lineage {
+		if observations[edge.Name] {
+			return false
+		}
+		observations[edge.Name] = true
+	}
 	if !validProductName(descriptor.Name) || !validPublicLabel(descriptor.Namespace) ||
 		!validPublicIdentity(
 			descriptor.ID,

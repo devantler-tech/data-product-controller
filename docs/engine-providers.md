@@ -232,7 +232,8 @@ Pod name/UID, matching image declarations and reported desired/running image IDs
 3.12.12 versions. The verified official immutable index reports an Enterprise binary marker;
 both current and member observations must match that actual binary profile. The marker does not
 establish license entitlement. Update,
-upgrade, Secret-change, pending update and member-restart states withdraw readiness. Missing,
+upgrade, Secret-change, pending update, member-restart and member-termination states withdraw readiness,
+even when the departing member still reports Ready. Missing,
 unknown, malformed or duplicate conditions cannot establish readiness. Condition hashes,
 transition timestamps, historical SpecPropagated and Pod-spec checksums are not freshness markers.
 

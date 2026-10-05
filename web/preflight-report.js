@@ -200,6 +200,10 @@
       text(entry.key, 317);
       const at = position(entry.source, entry.document);
       require(products.has(entry.key) && !rank.has(entry.key) && featurePositions.has(at) && !usedPositions.has(at));
+      const product = products.get(entry.key), required = featurePositions.get(at).requiredFeatures;
+      require(!(product.inputs || []).length || required.includes("composition"));
+      require(!product.ui?.contract || required.includes("ui-contract"));
+      require(product.ui?.contract?.apiVersion !== "data-product-ui/v2" || required.includes("ui-appearance"));
       usedPositions.add(at);
       rank.set(entry.key, index);
       origins.set(entry.key, at);

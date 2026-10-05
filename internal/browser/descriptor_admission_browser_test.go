@@ -7,6 +7,71 @@ import (
 	"testing"
 )
 
+// TestDescriptorUniqueNamedCollections covers host import before a published surface can be selected.
+func TestDescriptorUniqueNamedCollections(t *testing.T) {
+	page, host, publisher, calls := kitWorkspaceFixture(t, false, false)
+	for _, collection := range []string{"outputs", "inputs", "lineage"} {
+		for _, duplicate := range []bool{false, true} {
+			t.Run(
+				collection+map[bool]string{false: "/distinct", true: "/duplicate"}[duplicate],
+				func(t *testing.T) {
+					descriptor := offlineDescriptor(host, publisher)
+					ref := map[string]any{"name": "producer", "output": "observations"}
+					descriptor["inputs"] = []any{
+						map[string]any{"name": "upstream", "productRef": ref},
+					}
+					descriptor["lineage"] = []any{
+						map[string]any{
+							"name":       "upstream",
+							"productRef": ref,
+							"ready":      true,
+							"reason":     "InputReady",
+						},
+					}
+					entries := descriptor[collection].([]any)
+					second := map[string]any{}
+					for key, value := range entries[0].(map[string]any) {
+						second[key] = value
+					}
+					if !duplicate {
+						second["name"] = "alternative"
+						if collection == "lineage" {
+							descriptor["inputs"] = append(
+								descriptor["inputs"].([]any),
+								map[string]any{"name": "alternative", "productRef": ref},
+							)
+						}
+					}
+					descriptor[collection] = append(entries, second)
+					if collection == "inputs" {
+						delete(descriptor, "lineage")
+					}
+					before := calls.Load()
+					page.MustElement("#descriptor").
+						MustSelectAllText().
+						MustInput(descriptorJSON(t, descriptor))
+					page.MustElement("#import-descriptor").MustClick()
+					page.MustElement("#kit-status").
+						MustWait(`()=>['ready','invalid'].includes(this.dataset.state)`)
+					accepted := page.MustEval(`()=>document.querySelector('#kit-status').dataset.state==='ready'`).
+						Bool()
+					if accepted == duplicate {
+						t.Fatalf(
+							"collection=%s duplicate=%t admitted=%t",
+							collection,
+							duplicate,
+							accepted,
+						)
+					}
+					if duplicate && calls.Load() != before {
+						t.Fatal("ambiguous collection mounted a product")
+					}
+				},
+			)
+		}
+	}
+}
+
 func TestDescriptorDependencyIdentityAdmission(t *testing.T) {
 	page, host, publisher, calls := kitWorkspaceFixture(t, false, false)
 	for _, tc := range []struct {
