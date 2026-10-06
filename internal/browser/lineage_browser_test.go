@@ -80,7 +80,7 @@ func lineageFixture(
 			calls.Add(1)
 			if len(override) > 0 && override[0].Load() != nil {
 				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(override[0].Load().([]byte))
+				_, _ = w.Write(fixtureValue[[]byte](t, override[0].Load()))
 				return
 			}
 			if failed.Load() {

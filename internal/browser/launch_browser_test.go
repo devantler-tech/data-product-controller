@@ -69,3 +69,13 @@ func removeBrowserProfile(t *testing.T, browserLauncher *launcher.Launcher, prof
 		t.Errorf("remove browser profile %q: %v", profile, err)
 	}
 }
+
+// fixtureValue reports malformed fixture setup through the owning test.
+func fixtureValue[T any](t *testing.T, value any) T {
+	t.Helper()
+	typed, ok := value.(T)
+	if !ok {
+		t.Fatalf("fixture value has unexpected type %T", value)
+	}
+	return typed
+}

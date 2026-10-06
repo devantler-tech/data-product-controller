@@ -128,7 +128,7 @@ func TestCatalogBoundsStreamedResponses(t *testing.T) {
 			browser := contractBrowser(t)
 			server := catalogWireFixture(t, func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.(http.Flusher).Flush()
+				fixtureValue[http.Flusher](t, w).Flush()
 				_, _ = w.Write([]byte(tc.wire))
 			})
 			page := browser.MustPage().
