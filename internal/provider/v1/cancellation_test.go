@@ -18,6 +18,7 @@ type completionReader struct {
 	get func(context.Context, client.ObjectKey, client.Object, ...client.GetOption) error
 }
 
+// Get exposes the fixture's controlled completion boundary to each registered provider.
 func (r completionReader) Get(
 	ctx context.Context,
 	key client.ObjectKey,
@@ -91,6 +92,7 @@ func TestProviderCompletionHonorsContext(t *testing.T) {
 	}
 }
 
+// completionFixture supplies each provider's healthy resource and owned connection metadata.
 func completionFixture(
 	t *testing.T,
 	profile string,

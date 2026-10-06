@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestAuditRejectsSubresourceReads rejects attempted subresource access even when denied or incomplete.
 func TestAuditRejectsSubresourceReads(t *testing.T) {
 	for _, subresource := range []string{"", "status", "scale", "proxy"} {
 		for _, stage := range []string{"ResponseComplete", "RequestReceived"} {

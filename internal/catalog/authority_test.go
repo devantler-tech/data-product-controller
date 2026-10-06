@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestRound13AuditCatalogTransportPorts rejects catalog endpoints without usable TCP ports.
 func TestRound13AuditCatalogTransportPorts(t *testing.T) {
 	for _, host := range []string{"https://example.test:0/query", "https://example.test:65536/query", "https://example.test:/query"} {
 		p := fixture()

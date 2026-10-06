@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestAuditConfigurationEscapedUnicodeIdentity distinguishes valid Unicode from lossy surrogate decoding.
 func TestAuditConfigurationEscapedUnicodeIdentity(t *testing.T) {
 	for _, tc := range []struct {
 		name, value string

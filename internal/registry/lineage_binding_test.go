@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// TestRound13AuditLineageAssociation excludes lineage that differs from the declared input binding.
 func TestRound13AuditLineageAssociation(t *testing.T) {
 	for _, scenario := range []string{"undeclared-input", "different-producer", "different-output"} {
 		t.Run(scenario, func(t *testing.T) {

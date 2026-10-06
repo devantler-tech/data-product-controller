@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// TestProviderRetryNeverStartsAfterExpiry checks both initial and retried phase boundaries.
 func TestProviderRetryNeverStartsAfterExpiry(t *testing.T) {
 	for _, boundary := range []string{"initial", "retry"} {
 		t.Run(boundary, func(t *testing.T) {

@@ -16,6 +16,7 @@ type pausedObservationGauge struct {
 	entered, release chan struct{}
 }
 
+// SetToCurrentTime pauses timestamp publication so a scrape overlaps an incomplete observation.
 func (g *pausedObservationGauge) SetToCurrentTime() {
 	g.Set(200)
 	close(g.entered)

@@ -16,6 +16,7 @@ import (
 
 type completedDeploymentReader struct{ finish func(context.Context) }
 
+// Get completes a healthy snapshot after invoking the controlled cancellation boundary.
 func (r completedDeploymentReader) Get(
 	ctx context.Context,
 	key client.ObjectKey,
@@ -60,6 +61,7 @@ func (r completedDeploymentReader) Get(
 	return nil
 }
 
+// List rejects broad reads so the fixture exercises only the declared Deployment.
 func (completedDeploymentReader) List(
 	context.Context,
 	client.ObjectList,

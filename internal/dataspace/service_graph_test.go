@@ -7,6 +7,7 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 )
 
+// TestRound13SourceServiceGraph rejects incomplete, orphaned and shared service associations.
 func TestRound13SourceServiceGraph(t *testing.T) {
 	for _, which := range []string{"missing title", "empty title", "different title", "unreferenced service", "shared output service"} {
 		t.Run(which, func(t *testing.T) {

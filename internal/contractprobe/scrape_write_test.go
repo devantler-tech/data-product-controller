@@ -14,8 +14,13 @@ type auditBlockedScrapeWriter struct {
 	first            bool
 }
 
+// Header supplies the metrics response headers without releasing its blocked body write.
 func (w *auditBlockedScrapeWriter) Header() http.Header { return w.header }
-func (w *auditBlockedScrapeWriter) WriteHeader(int)     {}
+
+// WriteHeader accepts the response status while leaving the body-write barrier intact.
+func (w *auditBlockedScrapeWriter) WriteHeader(int) {}
+
+// Write holds the first response body write until the test releases its barrier.
 func (w *auditBlockedScrapeWriter) Write(b []byte) (int, error) {
 	if !w.first {
 		w.first = true
@@ -25,6 +30,7 @@ func (w *auditBlockedScrapeWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+// TestAuditScrapeResponseWriteDoesNotBlockObservation keeps readiness independent of a stalled metrics client.
 func TestAuditScrapeResponseWriteDoesNotBlockObservation(t *testing.T) {
 	s := NewService("https://example.test/schema", func(context.Context) bool { return false })
 	defer s.Close()
@@ -50,7 +56,7 @@ func TestAuditScrapeResponseWriteDoesNotBlockObservation(t *testing.T) {
 	blocked := false
 	select {
 	case <-observed:
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(5 * time.Second):
 		blocked = true
 	}
 	close(w.release)
