@@ -3,7 +3,6 @@
 package browser_test
 
 import (
-	"context"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -12,7 +11,6 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/launcher"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -59,17 +57,7 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 	)
 	t.Cleanup(registryServer.Close)
 
-	launchContext, cancelLaunch := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancelLaunch()
-	controlURL, err := launcher.New().
-		Context(launchContext).
-		Headless(true).
-		NoSandbox(true).
-		Set("ignore-certificate-errors").
-		Launch()
-	if err != nil {
-		t.Fatalf("launch browser: %v", err)
-	}
+	controlURL := launchBrowser(t, "ignore-certificate-errors")
 	browser := rod.New().ControlURL(controlURL).
 		WithPanic(func(value interface{}) { t.Fatalf("browser interaction: %v", value) }).
 		MustConnect()
