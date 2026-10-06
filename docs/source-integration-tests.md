@@ -166,8 +166,13 @@ Each engine module has a shared eight-minute deadline. Each hosted job has a 50-
 the source, composition, catalog and SQL checks retain their assertions and the Document and
 Graph modules each retain an independent eight-minute budget. These tests run the
 real controller and Kubernetes API; they do not install CloudNativePG, Percona or ArangoDB, run databases,
-verify actual credentials or prove operator-owned lifecycle. That acceptance remains in
-[#38](https://github.com/devantler-tech/data-product-controller/issues/38); engine gate rollout and
-retirement remain in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).
-Real Graph queries and effective application grants remain in
-[#157](https://github.com/devantler-tech/data-product-controller/issues/157).
+verify actual credentials or prove operator-owned lifecycle.
+
+Separate [PostgreSQL](real-postgresql-acceptance.md),
+[Document](real-document-acceptance.md) and [Graph](real-graph-acceptance.md)
+acceptance profiles exercise real operator-managed databases, authenticated queries,
+effective application grants and lifecycle. The PostgreSQL profile covers SQL, JSONB
+and AGE; the Document and Graph profiles cover native Percona and ArangoDB.
+These profiles provide disposable-environment evidence. Production rollout and
+engine-provider gate retirement for all five supported native and hybrid selections
+remain in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).
