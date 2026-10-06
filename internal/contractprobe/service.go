@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
 )
 
 // Service serves private contract reachability probes and metrics.
@@ -22,18 +24,21 @@ type Service struct {
 	target   string
 	slots    chan struct{}
 	metrics  http.Handler
+	registry *prometheus.Registry
 	requests *prometheus.CounterVec
 	ready    prometheus.Gauge
 	observed prometheus.Gauge
+	metricMu sync.RWMutex
 }
 
 // NewService constructs a default-off probe with fixed network and resource boundaries.
 func NewService(target string, enabled func(context.Context) bool) *Service {
 	registry := prometheus.NewRegistry()
 	service := &Service{
-		target:  target,
-		enabled: enabled,
-		slots:   make(chan struct{}, 1),
+		registry: registry,
+		target:   target,
+		enabled:  enabled,
+		slots:    make(chan struct{}, 1),
 		client: &http.Client{
 			Timeout:       5 * time.Second,
 			CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse },
@@ -72,7 +77,7 @@ func NewService(target string, enabled func(context.Context) bool) *Service {
 		),
 	}
 	registry.MustRegister(service.requests, service.ready, service.observed)
-	service.metrics = promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+	service.metrics = promhttp.HandlerFor(service, promhttp.HandlerOpts{})
 	return service
 }
 
@@ -105,6 +110,13 @@ func (s *Service) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Gather snapshots one completed observation before HTTP response writing begins.
+func (s *Service) Gather() ([]*dto.MetricFamily, error) {
+	s.metricMu.RLock()
+	defer s.metricMu.RUnlock()
+	return s.registry.Gather()
+}
+
 // readiness limits concurrent probes and preserves the last completed observation when busy.
 func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 	select {
@@ -124,11 +136,21 @@ func (s *Service) readiness(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "ContractProbeCancelled", http.StatusServiceUnavailable)
 		return
 	}
+	s.metricMu.Lock()
+	if r.Context().Err() != nil {
+		s.metricMu.Unlock()
+		s.requests.WithLabelValues("ContractProbeCancelled").Inc()
+		http.Error(w, "ContractProbeCancelled", http.StatusServiceUnavailable)
+		return
+	}
 	s.requests.WithLabelValues(reason).Inc()
 	s.observed.SetToCurrentTime()
 	s.ready.Set(0)
 	if reason == "ContractReachable" {
 		s.ready.Set(1)
+	}
+	s.metricMu.Unlock()
+	if reason == "ContractReachable" {
 		_, _ = io.WriteString(w, "ContractReachable")
 		return
 	}

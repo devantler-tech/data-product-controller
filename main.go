@@ -10,6 +10,7 @@ import (
 	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"github.com/devantler-tech/data-product-controller/internal/catalog"
 	"github.com/devantler-tech/data-product-controller/internal/config"
+	connectorv1 "github.com/devantler-tech/data-product-controller/internal/connector/v1"
 	productcontroller "github.com/devantler-tech/data-product-controller/internal/controller"
 	providerv1 "github.com/devantler-tech/data-product-controller/internal/provider/v1"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
@@ -170,6 +171,11 @@ func main() {
 	}
 
 	managerConfig := ctrl.GetConfigOrDie()
+	connectorReader, err := connectorv1.NewDeploymentReader(managerConfig)
+	if err != nil {
+		setupLog.Error(err, "create connector reader")
+		os.Exit(1)
+	}
 	engineReader, err := providerv1.NewEngineReader(managerConfig)
 	if err != nil {
 		setupLog.Error(err, "create engine provider reader")
@@ -202,7 +208,7 @@ func main() {
 		EngineProvidersEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, engineProvidersFlag)
 		},
-		ConnectorReader: controllerManager.GetAPIReader(),
+		ConnectorReader: connectorReader,
 		CompositionEnabled: func(ctx context.Context) bool {
 			return featureflag.Enabled(ctx, flagClient, compositionFlag)
 		},

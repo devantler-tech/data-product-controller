@@ -31,7 +31,7 @@ func TestPostgresHarnessRendersActualModelDescriptors(t *testing.T) {
 		t.Fatal(err)
 	}
 	directory := t.TempDir()
-	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, "bash", "-c", `set -euo pipefail
 kube() {

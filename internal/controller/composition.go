@@ -74,6 +74,15 @@ func (r *DataProductReconciler) observeComposition(
 		missing:  map[client.ObjectKey]bool{},
 	}
 	observation := graph.visit(ctx, product, 0)
+	if observation.reason == "" && graph.notReady != nil {
+		observation = compositionObservation{
+			reason: "DependencyNotReady",
+			message: fmt.Sprintf(
+				"DataProduct %s is not ready; wait for its current source and dependency observations.",
+				*graph.notReady,
+			),
+		}
+	}
 	// Read only the already observed snapshot. A failed/limited traversal must not
 	// start a second unbounded walk to populate status.
 	if len(product.Spec.Inputs) <= maxCompositionEdges {
@@ -149,6 +158,7 @@ func (r *DataProductReconciler) observeComposition(
 }
 
 type compositionGraph struct {
+	notReady          *client.ObjectKey
 	reader            client.Reader
 	products          map[client.ObjectKey]*datav1alpha1.DataProduct
 	visiting, visited map[client.ObjectKey]bool
@@ -243,6 +253,9 @@ func (g *compositionGraph) visit(
 					producerKey,
 				),
 			}
+		}
+		if !producerReady(producer) && g.notReady == nil {
+			g.notReady = &producerKey
 		}
 	}
 	g.visited[key] = true

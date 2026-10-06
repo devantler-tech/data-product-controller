@@ -55,6 +55,9 @@ your normal authorized tooling; see the [DCAT guide](dcat-catalog.md). The expor
 accepts that specific profile with its exact embedded context, not arbitrary
 JSON-LD or remote contexts. Editing the context, adding extension fields, changing
 types or leaving dangling source service relationships fails validation.
+Each source service requires a nonempty title matching its named distribution,
+and exactly one distribution must reference it. Unreferenced services and services
+shared by multiple distributions make the whole source snapshot invalid.
 
 Use the [example binding file](examples/dsp-catalog/bindings.json) as a starting
 point. Its example addresses, offer IDs and format are placeholders, not an

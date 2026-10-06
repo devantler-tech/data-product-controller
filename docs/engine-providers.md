@@ -57,6 +57,9 @@ mismatches, lost permissions, unready replicas and deletion produce stable reaso
 provider messages into product status. Aggregate readiness also requires the product's other
 declared dependencies. Typed observation uses a fixed resource mapping, fresh exact-name reads, a five-second deadline and
 30-second polling; unchanged observations do not rewrite status.
+After a selected provider completes, cancellation or deadline expiry makes the
+observation unavailable, even if the final API read returned a healthy object.
+This completion check also applies to the legacy Crossplane adapter.
 
 Engine and legacy source readers negotiate only single-object partial metadata for application Secrets.
 Servers that cannot provide that representation fail observation with `SourceUnavailable`;

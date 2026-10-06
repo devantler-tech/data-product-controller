@@ -33,13 +33,23 @@ func TestDistributionBudget(t *testing.T) {
 		bound := firstObject(t, bindings["datasets"])
 		output := encode(t, firstObject(t, dataset["dcat:distribution"]))
 		selection := encode(t, firstObject(t, bound["distributions"]))
+		service := encode(t, firstObject(t, source["dcat:service"]))
 		outputs, selections := []any{}, []any{}
+		services := []any{}
 		for i := 0; i < n; i++ {
 			id := []byte(fmt.Sprintf("urn:example:observations-%d", i))
-			outputs = append(
-				outputs,
-				object(t, bytes.ReplaceAll(output, []byte("urn:example:observations"), id)),
+			distribution := object(
+				t,
+				bytes.ReplaceAll(output, []byte("urn:example:observations"), id),
 			)
+			published := object(t, service)
+			serviceID := fmt.Sprintf("urn:example:source-service-%d", i)
+			published["@id"] = serviceID
+			published["dcterms:title"] = fmt.Sprintf("output-%d", i)
+			distribution["dcterms:title"] = published["dcterms:title"]
+			distribution["dcat:accessService"] = map[string]any{"@id": serviceID}
+			outputs = append(outputs, distribution)
+			services = append(services, published)
 			selected := bytes.ReplaceAll(selection, []byte("urn:example:observations"), id)
 			selected = bytes.ReplaceAll(
 				selected,
@@ -49,6 +59,7 @@ func TestDistributionBudget(t *testing.T) {
 			selections = append(selections, object(t, selected))
 		}
 		dataset["dcat:distribution"] = outputs
+		source["dcat:service"] = services
 		bound["distributions"] = selections
 		b, err := dataspace.Export(
 			bytes.NewReader(encode(t, source)),

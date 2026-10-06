@@ -77,8 +77,10 @@ func (s sourceCatalog) index() (map[string]sourceDataset, map[string]bool, error
 	index := map[string]sourceDataset{}
 	outputs := 0
 	services := map[string]sourceService{}
+	used := map[string]bool{}
 	for _, v := range s.Services {
 		if claim(ids, v.ID) != nil || !types(v.Type, "dcat:DataService") ||
+			v.Title == "" ||
 			!publicURL(v.Endpoint.ID, false) ||
 			!publicURL(v.Contract.ID, false) {
 			return fail()
@@ -111,15 +113,17 @@ func (s sourceCatalog) index() (map[string]sourceDataset, map[string]bool, error
 			if claim(ids, v.ID) != nil || v.Type != "dcat:Distribution" || v.Title == "" ||
 				!publicURL(v.AccessURL.ID, false) ||
 				!ok ||
+				used[service.ID] || service.Title != v.Title ||
 				service.Dataset.ID != d.ID ||
 				service.Endpoint.ID != v.AccessURL.ID {
 				return fail()
 			}
+			used[service.ID] = true
 		}
 		index[d.ID] = d
 	}
 	for _, v := range s.Services {
-		if _, ok := index[v.Dataset.ID]; !ok {
+		if _, ok := index[v.Dataset.ID]; !ok || !used[v.ID] {
 			return fail()
 		}
 	}

@@ -30,6 +30,10 @@ The [HTTP source guide](http-source.md) defines the export workload's own Secret
 ## Conditions and recovery
 
 The controller reads the current Deployment every 30 seconds with a five-second read deadline.
+Its uncached reader uses a fixed apps/v1 Deployment mapping, so cold reads require
+no API discovery outside that deadline. The transport also has a five-second bound.
+A successful API return after cancellation or deadline expiry is unavailable; it
+cannot publish connector or contract-probe readiness.
 `ConnectorReady=True` requires a non-deleting workload, a positive desired replica count, and a
 positive generation matched exactly by `status.observedGeneration`. An omitted desired count means
 one. Updated, total, ready, and available replicas must each equal the desired count, and

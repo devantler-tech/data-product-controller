@@ -121,7 +121,14 @@ func (r *Registry) Observe(
 			"Select a supported engine type, provider and versioned adapter.",
 		)
 	}
-	return selected.Observe(ctx, namespace, source)
+	observation := selected.Observe(ctx, namespace, source)
+	if ctx.Err() != nil {
+		return unavailable(
+			"SourceUnavailable",
+			"The source observation was cancelled or exceeded its deadline; retry when the Kubernetes API is available.",
+		)
+	}
+	return observation
 }
 
 // unavailable constructs an unready observation with an explicit, caller-supplied public explanation.

@@ -59,7 +59,15 @@ require_read_only_source_audit() {
 wait_for() {
 	local description=$1
 	shift
-	until "$@" >"$test_dir/wait.log" 2>&1; do
+	while true; do
+		remaining >/dev/null || {
+			echo "FAIL: $description" >&2
+			[[ ! -f "$test_dir/wait.log" ]] || cat "$test_dir/wait.log" >&2
+			return 1
+		}
+		if "$@" >"$test_dir/wait.log" 2>&1; then
+			break
+		fi
 		remaining >/dev/null || {
 			echo "FAIL: $description" >&2
 			cat "$test_dir/wait.log" >&2

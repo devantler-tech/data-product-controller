@@ -31,8 +31,22 @@ func validPortableMetadata(descriptor portableDescriptor) bool {
 		return false
 	}
 	observations := make(map[string]bool, len(descriptor.Lineage))
+	inputs := make(map[string]datav1alpha1.ProductReference, len(descriptor.Inputs))
+	for _, input := range descriptor.Inputs {
+		ref := input.ProductRef
+		if ref.Namespace == "" {
+			ref.Namespace = descriptor.Namespace
+		}
+		inputs[input.Name] = ref
+	}
 	for _, edge := range descriptor.Lineage {
-		if observations[edge.Name] {
+		declared, exists := inputs[edge.Name]
+		observed := edge.ProductRef
+		if observed.Namespace == "" {
+			observed.Namespace = descriptor.Namespace
+		}
+		if observations[edge.Name] || !exists || declared != observed ||
+			(edge.Output != nil && edge.Output.Name != declared.Output) {
 			return false
 		}
 		observations[edge.Name] = true
