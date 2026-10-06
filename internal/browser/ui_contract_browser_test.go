@@ -17,7 +17,6 @@ import (
 	"github.com/devantler-tech/data-product-controller/web"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
-	"github.com/go-rod/rod/lib/launcher"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -400,17 +399,7 @@ func TestUIManifestValidation(t *testing.T) {
 // contractBrowser runs protocol checks in Chromium with certificates confined to TLS fixtures.
 func contractBrowser(t *testing.T) *rod.Browser {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	t.Cleanup(cancel)
-	controlURL, err := launcher.New().
-		Context(ctx).
-		Headless(true).
-		NoSandbox(true).
-		Set("ignore-certificate-errors").
-		Launch()
-	if err != nil {
-		t.Fatal(err)
-	}
+	controlURL := launchBrowser(t, "ignore-certificate-errors")
 	browser := rod.New().
 		Context(t.Context()).
 		Timeout(60 * time.Second).

@@ -16,7 +16,6 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/controller"
 	"github.com/devantler-tech/data-product-controller/internal/registry"
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/launcher"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -94,12 +93,7 @@ func TestThreeProductComposition(t *testing.T) {
 		len(collection.Products[0].Lineage) != 2 {
 		t.Fatalf("composed API descriptor = %+v", collection)
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
-	defer cancel()
-	controlURL, err := launcher.New().Context(ctx).Headless(true).NoSandbox(true).Launch()
-	if err != nil {
-		t.Fatal(err)
-	}
+	controlURL := launchBrowser(t)
 	browser := rod.New().
 		ControlURL(controlURL).
 		WithPanic(func(value interface{}) { t.Fatalf("browser: %v", value) }).
