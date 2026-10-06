@@ -163,7 +163,7 @@ source_replicas_access() {
 
 # source_lifecycle_replicas_run rotates the projected Secret on every installed replica, then restores one-replica acceptance.
 source_lifecycle_replicas_run() {
-	lifecycle_begin 'two HTTP source replicas and projected credential rotation' 600 || return 1
+	lifecycle_begin 'two HTTP source replicas and projected credential rotation' 900 || return 1
 	local inventory phase
 	install_chart --set httpSource.enabled=true --set httpSource.replicas=2 \
 		--set connectorReadiness.enabled=true --set contractReadiness.enabled=false

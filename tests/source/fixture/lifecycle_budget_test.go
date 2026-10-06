@@ -13,7 +13,7 @@ func TestLifecycleBudgetsKeepProjectionTimeAndAbsoluteBounds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{"source restoration", "absolute clamp", "shared clamp", "exhausted"} {
+	for _, name := range []string{"source restoration", "replicated source restoration", "absolute clamp", "shared clamp", "exhausted"} {
 		t.Run(name, func(t *testing.T) {
 			scratch := t.TempDir()
 			if err := os.WriteFile(filepath.Join(scratch, "kubeconfig"), nil, 0o600); err != nil {
@@ -43,6 +43,19 @@ case "$BUDGET_CASE" in
 			fi
 		}
 		source_lifecycle_run ;;
+	'replicated source restoration')
+		install_chart() { :; }
+		docker() { :; }
+		source_replica_inventory() { printf '%s\n' '[{"uid":"same-pod"}]'; }
+		source_lifecycle_retention_check() { :; }
+		source_secret() { [[ $1 != fixture-token-a ]] || SECONDS=436; }
+		wait_for() {
+			if [[ $1 == 'both retained replicas restore the original credential pair' && $2 != 300 ]]; then
+				printf 'Replicated Secret restoration was truncated to %s seconds\n' "$2" >&2
+				exit 82
+			fi
+		}
+		source_lifecycle_replicas_run ;;
 	'absolute clamp')
 		SECONDS=1000
 		integration_deadline=1100
