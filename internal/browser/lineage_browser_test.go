@@ -273,7 +273,22 @@ func TestLineagePendingResponseCannotCrossPageExit(t *testing.T) {
 					const {signal,...transportOptions}=options;
 					const response=await originalFetch(url,transportOptions);
 					const body=await response.arrayBuffer();
-					return new Promise(resolve=>window.finishTrace=()=>resolve(new Response(body,{status:response.status,headers:response.headers})));
+					const delivered=new Response(body,{status:response.status,headers:response.headers});
+					const getReader=delivered.body.getReader.bind(delivered.body);
+					window.traceReadComplete=false;
+					delivered.body.getReader=(...args)=>{
+						const reader=getReader(...args);
+						const read=reader.read.bind(reader),cancel=reader.cancel.bind(reader);
+						let consumed=false;
+						reader.read=async (...args)=>{const chunk=await read(...args);if(chunk.done) consumed=true;return chunk;};
+						reader.cancel=async (...args)=>{
+							await cancel(...args);
+							// Signal only after EOF, cancellation, and the consumer's queued continuations.
+							setTimeout(()=>window.traceReadComplete=consumed,0);
+						};
+						return reader;
+					};
+					return new Promise(resolve=>window.finishTrace=()=>resolve(delivered));
 				};
 			}`)
 			page.MustElement("#trace-inputs").MustClick()
@@ -289,10 +304,9 @@ func TestLineagePendingResponseCannotCrossPageExit(t *testing.T) {
 				Bool() {
 				t.Fatal("page exit retained a pending trace")
 			}
-			page.MustEval(
-				`async()=>{finishTrace();await new Promise(resolve=>setTimeout(resolve,0));}`,
-			)
-			if page.MustEval(`()=>!document.querySelector('#trace-result').hidden || !document.querySelector('#save-trace').hidden || document.querySelector('#trace-status').textContent!==''`).
+			page.MustEval(`()=>finishTrace()`)
+			page.MustWait(`()=>window.traceReadComplete===true`)
+			if page.MustEval(`()=>!document.querySelector('#trace-result').hidden || !document.querySelector('#save-trace').hidden || document.querySelector('#trace-status').textContent!=='' || document.querySelectorAll('#trace-table tbody tr, #trace-edges tbody tr').length!==0`).
 				Bool() {
 				t.Fatal("late lineage response restored an exited document")
 			}

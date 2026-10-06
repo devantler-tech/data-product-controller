@@ -550,6 +550,7 @@ func TestPublisherPendingReadCannotCrossPageExit(t *testing.T) {
 				document.querySelector('#report-form').requestSubmit();
 			}`)
 			page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='reading'`)
+			page.MustWait(`()=>typeof window.finishRead==='function'`)
 			page.MustEval(`async (wire,persisted)=>{
 				dispatchEvent(new PageTransitionEvent('pagehide',{persisted}));
 				dispatchEvent(new PageTransitionEvent('pageshow',{persisted}));
