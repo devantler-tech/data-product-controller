@@ -25,6 +25,9 @@ count=$(printf '%s' "$defaults" | yq ea '[select(.metadata.labels."app.kubernete
 enabled=$(render)
 deployment=$(printf '%s' "$enabled" | yq ea 'select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/component" == "http-source")' -)
 [ -n "$deployment" ] || fail 'enabled source has no Deployment'
+[ "$(printf '%s' "$deployment" | yq '.spec.replicas' -)" = 1 ] || fail 'enabled source must default to one replica'
+replicated=$(render --set httpSource.replicas=2)
+[ "$(printf '%s' "$replicated" | yq ea 'select(.kind == "Deployment" and .metadata.labels."app.kubernetes.io/component" == "http-source") | .spec.replicas' -)" = 2 ] || fail 'source must honor the configured replica count'
 [ "$(printf '%s' "$deployment" | yq '.spec.template.spec.containers[0].command[0]' -)" = '/http-source' ] || fail 'source must execute its own binary'
 [ "$(printf '%s' "$deployment" | yq '.spec.template.spec.containers[0].env[] | select(.name == "HTTP_SOURCE_ENABLED") | .value' -)" = true ] || fail 'enabled workload must opt into the release flag'
 [ "$(printf '%s' "$deployment" | yq '.spec.template.spec.automountServiceAccountToken' -)" = false ] || fail 'source must not receive an API token'
@@ -54,9 +57,10 @@ metrics_service=$(printf '%s' "$enabled" | yq ea 'select(.kind == "Service" and 
 [ "$(printf '%s' "$metrics_service" | yq '.spec.ports | length' -)" = 1 ] || fail 'management Service must carry one port'
 [ "$(printf '%s' "$metrics_service" | yq '.spec.ports[0].targetPort' -)" = management ] || fail 'management must not bypass data readiness'
 
-for invalid in httpSource.secretName= httpSource.sourceCIDR= httpSource.sourceCIDR=0.0.0.0/0 httpSource.sourceCIDR=192.0.2.10/24 image.digest=; do
+for invalid in httpSource.replicas=0 httpSource.replicas=-1 httpSource.replicas=1.5 httpSource.replicas=true httpSource.replicas=two httpSource.replicas=2147483648 httpSource.secretName= httpSource.sourceCIDR= httpSource.sourceCIDR=0.0.0.0/0 httpSource.sourceCIDR=192.0.2.10/24 image.digest=; do
 	if render --set "$invalid" >/dev/null 2>&1; then fail "accepted unsafe setting $invalid"; fi
 done
+if render --set-string httpSource.replicas=2 >/dev/null 2>&1; then fail 'accepted a string replica count'; fi
 if render --set httpSource.consumerPodLabels.app=null >/dev/null 2>&1; then fail 'accepted empty consumer selector'; fi
 if render --namespace default >/dev/null 2>&1; then fail 'accepted the default namespace'; fi
 if helm template source-test "$chart" --namespace products --set httpSource.enabled=true >/dev/null 2>&1; then fail 'enabled without connection and ingress configuration'; fi

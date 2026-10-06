@@ -49,6 +49,7 @@ installed_lifecycle_matrix() {
 	wait_for 'candidate operational source has a full current rollout' 180 lifecycle_rollout dpc-http-source full
 	wait_for 'candidate restores the exact selected product' 180 readiness True true
 	source_lifecycle_run
+	source_lifecycle_replicas_run
 	contract_matrix_run
 	connector_matrix_run
 	matrix_observation candidate "$candidate_image" "$product_digest"

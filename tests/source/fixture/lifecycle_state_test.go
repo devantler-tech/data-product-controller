@@ -83,6 +83,69 @@ func TestLifecycleRolloutRejectsOldServingCapacity(t *testing.T) {
 	}
 }
 
+// TestSourceReplicaInventoryRejectsIncompleteOrStaleEndpoints prevents a Service from hiding an unhealthy replica.
+func TestSourceReplicaInventoryRejectsIncompleteOrStaleEndpoints(t *testing.T) {
+	const inventory = `{"items":[{"kind":"Deployment","metadata":{"name":"dpc-http-source","namespace":"products","uid":"deployment","generation":2,"annotations":{"deployment.kubernetes.io/revision":"2"}},"spec":{"replicas":2},"status":{"observedGeneration":2,"replicas":2,"updatedReplicas":2,"readyReplicas":2,"availableReplicas":2}},{"kind":"ReplicaSet","metadata":{"namespace":"products","uid":"current-rs","generation":1,"annotations":{"deployment.kubernetes.io/revision":"2"},"ownerReferences":[{"apiVersion":"apps/v1","kind":"Deployment","uid":"deployment","controller":true}]},"spec":{"replicas":2},"status":{"observedGeneration":1,"replicas":2,"readyReplicas":2,"availableReplicas":2}},{"kind":"Pod","metadata":{"name":"source-a","namespace":"products","uid":"pod-a","ownerReferences":[{"apiVersion":"apps/v1","kind":"ReplicaSet","uid":"current-rs","controller":true}]},"status":{"podIP":"10.0.0.1","conditions":[{"type":"Ready","status":"True"}],"containerStatuses":[{"name":"http-source","ready":true,"restartCount":0}]}},{"kind":"Pod","metadata":{"name":"source-b","namespace":"products","uid":"pod-b","ownerReferences":[{"apiVersion":"apps/v1","kind":"ReplicaSet","uid":"current-rs","controller":true}]},"status":{"podIP":"10.0.0.2","conditions":[{"type":"Ready","status":"True"}],"containerStatuses":[{"name":"http-source","ready":true,"restartCount":0}]}}]}`
+	t.Run("revoked credentials retain unready identities", func(t *testing.T) {
+		unready := strings.ReplaceAll(inventory, `"ready":true`, `"ready":false`)
+		unready = strings.ReplaceAll(unready, `"status":"True"`, `"status":"False"`)
+		unready = strings.ReplaceAll(unready, `"readyReplicas":2`, `"readyReplicas":0`)
+		unready = strings.ReplaceAll(unready, `"availableReplicas":2`, `"availableReplicas":0`)
+		output, err := lifecycleFilter(
+			t,
+			unready,
+			"--arg",
+			"mode",
+			"source-pods",
+			"--argjson",
+			"count",
+			"2",
+			"--argjson",
+			"healthy",
+			"false",
+		)
+		if err != nil || !strings.Contains(output, `"uid":"pod-b"`) {
+			t.Fatalf("unready identity capture failed: %s", output)
+		}
+	})
+	for _, tc := range []struct {
+		name, input string
+		accepted    bool
+	}{
+		{"two current endpoints", inventory, true},
+		{"stale deployment", strings.Replace(inventory, `"observedGeneration":2`, `"observedGeneration":1`, 1), false},
+		{"old ReplicaSet", strings.ReplaceAll(inventory, `"uid":"current-rs","controller":true`, `"uid":"old-rs","controller":true`), false},
+		{"wrong owner kind", strings.Replace(inventory, `"kind":"ReplicaSet","uid":"current-rs"`, `"kind":"Deployment","uid":"current-rs"`, 1), false},
+		{"duplicate Pod UID", strings.Replace(inventory, `"uid":"pod-b"`, `"uid":"pod-a"`, 1), false},
+		{"duplicate address", strings.Replace(inventory, `"10.0.0.2"`, `"10.0.0.1"`, 1), false},
+		{"missing address", strings.Replace(inventory, `"10.0.0.2"`, `""`, 1), false},
+		{"unready container", strings.Replace(inventory, `"ready":true`, `"ready":false`, 1), false},
+		{"unready Pod", strings.Replace(inventory, `"type":"Ready","status":"True"`, `"type":"Ready","status":"False"`, 1), false},
+		{"deleting Pod", strings.Replace(inventory, `"uid":"pod-a","ownerReferences"`, `"uid":"pod-a","deletionTimestamp":"2026-10-06T00:00:00Z","ownerReferences"`, 1), false},
+		{"foreign Pod", strings.Replace(inventory, `"name":"source-a","namespace":"products"`, `"name":"source-a","namespace":"foreign"`, 1), false},
+		{"incomplete ReplicaSet", strings.Replace(inventory, `"observedGeneration":1,"replicas":2,"readyReplicas":2`, `"observedGeneration":1,"replicas":2,"readyReplicas":1`, 1), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			output, err := lifecycleFilter(
+				t,
+				tc.input,
+				"--arg",
+				"mode",
+				"source-pods",
+				"--argjson",
+				"count",
+				"2",
+			)
+			if (err == nil) != tc.accepted {
+				t.Fatalf("inventory accepted=%v, want=%v: %s", err == nil, tc.accepted, output)
+			}
+			if tc.accepted && !strings.Contains(output, `"uid":"pod-b"`) {
+				t.Fatal("inventory lost the second Pod identity")
+			}
+		})
+	}
+}
+
 // lifecycleFilter evaluates the actual harness predicate against one locally authored resource snapshot.
 func lifecycleFilter(t *testing.T, input string, args ...string) (string, error) {
 	t.Helper()
