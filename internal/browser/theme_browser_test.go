@@ -365,3 +365,37 @@ func themeWorkspace(
 	page.MustElement(".product-card").MustWaitVisible()
 	return page, &loads
 }
+
+// TestDuplicateAppearanceHintsPreserveQuery retains the connection and its allowance for actual changes.
+func TestDuplicateAppearanceHintsPreserveQuery(t *testing.T) {
+	page, loads := themeWorkspace(t, false, true, true, true)
+	page.MustElement("#appearance").MustSelect("Light")
+	page.MustElement(".product-card").MustClick()
+	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
+	frame := page.MustElement("#product-surface").MustFrame()
+	frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'light'`)
+	frame.MustElement("#station").MustSelect("Nordhavn")
+	frame.MustElement("button[type=submit]").MustClick()
+	frame.MustElement("#status").MustWait(`() => this.textContent === '1 observation'`)
+	session := frame.MustEval(`() => connection.session`).Str()
+	page.MustEval(`() => {for(let i=0;i<1024;i++) disposeSurface.setAppearance('light')}`)
+	if loads.Load() != 1 || !page.MustElement("#product-surface").MustVisible() ||
+		frame.MustEval(`() => connection.session`).Str() != session ||
+		frame.MustElement("#status").MustText() != "1 observation" ||
+		!strings.Contains(frame.MustElement("#observations").MustText(), "Nordhavn") {
+		t.Fatal("duplicate appearance hints revoked the session or lost its query")
+	}
+	page.MustEval(
+		`() => {for(let i=0;i<255;i++) disposeSurface.setAppearance(i%2===0?'dark':'light')}`,
+	)
+	frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'dark'`)
+	if !page.MustElement("#product-surface").MustVisible() {
+		t.Fatal("duplicate hints consumed the distinct-change allowance")
+	}
+	page.MustEval(`() => disposeSurface.setAppearance('light')`)
+	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'error'`)
+	if page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
+		Bool() {
+		t.Fatal("distinct changes bypassed the appearance allowance")
+	}
+}
