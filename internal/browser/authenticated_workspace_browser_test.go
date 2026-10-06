@@ -87,10 +87,15 @@ func TestAuthenticatedWorkspace(t *testing.T) {
 				t.Fatal(err)
 			}
 			// Anonymous access must remain blocked even though the response contains only flags.
-			response, err := catalog.Client().Get(catalog.URL + "/api/v1/ui-config")
-			if err != nil {
-				t.Fatal(err)
-			}
+			request := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"/api/v1/ui-config",
+				nil,
+			)
+			recorder := httptest.NewRecorder()
+			catalog.Config.Handler.ServeHTTP(recorder, request)
+			response := recorder.Result()
 			if err := response.Body.Close(); err != nil {
 				t.Fatal(err)
 			}

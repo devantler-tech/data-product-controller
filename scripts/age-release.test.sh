@@ -15,7 +15,7 @@ fail() {
 # An image declaration is not acceptance: both CI and its aggregate must
 # require a PostgreSQL process, real Cypher reads and SQL authorization denials.
 yq -e '.jobs."age-image".permissions.contents == "read" and .jobs."age-image"."timeout-minutes" <= 15' "$ci" >/dev/null || fail 'bounded read-only image acceptance is required'
-yq -e '(.jobs."required-checks".needs | contains(["age-image"])) and (.jobs."required-checks".steps[].with."job-results" | contains("needs.age-image.result"))' "$ci" >/dev/null || fail 'image acceptance must feed the required aggregate'
+AGE_RELEASE_NEEDS_JSON="\${{ toJSON(needs) }}" yq -e '(.jobs."required-checks".needs | contains(["age-image"])) and ([.jobs."required-checks".steps[] | select(.env.NEEDS_JSON == strenv(AGE_RELEASE_NEEDS_JSON)) | .run | contains("ci-trusted/scripts/ci-plan/main.go check")] | any)' "$ci" >/dev/null || fail 'image acceptance must feed the trusted required result checker'
 [ -f "$publisher" ] || fail 'owned image publisher is required'
 yq -e '(.on | has("workflow_call")) and (.on | keys | length == 1)' "$publisher" >/dev/null || fail 'publisher must only be callable as a reusable workflow'
 yq -e '(.permissions | length == 0) and .jobs.publish.permissions.contents == "read" and .jobs.publish.permissions.packages == "write" and .jobs.publish.permissions."id-token" == "write"' "$publisher" >/dev/null || fail 'publisher must use scoped identity and package permissions'

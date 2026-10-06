@@ -64,19 +64,12 @@ func TestThreeProductComposition(t *testing.T) {
 		registry.NewHandler(reader),
 	)
 	t.Cleanup(server.Close)
-	request, err := http.NewRequestWithContext(
-		t.Context(),
-		http.MethodGet,
-		server.URL+"/api/v1/products",
-		nil,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	response, err := server.Client().Do(request)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Check the public descriptor handler directly; the browser below exercises
+	// its real HTTP transport and sandbox interaction.
+	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/products", nil)
+	recorder := httptest.NewRecorder()
+	server.Config.Handler.ServeHTTP(recorder, request)
+	response := recorder.Result()
 	defer func() { _ = response.Body.Close() }()
 	var collection struct {
 		Products []struct {

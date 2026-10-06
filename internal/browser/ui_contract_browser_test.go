@@ -35,7 +35,7 @@ func TestDemoWorksInTwoHosts(t *testing.T) {
 				http.Error(w, "fixture outage", http.StatusServiceUnavailable)
 				return
 			}
-			handler.Load().(http.Handler).ServeHTTP(w, r)
+			fixtureValue[http.Handler](t, handler.Load()).ServeHTTP(w, r)
 		}),
 	)
 	t.Cleanup(productServer.Close)

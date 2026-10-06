@@ -22,7 +22,7 @@ func TestPublicURLSandboxQueries(t *testing.T) {
 		if r.URL.Path == "/healthz" {
 			forbiddenRequests.Add(1)
 		}
-		productHandler.Load().(http.Handler).ServeHTTP(w, r)
+		fixtureValue[http.Handler](t, productHandler.Load()).ServeHTTP(w, r)
 	}))
 	t.Cleanup(product.Close)
 	handler, err := demoproduct.NewHandlerWithPublicURL(product.URL)

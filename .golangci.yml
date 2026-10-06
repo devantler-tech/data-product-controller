@@ -58,6 +58,9 @@ linters:
           list-mode: strict
           allow:
             - $gostd
+            # The trusted-base CI selector parses test syntax without executing it.
+            - go/parser$
+            - go/token$
             - github.com/devantler-tech/data-product-controller
             # Pinned API serialization supplies the ArangoDB specification checksum;
             # no operator runtime or database client is instantiated.

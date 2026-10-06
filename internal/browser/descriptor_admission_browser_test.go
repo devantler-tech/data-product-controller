@@ -28,16 +28,16 @@ func TestDescriptorUniqueNamedCollections(t *testing.T) {
 							"reason":     "InputReady",
 						},
 					}
-					entries := descriptor[collection].([]any)
+					entries := fixtureValue[[]any](t, descriptor[collection])
 					second := map[string]any{}
-					for key, value := range entries[0].(map[string]any) {
+					for key, value := range fixtureValue[map[string]any](t, entries[0]) {
 						second[key] = value
 					}
 					if !duplicate {
 						second["name"] = "alternative"
 						if collection == "lineage" {
 							descriptor["inputs"] = append(
-								descriptor["inputs"].([]any),
+								fixtureValue[[]any](t, descriptor["inputs"]),
 								map[string]any{"name": "alternative", "productRef": ref},
 							)
 						}
