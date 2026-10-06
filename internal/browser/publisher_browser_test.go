@@ -520,3 +520,55 @@ func TestPublisherInputSwitching(t *testing.T) {
 		t.Error("late file read restored the obsolete complete report")
 	}
 }
+
+// TestPublisherPendingReadCannotCrossPageExit rejects delayed imports from an exited document.
+func TestPublisherPendingReadCannotCrossPageExit(t *testing.T) {
+	for _, persisted := range []bool{false, true} {
+		t.Run(fmt.Sprintf("persisted=%t", persisted), func(t *testing.T) {
+			report := publisherReport(t, false, "")
+			encoded, err := json.Marshal(report)
+			if err != nil {
+				t.Fatal(err)
+			}
+			host := publisherHost(t)
+			page := contractBrowser(t).MustPage().Timeout(20 * time.Second).
+				MustNavigate(host.URL + "/publisher-review").MustWaitLoad()
+			page.MustWait(`()=>typeof DataProductPreflightReport==='object'`)
+			page.MustEval(
+				`wire=>{document.querySelector('#report-text').value=wire;document.querySelector('#report-form').requestSubmit()}`,
+				string(encoded),
+			)
+			page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+			page.MustElement("#product-list button").MustClick()
+			page.MustElement("#export-preview").MustWait(`()=>!this.disabled`)
+			page.MustEval(`()=>{
+				const file=new File(['{}'],'pending.json');
+				file.arrayBuffer=()=>new Promise(resolve=>window.finishRead=resolve);
+				const transfer=new DataTransfer();transfer.items.add(file);
+				document.querySelector('#report-file').files=transfer.files;
+				document.querySelector('#report-text').value='';
+				document.querySelector('#report-form').requestSubmit();
+			}`)
+			page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='reading'`)
+			page.MustEval(`async (wire,persisted)=>{
+				dispatchEvent(new PageTransitionEvent('pagehide',{persisted}));
+				dispatchEvent(new PageTransitionEvent('pageshow',{persisted}));
+				finishRead(new TextEncoder().encode(wire).buffer);
+				await new Promise(resolve=>setTimeout(resolve,0));
+			}`, string(encoded), persisted)
+			if page.MustEval(`()=>!document.querySelector('#review').hidden || !document.querySelector('#export-preview').disabled || document.querySelector('#report-status').dataset.state!=='cleared'`).
+				Bool() {
+				t.Fatal("late file read restored a report after page exit")
+			}
+			page.MustEval(`wire=>{
+				document.querySelector('#report-file').value='';
+				const input=document.querySelector('#report-text');input.value=wire;
+				input.dispatchEvent(new Event('input',{bubbles:true}));
+			}`, string(encoded))
+			page.MustElement("#read-report").MustClick()
+			page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+			page.MustElement("#product-list button").MustClick()
+			page.MustElement("#export-preview").MustWait(`()=>!this.disabled`)
+		})
+	}
+}
