@@ -5,6 +5,7 @@ package browser_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -251,5 +252,82 @@ func TestLineageRejectsFalseCompleteAndPrivateFields(t *testing.T) {
 			Bool() {
 			t.Fatal("malformed trace downloadable")
 		}
+	}
+}
+
+// TestLineagePendingResponseCannotCrossPageExit revokes delayed observations before a document is restored.
+func TestLineagePendingResponseCannotCrossPageExit(t *testing.T) {
+	for _, persisted := range []bool{false, true} {
+		t.Run(fmt.Sprintf("persisted=%t", persisted), func(t *testing.T) {
+			server, calls, _, _ := lineageFixture(t)
+			page := contractBrowser(t).MustPage().Timeout(20 * time.Second).
+				MustNavigate(server.URL + "?product=products%2Froot").MustWaitLoad()
+			page.MustElement("#trace-inputs").MustWaitVisible()
+			page.MustEval(`()=>{
+				const originalFetch=window.fetch.bind(window);
+				let held=false;
+				window.fetch=async (url,options)=>{
+					if(held || !String(url).endsWith('/lineage')) return originalFetch(url,options);
+					held=true;
+					// Deliver the real HTTP response even when this document cancels its read.
+					const {signal,...transportOptions}=options;
+					const response=await originalFetch(url,transportOptions);
+					const body=await response.arrayBuffer();
+					const delivered=new Response(body,{status:response.status,headers:response.headers});
+					const getReader=delivered.body.getReader.bind(delivered.body);
+					window.traceReadComplete=false;
+					delivered.body.getReader=(...args)=>{
+						const reader=getReader(...args);
+						const read=reader.read.bind(reader),cancel=reader.cancel.bind(reader);
+						let consumed=false;
+						reader.read=async (...args)=>{const chunk=await read(...args);if(chunk.done) consumed=true;return chunk;};
+						reader.cancel=async (...args)=>{
+							await cancel(...args);
+							// Signal only after EOF, cancellation, and the consumer's queued continuations.
+							setTimeout(()=>window.traceReadComplete=consumed,0);
+						};
+						return reader;
+					};
+					return new Promise(resolve=>window.finishTrace=()=>resolve(delivered));
+				};
+			}`)
+			page.MustElement("#trace-inputs").MustClick()
+			page.MustWait(`()=>typeof window.finishTrace==='function'`)
+			if calls.Load() != 1 {
+				t.Fatal("pending trace did not reach the real lineage API once")
+			}
+			page.MustEval(
+				`persisted=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted}))`,
+				persisted,
+			)
+			if page.MustEval(`()=>!document.querySelector('#dependency-trace').hidden || document.querySelector('#dependency-trace').getAttribute('aria-busy')==='true'`).
+				Bool() {
+				t.Fatal("page exit retained a pending trace")
+			}
+			page.MustEval(`()=>finishTrace()`)
+			page.MustWait(`()=>window.traceReadComplete===true`)
+			if page.MustEval(`()=>!document.querySelector('#trace-result').hidden || !document.querySelector('#save-trace').hidden || document.querySelector('#trace-status').textContent!=='' || document.querySelectorAll('#trace-table tbody tr, #trace-edges tbody tr').length!==0`).
+				Bool() {
+				t.Fatal("late lineage response restored an exited document")
+			}
+			page.MustEval(
+				`persisted=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted}))`,
+				persisted,
+			)
+			if !persisted {
+				page.MustElement("#refresh-products").MustClick()
+			}
+			page.MustElement("#trace-inputs").MustWaitVisible()
+			if calls.Load() != 1 {
+				t.Fatal("document restoration fetched lineage without an explicit action")
+			}
+			page.MustElement("#trace-inputs").MustClick()
+			page.MustElement("#trace-status").
+				MustWait(`()=>this.textContent.includes('Incomplete trace')`)
+			page.MustElement("#save-trace").MustWaitVisible()
+			if calls.Load() != 2 {
+				t.Fatal("restored document did not fetch a fresh lineage observation")
+			}
+		})
 	}
 }
