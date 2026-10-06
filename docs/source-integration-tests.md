@@ -80,7 +80,12 @@ The suite checks the workload-absent HTTP default and both connector-observation
 flag states before granting exactly one named Deployment GET. It follows source
 outage, recovery, revoked Kubernetes permissions, and projected bearer-token
 rotation through `ConnectorReady`, aggregate `Ready`, and the registry response.
-Credential rotation must retain the connector Pod UID. Management metrics must
+Credential rotation must retain the connector Pod UID. A separate candidate phase installs
+`httpSource.replicas=2`, joins both endpoints to the current Deployment and ReplicaSet, and
+checks queries, OpenAPI, readiness and fresh metrics at each Pod address. It revokes the old
+token, projects the replacement, and restores the original pair while requiring the same
+Pod UIDs and restart counts. The phase restores one replica before the existing fault and
+released rollback cases. Management metrics must
 remain reachable while the data service is unready.
 
 An allowed consumer reads the real export and its OpenAPI document. A consumer

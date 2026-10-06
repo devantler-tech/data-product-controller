@@ -131,6 +131,66 @@ source_lifecycle_run() {
 	lifecycle_wait 'restored source remains fully ready' 240 readiness True true
 }
 
+# source_replica_inventory joins every source Pod to the current complete Deployment and ReplicaSet.
+source_replica_inventory() {
+	kube get deployment,replicaset,pod -l app.kubernetes.io/component=http-source -o json |
+		jq -ceS -f "$repo_root/tests/source/lifecycle-state.jq" --arg mode source-pods --argjson count "$1" --argjson healthy "${2:-true}"
+}
+
+# source_replicas_access checks each current endpoint directly and requires unchanged identity and restart counts.
+source_replicas_access() {
+	local expected=$1 ready=$2 since=$3 inventory address query_status=200 readiness_status=200
+	inventory=$(source_replica_inventory 2 false) || return 1
+	[[ "$inventory" == "$expected" ]] || return 1
+	if [[ "$ready" == 0 ]]; then
+		query_status=502
+		readiness_status=503
+	fi
+	while IFS= read -r address; do
+		[[ "$address" != *:* ]] || address="[$address]"
+		if [[ "$ready" == 1 ]]; then
+			probe --url "http://$address:8080/api/data" --contains '"fixture":"source"' || return 1
+			probe --url "http://$address:8080/openapi.json" --contains '"openapi"' || return 1
+		else
+			probe --url "http://$address:8080/api/data" --want-status "$query_status" || return 1
+		fi
+		probe --url "http://$address:8081/readyz" --want-status "$readiness_status" || return 1
+		kube exec consumer -- /fixture metrics --url "http://$address:8081/metrics" \
+			--kind http-source --ready "$ready" --since "$since" --timeout 10s || return 1
+	done < <(jq -r '.[].ip' <<<"$inventory")
+	[[ $(source_replica_inventory 2 false) == "$expected" ]]
+}
+
+# source_lifecycle_replicas_run rotates the projected Secret on every installed replica, then restores one-replica acceptance.
+source_lifecycle_replicas_run() {
+	lifecycle_begin 'two HTTP source replicas and projected credential rotation' 900 || return 1
+	local inventory phase
+	install_chart --set httpSource.enabled=true --set httpSource.replicas=2 \
+		--set connectorReadiness.enabled=true --set contractReadiness.enabled=false
+	lifecycle_wait 'both source replicas have current owned endpoints' 180 source_replica_inventory 2
+	inventory=$(source_replica_inventory 2)
+	phase=$(lifecycle_phase)
+	lifecycle_wait 'both current source replicas serve queries and fresh readiness' 90 source_replicas_access "$inventory" 1 "$phase"
+	lifecycle_wait 'the selected product observes the complete two-replica connector' 180 readiness True true
+	phase=$(lifecycle_phase)
+	docker exec "$source_container" /fixture control rotated
+	lifecycle_wait 'both existing replicas reject the revoked credential' 120 source_replicas_access "$inventory" 0 "$phase"
+	lifecycle_wait 'both revoked replicas withdraw selected product readiness' 180 readiness False false
+	phase=$(lifecycle_phase)
+	source_secret fixture-token-b
+	lifecycle_wait 'both retained replicas recover with the projected new credential' 300 source_replicas_access "$inventory" 1 "$phase"
+	lifecycle_wait 'the selected product recovers after both projections' 180 readiness True true
+	phase=$(lifecycle_phase)
+	docker exec "$source_container" /fixture control healthy
+	source_secret fixture-token-a
+	lifecycle_wait 'both retained replicas restore the original credential pair' 300 source_replicas_access "$inventory" 1 "$phase"
+	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true --set contractReadiness.enabled=false
+	lifecycle_wait 'one-replica source behavior is restored for existing fault and rollback cases' 180 source_replica_inventory 1
+	lifecycle_wait 'restored one-replica source is ready' 180 readiness True true
+	source_lifecycle_retention_check
+	echo 'PASS: two installed source replicas rotate credentials without Pod replacement or restart'
+}
+
 # source_lifecycle_rollback_check requires working exports, fresh source observations and retained ownership after Helm rollback.
 source_lifecycle_rollback_check() {
 	lifecycle_begin 'HTTP source after installed rollback' 120 || return 1

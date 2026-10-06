@@ -53,6 +53,7 @@ contractProbe:
 
 httpSource:
   enabled: false
+  replicas: 1
   secretName: ""
   sourceCIDR: ""
   consumerPodLabels: {}

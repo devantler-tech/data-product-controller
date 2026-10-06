@@ -63,6 +63,7 @@ image:
   digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 httpSource:
   enabled: true
+  replicas: 2
   secretName: existing-export
   sourceCIDR: 192.0.2.10/32
   consumerPodLabels:
@@ -70,6 +71,11 @@ httpSource:
   monitorPodLabels:
     app: trusted-monitor
 ```
+
+The workload stays disabled by default. When enabled, `httpSource.replicas` defaults to one;
+set a positive integer to run multiple replicas behind the same Service. Each replica uses the
+same projected Secret and the same access policy. Kubernetes propagates Secret updates to each
+replica independently; wait for every replica to recover before completing a credential rotation.
 
 The example digest and address are placeholders. Render for a non-default namespace before applying:
 
@@ -115,7 +121,8 @@ this policy. Only the separate management port exposes probes and metrics.
 | Response boundary        | Complete validated JSON only; no upstream cookies, redirects, authentication challenges, or other headers. Responses use `Cache-Control: no-store`. |
 
 The chart probes readiness every 30 seconds with a seven-second timeout. Each probe reads the full
-export, so include that traffic in the source's request budget. The connector performs no application
+export on every replica, so include the combined traffic in the source's request budget.
+Query and probe capacity limits apply separately to each replica. The connector performs no application
 retries or caching. Source outages, TLS failures, invalid responses, missing credentials, and revoked
 credentials fail closed; the next successful access restores observed readiness. The source owner
 controls how long old credentials remain valid during rotation.

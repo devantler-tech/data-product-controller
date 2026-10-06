@@ -25,7 +25,7 @@ metadata:
     {{- include "data-product-controller.labels" . | nindent 4 }}
     app.kubernetes.io/component: http-source
 spec:
-  replicas: 1
+  replicas: {{ .Values.httpSource.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: data-product-controller
