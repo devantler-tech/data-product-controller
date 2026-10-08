@@ -5,6 +5,7 @@ set -euo pipefail
 umask 077
 script_dir=$(cd "$(dirname "$0")" && pwd)
 products=() deployments=() containers=() conditions=() runtime_digests=()
+expected_types=() expected_statuses=() expected_reasons=()
 kubeconfig='' context='' namespace='' image='' evidence_dir='' timeout_seconds=''
 active_read='' watchdog='' evidence_created=0 started_at=$SECONDS
 
@@ -43,6 +44,15 @@ while [[ $# -gt 0 ]]; do
 		containers+=("${2#*:}")
 		;;
 	--condition) conditions+=("$2") ;;
+	--expected-condition)
+		[[ $2 == *:*:* ]] || fail invalid_arguments 2
+		expected_type=${2%%:*}
+		expected_rest=${2#*:}
+		conditions+=("$expected_type")
+		expected_types+=("$expected_type")
+		expected_statuses+=("${expected_rest%%:*}")
+		expected_reasons+=("${expected_rest#*:}")
+		;;
 	--image) image=$2 ;;
 	--runtime-digest) runtime_digests+=("$2") ;;
 	--timeout) timeout_seconds=$2 ;;
@@ -68,6 +78,14 @@ for value in "${products[@]}" "${deployments[@]}"; do dns_name "$value" || fail 
 for value in "${containers[@]}"; do dns_label "$value" || fail invalid_arguments 2; done
 for value in "${conditions[@]}"; do
 	case "$value" in Ready | SourceReady | ConnectorReady | ContractsReady | CompositionReady) ;; *) fail invalid_arguments 2 ;; esac
+done
+for ((i = 0; i < ${#expected_types[@]}; i++)); do
+	case "${expected_statuses[$i]}" in True | False | Unknown) ;; *) fail invalid_arguments 2 ;; esac
+	reason=${expected_reasons[$i]}
+	# Match the CRD's ASCII Reason grammar; split only the first two CLI colons.
+	[[ ${#reason} -ge 1 && ${#reason} -le 1024 ]] || fail invalid_arguments 2
+	[[ $reason =~ ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$ ]] || fail invalid_arguments 2
+	[[ $reason != *[!ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_,:]* ]] || fail invalid_arguments 2
 done
 unique "${products[@]}" || fail invalid_arguments 2
 unique "${deployments[@]}" || fail invalid_arguments 2
@@ -112,7 +130,7 @@ bounded() {
 project_read() {
 	local mode=$1 destination=$2
 	shift 2
-	kubectl "$@" 2>/dev/null | jq -se --arg mode "$mode" -f "$script_dir/observe-rollout.jq" >"$destination" 2>/dev/null
+	kubectl "$@" 2>/dev/null | jq -se --arg mode "$mode" --argjson expected_conditions "$expected_conditions" -f "$script_dir/observe-rollout.jq" >"$destination" 2>/dev/null
 }
 read_metadata() {
 	local mode=$1 destination=$2 resource=$3 name=${4:-} request_seconds
@@ -128,6 +146,12 @@ read_metadata() {
 
 product_names=$(printf '%s\n' "${products[@]}" | jq -Rsc 'split("\n")[:-1]')
 required_conditions=$(printf '%s\n' "${conditions[@]}" | jq -Rsc 'split("\n")[:-1]')
+expected_conditions='[]'
+for ((i = 0; i < ${#expected_types[@]}; i++)); do
+	expected_conditions=$(jq -cn --argjson current "$expected_conditions" --arg type "${expected_types[$i]}" \
+		--arg status "${expected_statuses[$i]}" --arg reason "${expected_reasons[$i]}" \
+		'$current + [{type:$type,status:$status,reason:$reason}]')
+done
 accepted_digests=$(printf '%s\n' "${image##*@}" "${runtime_digests[@]}" | jq -Rsc 'split("\n")[:-1] | unique')
 deployment_identities='[]'
 for ((i = 0; i < ${#deployments[@]}; i++)); do
@@ -139,6 +163,7 @@ check_json() {
 	jq -en --arg mode "$mode" --arg namespace "$namespace" --arg image "$image" \
 		--argjson product_names "$product_names" --argjson deployment_identities "$deployment_identities" \
 		--argjson required_conditions "$required_conditions" --argjson accepted_digests "$accepted_digests" \
+		--argjson expected_conditions "$expected_conditions" \
 		--slurpfile products "$evidence_dir/products.json" --slurpfile deployments "$evidence_dir/deployments.json" \
 		--slurpfile replicasets "$evidence_dir/replicasets.json" --slurpfile pods "$evidence_dir/pods.json" \
 		--slurpfile final_products "$evidence_dir/final-products.json" --slurpfile final_deployments "$evidence_dir/final-deployments.json" \
