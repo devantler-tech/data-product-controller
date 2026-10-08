@@ -30,6 +30,32 @@ Supported additional conditions are `SourceReady`, `ConnectorReady`,
 `ContractsReady` and `CompositionReady`. Use separate invocations when products
 require different condition sets or workloads use different images.
 
+For an acceptance trial with intentionally expected readiness failure, replace
+that type's `--condition` with `--expected-condition TYPE:STATUS:REASON`:
+
+```bash
+# Add these selectors to an invocation with the same explicit resource identities.
+--expected-condition Ready:False:ConnectorAccessDenied \
+--expected-condition ConnectorReady:False:ConnectorAccessDenied
+```
+
+This option accepts the same five condition types and the exact statuses `True`,
+`False` and `Unknown`. The reason must match exactly and use the API's ASCII
+Reason grammar: 1–1,024 characters, beginning with a letter and ending with a
+letter, digit or underscore; internal letters, digits, underscores, commas and
+colons are permitted. Only the first two colons separate the selector fields.
+The combined selectors must still include `Ready` and must name each type once;
+conflicting or repeated selectors fail before any cluster read. Expectations
+apply to every selected product.
+
+An explicit expectation never changes workload requirements. Selected Deployments,
+ReplicaSets and Pods must still have complete positive readiness and verified
+runtime identity. Use this option for a product condition failure while those
+selected workloads remain healthy. It does not observe a zero-capacity or partial
+workload phase, grant access, induce a fault, or establish its cause. Aggregate
+`Ready` can reflect an earlier source or dependency failure, so choose each
+condition's expected reason independently from the reviewed trial.
+
 The timeout is required and accepts 1–600 seconds. There are at most 64 products,
 64 Deployments and eight additional runtime digests per invocation. Namespace
 inventories exceeding 4,096 ReplicaSets or Pods are incomplete. These bounds keep
@@ -44,8 +70,10 @@ including a stalled credential plugin. An unreadable, forbidden, empty or malfor
 fails the observation. Incomplete readiness retries within the same absolute
 deadline; a deadline can never produce success.
 
-Success requires exactly one true condition of each required type at the current
-product generation. Every Deployment must have a current observed generation,
+Success requires exactly one condition of each selected type at the current
+product generation. A `--condition` selector requires `True`; an explicit
+expectation requires its exact status and reason in both snapshots.
+Every Deployment must have a current observed generation,
 positive desired replicas, and all desired replicas updated, ready and available.
 Its current revision must identify exactly one live ReplicaSet owned by the exact
 Deployment UID, with current observed generation and full replica readiness.
@@ -66,12 +94,20 @@ acceptance cluster.
 
 The evidence directory must be a new absolute path. It is created with mode
 `0700`; files use `0600`. The retained JSON is a metadata projection: resource
-identity, generation, revision, ownership, replica counts, condition booleans,
-container image and runtime identity. Product specs, condition prose, unrelated
+identity, generation, revision, ownership, replica counts, condition statuses,
+container image and runtime identity. Explicit reason expectations retain only a
+match boolean; raw reasons and the caller's requested reason are not written.
+Product specs, condition prose, unrelated
 annotations, environment, volumes and Secret values are excluded before writing.
-Keep these files private. Standard output contains only completeness, product,
-Deployment and Pod counts, plus a fixed failure code on failure. Exit zero means
-complete; other exits fail closed. The evidence is a bounded observation across
+Keep these files private. A legacy invocation's standard output contains only
+completeness, product, Deployment and Pod counts, plus a fixed failure code on
+failure. Exit zero means
+complete; other exits fail closed. An opt-in invocation additionally reports
+`"expectation":"conditions"` and `healthy`, which is false when a selected
+expected status is `False` or `Unknown`. Its `complete:true` means the requested
+state was observed, including an intentional failure; it is not healthy rollout
+or adoption evidence. Invocations using only `--condition` keep the original
+summary shape. The evidence is a bounded observation across
 several reads, not an atomic Kubernetes snapshot or a guarantee of later health.
 
 Run the synthetic boundary tests with:
@@ -84,4 +120,6 @@ They invoke the real observer and constrain the external kubectl boundary to
 explicitly scoped, read-only calls. They cover stale and duplicate conditions,
 zero or partial replicas, current and old ownership chains, runtime identity,
 terminating and foreign-owned Pods, denied or incomplete reads, deadline
-enforcement, and changes during the final read.
+enforcement, and changes during the final read. Explicit expectation cases also
+cover false, unknown and recovered conditions, reason parsing and privacy,
+contradictory observations and final status or reason changes.

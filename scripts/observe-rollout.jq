@@ -3,6 +3,7 @@
 $ARGS.named.namespace as $namespace |
 $ARGS.named.image as $image |
 $ARGS.named.required_conditions as $required_conditions |
+($ARGS.named.expected_conditions // []) as $expected_conditions |
 $ARGS.named.accepted_digests as $accepted_digests |
 $ARGS.named.product_names as $product_names |
 $ARGS.named.deployment_identities as $deployment_identities |
@@ -21,7 +22,12 @@ def metadata:
 def containers: [.[]? | {name,image}];
 def product:
   {apiVersion,kind,metadata:(.metadata | metadata),
-   status:{conditions:[.status.conditions[]? | {type,status,observedGeneration}]}};
+   status:{conditions:[.status.conditions[]? |
+     . as $condition | [$expected_conditions[] | select(.type == $condition.type)] as $expected |
+     {type,status,observedGeneration} +
+     (if ($expected | length) == 1 then
+       {expectedReasonMatched:($condition.reason == $expected[0].reason)}
+      else {} end)]}};
 def deployment:
   {apiVersion,kind,metadata:(.metadata | metadata),
    spec:{replicas:.spec.replicas,containers:(.spec.template.spec.containers | containers)},
@@ -43,12 +49,14 @@ def identity($name; $kind; $version):
   (.metadata.name | type == "string" and length > 0) and
   .metadata.namespace == $namespace and (.metadata.uid | type == "string" and length > 0) and
   (.metadata.generation | positive) and .metadata.deletionTimestamp == null;
-def conditions_ready:
+def conditions_match:
   . as $p | all($required_conditions[];
     . as $type | [$p.status.conditions[] | select(.type == $type)] as $matching |
-    ($matching | length) == 1 and $matching[0].status == "True" and
+    [$expected_conditions[] | select(.type == $type)] as $expected |
+    ($matching | length) == 1 and $matching[0].status == ($expected[0].status // "True") and
+    (($expected | length) == 0 or $matching[0].expectedReasonMatched == true) and
     $matching[0].observedGeneration == $p.metadata.generation);
-def product_ready($name): identity($name; "DataProduct"; "data.devantler.tech/v1alpha1") and conditions_ready;
+def product_matches($name): identity($name; "DataProduct"; "data.devantler.tech/v1alpha1") and conditions_match;
 def deployment_ready($name; $container):
   . as $d | identity($name; "Deployment"; "apps/v1") and
   (.metadata.revision | type == "string" and test("^[1-9][0-9]*$")) and
@@ -100,7 +108,7 @@ def snapshot_ready:
   ($products[0] | length) == ($product_names | length) and
   ($deployments[0] | length) == ($deployment_identities | length) and
   inventory_valid($replicasets[0].items) and inventory_valid($pods[0].items) and
-  all(range(0; $product_names | length); . as $i | $products[0][$i] | product_ready($product_names[$i])) and
+  all(range(0; $product_names | length); . as $i | $products[0][$i] | product_matches($product_names[$i])) and
   all(range(0; $deployment_identities | length); . as $i | $deployment_identities[$i] as $identity |
     $deployments[0][$i] as $d | ($d | deployment_ready($identity.name; $identity.container)) and
     workload_ready($d; $identity.container; $replicasets[0]; $pods[0]));
@@ -119,7 +127,7 @@ def final_stable:
   ($final_deployments[0] | length) == ($deployment_identities | length) and
   inventory_valid($final_replicasets[0].items) and inventory_valid($final_pods[0].items) and
   all(range(0; $product_names | length); . as $i | $final_products[0][$i] as $after |
-    ($after | product_ready($product_names[$i])) and
+    ($after | product_matches($product_names[$i])) and
     $after.metadata.uid == $products[0][$i].metadata.uid and $after.metadata.generation == $products[0][$i].metadata.generation) and
   all(range(0; $deployment_identities | length); . as $i | $deployment_identities[$i] as $identity |
     $final_deployments[0][$i] as $after | ($after | deployment_ready($identity.name; $identity.container)) and
@@ -143,5 +151,8 @@ if $mode == "product" or $mode == "deployment" or $mode == "replicasets" or $mod
     else error("invalid_inventory") end
   end
 elif ($mode == "snapshot" or $mode == "final") and snapshot_ready and ($mode != "final" or final_stable) then
-  {complete:true,products:($product_names | length),deployments:($deployment_identities | length),pods:([$deployments[0][].spec.replicas] | add)}
+  {complete:true,products:($product_names | length),deployments:($deployment_identities | length),pods:([$deployments[0][].spec.replicas] | add)} +
+  (if ($expected_conditions | length) > 0 then
+    {expectation:"conditions",healthy:all($expected_conditions[]; .status == "True")}
+   else {} end)
 else false end

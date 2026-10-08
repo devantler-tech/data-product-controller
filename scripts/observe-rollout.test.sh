@@ -53,6 +53,32 @@ fi
 if [[ $OBSERVER_CASE == slow_snapshot ]]; then sleep 1; fi
 if [[ $OBSERVER_CASE == empty && $key == pods ]]; then exit 0; fi
 filter='.'
+if [[ $OBSERVER_CASE == expected_* ]]; then
+  filter='.product.status.conditions[] |= (.status="False" | .reason="ConnectorAccessDenied")'
+fi
+case "$OBSERVER_CASE" in
+  expected_mixed) filter+=' | .product.status.conditions[1] |= (.status="True" | .reason="DO_NOT_RETAIN")' ;;
+  expected_unknown) filter+=' | .product.status.conditions[0].status="Unknown" | .product.status.conditions[1].status="True"' ;;
+  expected_recovery) filter='.product.status.conditions[0] |= (.status="True" | .reason="DependenciesReady") | .product.status.conditions[1] |= (.status="True" | .reason="ConnectorReady")' ;;
+  expected_reason_delimiters) filter+=' | .product.status.conditions[].reason="Fault:Scope,Withdrawn"' ;;
+  expected_reason_single) filter+=' | .product.status.conditions[].reason="A"' ;;
+  expected_reason_boundary) filter+=' | .product.status.conditions[].reason=("A" * 1024)' ;;
+  expected_wrong_status) filter+=' | .product.status.conditions[0].status="True"' ;;
+  expected_wrong_reason) filter+=' | .product.status.conditions[0].reason="DO_NOT_RETAIN"' ;;
+  expected_null_reason) filter+=' | .product.status.conditions[0].reason=null' ;;
+  expected_object_reason) filter+=' | .product.status.conditions[0].reason={"private":"DO_NOT_RETAIN"}' ;;
+  expected_stale) filter+=' | .product.status.conditions[0].observedGeneration=3' ;;
+  expected_future) filter+=' | .product.status.conditions[0].observedGeneration=5' ;;
+  expected_duplicate) filter+=' | .product.status.conditions += [.product.status.conditions[0]]' ;;
+  expected_missing) filter+=' | .product.status.conditions |= map(select(.type != "Ready"))' ;;
+  expected_zero) filter+=' | .deployment.spec.replicas=0 | .deployment.status |= (.replicas=0 | .updatedReplicas=0 | .readyReplicas=0 | .availableReplicas=0)' ;;
+  expected_partial) filter+=' | .deployment.status.readyReplicas=1' ;;
+  expected_runtime) filter+=' | .pods.items[0].status.containerStatuses[0].imageID="garbage"' ;;
+  expected_unready) filter+=' | .pods.items[0].status.conditions[0].status="False"' ;;
+  expected_foreign) filter+=' | .pods.items[0].metadata.ownerReferences[0].uid="foreign-rs"' ;;
+  expected_final_reason) [[ $count == 1 || $key != product ]] || filter+=' | .product.status.conditions[0].reason="DO_NOT_RETAIN"' ;;
+  expected_final_status) [[ $count == 1 || $key != product ]] || filter+=' | .product.status.conditions[0].status="True"' ;;
+esac
 case "$OBSERVER_CASE" in
   typed_inventory) filter='.replicasets.kind="ReplicaSetList" | .replicasets.apiVersion="apps/v1" | .pods.kind="PodList"' ;;
   wrong_inventory) filter='.replicasets.kind="DeploymentList"' ;;
@@ -109,13 +135,17 @@ export PATH="$test_dir/bin:$PATH"
 # Check the real observer's result, phase-specific failure and private evidence.
 run_observer() {
 	local scenario=$1 expected=$2
+	shift 2
+	local selectors=(--condition Ready --condition ConnectorReady)
+	if [[ $# -gt 0 ]]; then selectors=("$@"); fi
 	export OBSERVER_CASE=$scenario
 	local output="$test_dir/$scenario.out" status=0 invocation_timeout=1
 	case "$scenario" in ready | typed_inventory | foreign_inventory | index_runtime | pullable_runtime | reconfigured | recreated | revised | product_recreated | product_changed | product_failed) invocation_timeout=5 ;; hung | slow_snapshot) invocation_timeout=2 ;; esac
 	case "$scenario" in final_*) invocation_timeout=5 ;; esac
+	case "$scenario" in expected_*) [[ $expected != success && $scenario != expected_final_* ]] || invocation_timeout=5 ;; esac
 	bash "$repo_root/scripts/observe-rollout.sh" \
 		--kubeconfig "$test_dir/kubeconfig" --context fixture --namespace products \
-		--product export --deployment dpc:controller --condition Ready --condition ConnectorReady \
+		--product export --deployment dpc:controller "${selectors[@]}" \
 		--image "$OBSERVER_IMAGE" --runtime-digest "$runtime" --timeout "$invocation_timeout" \
 		--evidence-dir "$test_dir/evidence-$scenario" >"$output" 2>"$test_dir/$scenario.err" || status=$?
 	if [[ $expected == success ]]; then
@@ -125,6 +155,16 @@ run_observer() {
 			exit 1
 		}
 		jq -e '.complete == true and .products == 1 and .deployments == 1 and .pods == 2' "$output" >/dev/null
+		if [[ " ${selectors[*]} " == *' --expected-condition '* ]]; then
+			jq -e '.expectation == "conditions" and (.healthy | type == "boolean")' "$output" >/dev/null
+			if [[ $scenario == expected_recovery ]]; then
+				jq -e '.healthy == true' "$output" >/dev/null
+			else
+				jq -e '.healthy == false' "$output" >/dev/null
+			fi
+		else
+			jq -e 'keys == ["complete","deployments","pods","products"]' "$output" >/dev/null
+		fi
 		[[ -s "$test_dir/evidence-$scenario/product-0-final.json" && -s "$test_dir/evidence-$scenario/deployment-0-final.json" ]]
 		[[ -s "$test_dir/evidence-$scenario/final-replicasets.json" && -s "$test_dir/evidence-$scenario/final-pods.json" ]]
 		[[ $(cat "$test_dir/$scenario-replicasets.count") == 2 && $(cat "$test_dir/$scenario-pods.count") == 2 ]]
@@ -144,6 +184,11 @@ run_observer() {
 		}
 		jq -e '.complete == false and (.failure | type == "string")' "$output" >/dev/null
 		case "$scenario" in
+		expected_final_*) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
+		expected_invalid_*)
+			jq -e '.failure == "invalid_arguments"' "$output" >/dev/null
+			[[ ! -e "$test_dir/$scenario-product.count" ]]
+			;;
 		reconfigured | recreated | revised | product_recreated | product_changed | product_failed) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
 		final_incomplete_read) jq -e '.failure == "read_incomplete"' "$output" >/dev/null ;;
 		final_*) jq -e '.failure == "rollout_changed"' "$output" >/dev/null ;;
@@ -156,6 +201,31 @@ run_observer() {
 	fi
 	printf 'PASS %s\n' "$scenario"
 }
+
+fault_selectors=(--expected-condition Ready:False:ConnectorAccessDenied --expected-condition ConnectorReady:False:ConnectorAccessDenied)
+run_observer expected_access success "${fault_selectors[@]}"
+run_observer expected_mixed success --expected-condition Ready:False:ConnectorAccessDenied --condition ConnectorReady
+run_observer expected_unknown success --expected-condition Ready:Unknown:ConnectorAccessDenied --condition ConnectorReady
+run_observer expected_recovery success --expected-condition Ready:True:DependenciesReady --expected-condition ConnectorReady:True:ConnectorReady
+run_observer expected_reason_delimiters success --expected-condition Ready:False:Fault:Scope,Withdrawn --expected-condition ConnectorReady:False:Fault:Scope,Withdrawn
+run_observer expected_reason_single success --expected-condition Ready:False:A --expected-condition ConnectorReady:False:A
+long_reason=$(printf '%01024d' 0 | tr 0 A)
+run_observer expected_reason_boundary success --expected-condition "Ready:False:$long_reason" --expected-condition "ConnectorReady:False:$long_reason"
+for scenario in expected_wrong_status expected_wrong_reason expected_null_reason expected_object_reason expected_stale expected_future expected_duplicate expected_missing expected_zero expected_partial expected_runtime expected_unready expected_foreign expected_final_reason expected_final_status; do
+	run_observer "$scenario" failure "${fault_selectors[@]}"
+done
+run_observer expected_legacy_failure failure
+run_observer expected_invalid_type failure --expected-condition Other:False:Denied --condition Ready
+run_observer expected_invalid_status failure --expected-condition Ready:false:Denied
+run_observer expected_invalid_reason_empty failure --expected-condition Ready:False:
+run_observer expected_invalid_reason_long failure --expected-condition "Ready:False:${long_reason}A"
+run_observer expected_invalid_reason_unicode failure --expected-condition Ready:False:Déni
+run_observer expected_invalid_reason_punctuation failure --expected-condition Ready:False:Denied!
+run_observer expected_invalid_reason_ending failure --expected-condition Ready:False:Denied:
+run_observer expected_invalid_missing_status failure --expected-condition Ready:Denied
+run_observer expected_invalid_missing_ready failure --expected-condition ConnectorReady:False:Denied
+run_observer expected_invalid_duplicate failure --expected-condition Ready:False:Denied --expected-condition Ready:False:Denied
+run_observer expected_invalid_conflict failure --condition Ready --expected-condition Ready:False:Denied
 
 run_observer ready success
 run_observer typed_inventory success
