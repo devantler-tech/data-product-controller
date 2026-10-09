@@ -6,7 +6,7 @@ require (
 	github.com/arangodb/kube-arangodb v0.0.0-20260902085934-c8ddcb3ff018
 	github.com/go-rod/rod v0.116.2
 	github.com/open-feature/go-sdk v1.19.0
-	github.com/piprate/json-gold v0.8.0
+	github.com/piprate/json-gold v0.9.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.3
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
