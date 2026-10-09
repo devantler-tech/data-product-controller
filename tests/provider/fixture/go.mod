@@ -1,6 +1,6 @@
 module github.com/devantler-tech/data-product-controller/tests/provider/fixture
 
-go 1.26.6
+go 1.26.9
 
 require (
 	github.com/jackc/pgx/v5 v5.11.0
