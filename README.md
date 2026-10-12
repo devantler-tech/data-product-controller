@@ -143,6 +143,12 @@ The latest requested station owns the result, even if an earlier request finishe
 When embedded, use the workspace's **Open API** and **View contract** links. The sample's
 data-access footer appears only on its standalone page.
 
+The optional [KSail release product](docs/ksail-releases.md) displays real published versions,
+UTC dates and channels from GitHub. Its filters use the loaded public API page, and **Refresh
+releases** makes one credential-free source read. It shares the independent reference workload;
+the controller receives no release records. Publication is default-off and activated through
+deployment-owned chart values.
+
 The registry and Harbour pages use content-addressed scripts and styles. Their HTML is not
 cached, so upgrades load the matching assets even when a browser or CDN retains an older release.
 
@@ -207,6 +213,7 @@ The current foundation provides:
 - a registry workspace that renders product descriptors and embeds product UIs in a restricted sandbox;
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
+- an optional live [KSail release browser](docs/ksail-releases.md) with its external public query contract and bounded, credential-free reads;
 - an opt-in, Secret-backed HTTPS JSON export connector with a read-only API, OpenAPI contract, probes, and metrics;
 - a Helm chart containing CRDs, least-privilege RBAC, hardened workloads, services, and optional Gateway API routing. Leader election uses release-local Leases and core Event create/patch permissions; it grants no cluster-wide Event access.
 

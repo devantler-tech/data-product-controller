@@ -86,6 +86,8 @@ controller:
 
 demoProduct:
   enabled: true
+  ksailReleases:
+    enabled: false
   replicas: 1
   # Empty derives the shared-host path when route.enabled is true.
   publicBaseURL: ""

@@ -2,6 +2,16 @@
   "$schema": "https://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "demoProduct": {
+      "type": "object",
+      "properties": {
+        "ksailReleases": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "enabled": { "type": "boolean" } }
+        }
+      }
+    },
     "registryLineage": {
       "type": "object",
       "additionalProperties": false,
