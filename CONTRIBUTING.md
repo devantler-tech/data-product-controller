@@ -1,8 +1,10 @@
 # Contributing to data-product-controller
 
 You can help by improving the documentation, fixing an example, or changing the controller, the
-registry or the chart. Discuss substantial changes in an
-[issue](https://github.com/devantler-tech/data-product-controller/issues) first; the
+registry or the chart. Open or find an
+[issue](https://github.com/devantler-tech/data-product-controller/issues) before you start, and
+reference it in the pull request; only a small, obvious fix such as a typo or a broken link may go
+straight to a pull request. The
 [roadmap](https://github.com/devantler-tech/data-product-controller/issues/1) shows what is
 planned. Report sensitive vulnerabilities through this repository's private
 [Report a vulnerability](https://github.com/devantler-tech/data-product-controller/security/advisories/new)
@@ -21,15 +23,16 @@ cd data-product-controller
 git switch -c docs/first-contribution
 ```
 
-Make a small wording improvement in `README.md`, then check the change for whitespace errors:
+Make a small, obvious correction in `README.md`, such as a typo, then check the change for whitespace errors:
 
 ```sh
 git diff --check
 ```
 
 The command must exit successfully and print nothing. Commit, push the branch to your fork and
-open a pull request with a [Conventional Commits](https://www.conventionalcommits.org/) title such
-as `docs: clarify the local example`.
+open a **draft** pull request with a [Conventional Commits](https://www.conventionalcommits.org/)
+title such as `docs: fix a typo in the local example`. Mark it ready for review once its checks
+have passed and you have answered the review comments.
 
 On the pull request, the organization's lint check also spell-checks the documentation; add a
 correct word it does not know to [`cspell.json`](cspell.json). This repository's own
@@ -43,7 +46,8 @@ You also need Go at the version in [`go.mod`](go.mod) or newer. The
 [README](README.md#try-it-locally) shows how to run the example product, which is the quickest way
 to see the code working.
 
-These checks need no cluster and no credentials. Run them before you open a pull request:
+Run the complete validation list in [AGENTS.md](AGENTS.md#validation) before you open a pull
+request, in the order given there. Its first Go checks need no cluster and no credentials:
 
 ```sh
 go build ./...
@@ -53,16 +57,16 @@ go test ./...
 Both exit successfully when the code compiles and the unit tests pass; the first run downloads
 dependencies and can take a few minutes.
 
-The remaining local checks need more tools:
+The other entries in that list need more tools:
 
-| Check                                                                     | Needs                                                                                 |
-|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
-| `go test -tags=browser ./internal/browser`                                | A Chromium-based browser; the test library downloads one when it finds none installed |
-| `sh scripts/chart.test.sh` and `helm lint charts/data-product-controller` | Helm and yq                                                                           |
-| `golangci-lint fmt` and `golangci-lint run`                               | golangci-lint                                                                         |
+| Check                                                                             | Needs                                                                                 |
+|-----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| `go test -tags=browser ./internal/browser`                                        | A Chromium-based browser; the test library downloads one when it finds none installed |
+| The `sh scripts/*.test.sh` entries and `helm lint charts/data-product-controller` | Helm and yq                                                                           |
+| `golangci-lint fmt` and `golangci-lint run`                                       | golangci-lint                                                                         |
 
-The complete list, in the order to run it, is in [AGENTS.md](AGENTS.md#validation). Run what your
-change touches and what your machine supports. CI runs these checks on the pull request, except
+The only checks you may leave to CI are the cluster-backed ones in the next section. CI runs the
+validation list on the pull request, except
 that a change limited to the reviewed browser test files runs the shorter set described in the
 [CI coverage note](docs/continuous-integration.md).
 

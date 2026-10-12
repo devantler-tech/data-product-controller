@@ -22,7 +22,7 @@ made-up measurements, the description of its API, and its own web page. The meas
 into the program; it reads no external source. Running it shows what a product publishes. It does not run the controller or the registry, and it needs no Kubernetes
 cluster, account or credentials.
 
-You need Git and Go at the version in [`go.mod`](go.mod) or newer.
+You need Git, `curl`, and Go at the version in [`go.mod`](go.mod) or newer.
 
 ```bash
 git clone https://github.com/devantler-tech/data-product-controller.git
@@ -184,8 +184,10 @@ fails.
 
 ## What is included
 
-Features marked default-off do nothing until an operator switches them on. The guides linked in
-this section say how.
+Features marked default-off make no reads and publish nothing until an operator switches them on.
+That is not the same as being ignored: a product that declares something a switched-off feature
+would check, such as a source or a connector, stays not ready until the feature is on. The guides
+linked in this section give each switch and its effect.
 
 The current foundation provides:
 
@@ -247,6 +249,7 @@ Engine-specific provisioning, additional source adapters, schema-content compati
 
 This part is for operators. It changes a Kubernetes cluster, so use one you are allowed to change.
 You need Helm, `kubectl` access to the cluster, and a Gateway API listener if you enable the route.
+Verifying a signature additionally needs Cosign.
 The chart's `kubeVersion` field states the Kubernetes versions it supports.
 
 The release workflows are set up to publish, for each release tag, the Helm chart plus a controller
