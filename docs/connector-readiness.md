@@ -6,7 +6,7 @@
 
 The `connector-readiness` OpenFeature release flag defaults off. Enable it with Helm's `--set connectorReadiness.enabled=true` or `CONNECTOR_READINESS_ENABLED=true` for the manager process. A product with a connector reference stays unready while the flag is disabled, and the controller makes no connector reads. Products without that reference retain their existing behavior.
 
-Upgrade the CRD before the controller when upgrading an existing installation, following the [Helm upgrade procedure](../README.md#install). Helm does not update CRDs during chart upgrades. Keep artifacts pinned to the released immutable digests.
+Upgrade the CRD before the controller when upgrading an existing installation, following the [Helm upgrade procedure](../README.md#install-on-a-cluster). Helm does not update CRDs during chart upgrades. Keep artifacts pinned to the released immutable digests.
 
 The chart and generated default RBAC grant no Deployment or Secret access for this feature.
 Operators supply a namespaced Role with only `get` on each authorized Deployment name. The [scoped

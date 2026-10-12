@@ -33,7 +33,7 @@ It does not fall back to a legacy frame. Existing descriptors without `contract`
 continue to use message-free sandboxed embedding. Rollback disables the flag and
 reloads host pages; already loaded browser sessions are not remotely revoked.
 Apply the updated CRD before upgrading an existing Helm installation, as described
-in the [installation guide](../README.md#install).
+in the [installation guide](../README.md#install-on-a-cluster).
 
 Platform owns production activation and immutable artifact pins. Release, local
 browser tests, and a successful handshake do not prove a production rollout.
