@@ -15,7 +15,7 @@ spec:
   owner:
     name: devantler-tech
     url: https://github.com/devantler-tech/ksail
-  documentationUrl: https://github.com/devantler-tech/data-product-controller/blob/main/docs/ksail-releases.md
+  documentationUrl: https://github.com/devantler-tech/data-product-controller
   outputs:
     - name: releases
       protocol: OpenAPI
