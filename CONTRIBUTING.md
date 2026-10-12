@@ -10,7 +10,8 @@ form, not a public issue or pull request.
 
 ## Make a first documentation change
 
-You need Git. This path needs no Go toolchain, cluster or credentials.
+You need Git and a GitHub account that can push to your own fork. This path needs no Go toolchain,
+no cluster and no credentials for any product or cloud service.
 
 Fork `devantler-tech/data-product-controller` on GitHub. Replace `YOUR-LOGIN` with your login:
 
@@ -57,11 +58,13 @@ The remaining local checks need more tools:
 | Check                                                                     | Needs                                                                                 |
 |---------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
 | `go test -tags=browser ./internal/browser`                                | A Chromium-based browser; the test library downloads one when it finds none installed |
-| `sh scripts/chart.test.sh` and `helm lint charts/data-product-controller` | Helm                                                                                  |
+| `sh scripts/chart.test.sh` and `helm lint charts/data-product-controller` | Helm and yq                                                                           |
 | `golangci-lint fmt` and `golangci-lint run`                               | golangci-lint                                                                         |
 
 The complete list, in the order to run it, is in [AGENTS.md](AGENTS.md#validation). Run what your
-change touches and what your machine supports; CI runs all of it on every pull request.
+change touches and what your machine supports. CI runs these checks on the pull request, except
+that a change limited to the reviewed browser test files runs the shorter set described in the
+[CI coverage note](docs/continuous-integration.md).
 
 ### Checks that hosted CI runs for you
 
@@ -101,8 +104,9 @@ Never edit these by hand:
   `charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml` and
   `deploy/data.devantler.tech_dataproducts.yaml`.
 
-After editing the API types or their markers in `api/v1alpha1/`, regenerate them and copy the
-resource definition to both places:
+After editing the API types in `api/v1alpha1/`, or any `+kubebuilder` marker anywhere in the code
+(the access markers live in `main.go` and `internal/controller/dataproduct_controller.go`),
+regenerate them and copy the resource definition to both places:
 
 ```sh
 go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \

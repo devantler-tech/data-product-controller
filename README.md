@@ -30,16 +30,20 @@ cd data-product-controller
 go run ./cmd/demo-product --listen-address 127.0.0.1:8080
 ```
 
-The first run downloads the Go dependencies and can take a few minutes. The example is running
-when it prints a line ending in:
+The first run downloads the Go dependencies and can take a few minutes. The example then prints a
+line ending in:
 
 ```text
 starting demo data product address=127.0.0.1:8080
 ```
 
+It prints that line before it opens the port, so the line alone does not show that the example is
+running. It is running when the command stays in the foreground and the request below is answered.
+If the command exits with an error instead, port 8080 is probably in use: choose another port and
+use it in the addresses below.
+
 The address `127.0.0.1` keeps the example reachable from your own machine only. Without
-`--listen-address` it listens on port 8080 on every network interface. If port 8080 is in use,
-choose another port and use it in the addresses below.
+`--listen-address` it listens on port 8080 on every network interface.
 
 In a second terminal, ask the example for its data:
 
