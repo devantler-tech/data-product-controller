@@ -18,8 +18,8 @@ owns the product.
 ## Try it locally
 
 The repository includes an example data product, *Harbour observations*, that serves two fixed,
-made-up measurements, the description of its API, and its own web page. Running it shows what a
-product publishes. It does not run the controller or the registry, and it needs no Kubernetes
+made-up measurements, the description of its API, and its own web page. The measurements are built
+into the program; it reads no external source. Running it shows what a product publishes. It does not run the controller or the registry, and it needs no Kubernetes
 cluster, account or credentials.
 
 You need Git and Go at the version in [`go.mod`](go.mod) or newer.
@@ -277,6 +277,11 @@ cosign verify \
 
 Deployment policy must match this chart identity separately from the shared controller-image and
 manifest publisher. Platform configuration owns signature enforcement and rollout.
+
+The controller image is signed by that shared publisher, not by the chart workflow above. To obtain
+a verified image digest, follow the [released artifact acceptance guide](docs/release-acceptance.md):
+its script checks the image and chart signatures of one release against the release tag and source
+revision you supply.
 
 ### Install the chart
 
