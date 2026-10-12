@@ -81,9 +81,9 @@ Validated 3 product(s): declarations only; live readiness and access remain unve
 Required operational features: composition
 ```
 
-The check reads only the file you name. It contacts no cluster and no network address, so a pass
-says the descriptions are well formed and fit together, not that the products are running or
-reachable. The [publisher guide](docs/publisher-preflight.md) covers the released command,
+The checker itself reads only the file you name and contacts no cluster and no network address;
+`go run` may still download Go dependencies to build it. A pass therefore says the descriptions are
+well formed and fit together, not that the products are running or reachable. The [publisher guide](docs/publisher-preflight.md) covers the released command,
 namespace selection and exit codes.
 
 ## Data product contract
