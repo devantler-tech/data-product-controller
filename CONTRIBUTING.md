@@ -54,11 +54,11 @@ dependencies and can take a few minutes.
 
 The remaining local checks need more tools:
 
-| Check | Needs |
-|---|---|
-| `go test -tags=browser ./internal/browser` | A Chromium-based browser; the test library downloads one when it finds none installed |
-| `sh scripts/chart.test.sh` and `helm lint charts/data-product-controller` | Helm |
-| `golangci-lint fmt` and `golangci-lint run` | golangci-lint |
+| Check                                                                     | Needs                                                                                 |
+|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| `go test -tags=browser ./internal/browser`                                | A Chromium-based browser; the test library downloads one when it finds none installed |
+| `sh scripts/chart.test.sh` and `helm lint charts/data-product-controller` | Helm                                                                                  |
+| `golangci-lint fmt` and `golangci-lint run`                               | golangci-lint                                                                         |
 
 The complete list, in the order to run it, is in [AGENTS.md](AGENTS.md#validation). Run what your
 change touches and what your machine supports; CI runs all of it on every pull request.
