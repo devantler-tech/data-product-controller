@@ -2,7 +2,10 @@
 set -eu
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 chart="$repo_root/charts/data-product-controller"
-fail() { printf '%s\n' "KSail release chart test failed: $1" >&2; exit 1; }
+fail() {
+	printf '%s\n' "KSail release chart test failed: $1" >&2
+	exit 1
+}
 default=$(helm template products "$chart" --namespace products)
 flag=$(printf '%s' "$default" | yq ea 'select(.kind=="Deployment" and .spec.template.spec.containers[0].name=="product") | .spec.template.spec.containers[0].env[] | select(.name=="KSAIL_RELEASES_ENABLED") | .value' -)
 [ "$flag" = false ] || fail 'live release product must default off'
@@ -26,9 +29,9 @@ printf '%s' "$separate" | yq ea -o=json -I=0 'select(.kind=="DataProduct" and .m
   and .spec.outputs[0].contractUrl=="https://harbour.example.test/ksail-releases/openapi.json"
 ' >/dev/null || fail 'independent publication requires its actual public URL'
 if helm template products "$chart" --set demoProduct.enabled=false --set demoProduct.ksailReleases.enabled=true >/dev/null 2>&1; then
-  fail 'publication without its workload was accepted'
+	fail 'publication without its workload was accepted'
 fi
 if helm template products "$chart" --set demoProduct.ksailReleases.enabled=true >/dev/null 2>&1; then
-  fail 'publication without a public URL was accepted'
+	fail 'publication without a public URL was accepted'
 fi
 printf '%s\n' 'KSail release chart boundaries passed'
