@@ -1,0 +1,34 @@
+{{- if .Values.demoProduct.ksailReleases.enabled }}
+{{- $baseURL := .Values.demoProduct.publicBaseURL | default (printf "https://%s/products/harbour" .Values.route.host) }}
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: ksail-releases
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+spec:
+  id: https://github.com/devantler-tech/ksail/releases
+  name: KSail releases
+  description: Published KSail versions, release dates and release channels from the public GitHub API.
+  version: v1.0.0
+  owner:
+    name: devantler-tech
+    url: https://github.com/devantler-tech/ksail
+  documentationUrl: https://github.com/devantler-tech/data-product-controller
+  outputs:
+    - name: releases
+      protocol: OpenAPI
+      url: https://api.github.com/repos/devantler-tech/ksail/releases
+      contractUrl: {{ printf "%s/ksail-releases/openapi.json" $baseURL | quote }}
+      mediaType: application/json
+  ui:
+    title: Browse KSail releases
+    url: {{ printf "%s/ksail-releases/ui" $baseURL | quote }}
+    {{- if .Values.uiContract.enabled }}
+    contract:
+      apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
+      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
+      capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
+    {{- end }}
+{{- end }}

@@ -18,7 +18,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
 - `internal/preflight/` and `cmd/product-check/` — default-off local publisher validation using the embedded delivered CRD and bounded public descriptor preview.
 - `web/` and `cmd/ui-kit/` — portable UI protocol library and independent, default-off compatibility host.
-- `internal/demoproduct/` and `cmd/demo-product/` — independently served example product, API contract, and UI.
+- `internal/demoproduct/` and `cmd/demo-product/` — independent harbour reference and default-off live KSail release surface, contracts, and UIs.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
 - `pkg/featureflag/` — OpenFeature boundary; provisioned sources, connector readiness, contract readiness, composition, DCAT publication, and portable UI grants are default-off. The registry workspace is always available.
@@ -68,6 +68,12 @@ Do not copy instructions into them.
 - Connector observation supports only named same-namespace `apps/v1` Deployments through `deployment/v1`. Preserve exact-name read-only RBAC, full current-generation replica readiness, independent `ConnectorReady` refresh, and bounded polling. Never add workload ownership, Secret reads, or data-plane URL probes; see `docs/connector-readiness.md`.
 - Contract checks bind selected outputs to independently owned probe Deployments. Preserve literal URL binding, the shared observation deadline, independent `ContractsReady` refresh, and the separation between controller reads and probe network traffic; see `docs/contract-readiness.md`.
 - A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
+- The default-off `ksail-releases` gate publishes a live public release surface from the independent
+  reference workload. Its browser alone reads the fixed KSail GitHub API without credentials.
+  Preserve the ten-second, 1-MiB streamed UTF-8 and 30-record bounds, plain-text projection,
+  redirect rejection, local-only filters, refresh/navigation cancellation and public-source CSP.
+  The controller and workload never read release data, and only presentation hints reach the host.
+  Workload readiness does not establish GitHub availability. See `docs/ksail-releases.md`.
 - The default-off `ui-contract` feature permits bounded status and resize hints under v1. V2 adds only a Light/Dark appearance hint behind the additional default-off `ui-appearance` gate. Preserve opaque iframe origins, exact source/session/shape checks, publisher-owned host approval, grant intersection, navigation revocation, message bounds and timeout cleanup. See `docs/ui-contract.md`.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - Discovery browser clients validate the closed public descriptor before display or export.

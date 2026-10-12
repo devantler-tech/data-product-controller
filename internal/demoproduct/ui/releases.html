@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="product-kind" content="ksail-releases" />
+    <meta
+      name="description"
+      content="Published KSail versions and release dates from GitHub."
+    />
+    <title>KSail releases</title>
+    <link rel="stylesheet" href="assets/product.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>KSail releases</h1>
+        <p>Published versions from devantler-tech/ksail on GitHub.</p>
+      </header>
+      <form id="query-form">
+        <div class="station-field">
+          <label for="release-search">Version</label>
+          <input
+            id="release-search"
+            type="search"
+            maxlength="128"
+            placeholder="Filter versions"
+            autocomplete="off"
+          />
+        </div>
+        <div class="release-channel">
+          <label for="station">Channel</label>
+          <select id="station">
+            <option value="">All releases</option>
+            <option value="stable">Stable</option>
+            <option value="prerelease">Pre-release</option>
+          </select>
+        </div>
+        <button type="submit">Refresh releases</button>
+      </form>
+      <p id="status" role="status" aria-live="polite">Loading releases…</p>
+      <section id="observations" aria-label="Release results"></section>
+      <p class="source-note">
+        One public API page, up to 30 releases. Filters use the loaded page.
+        Refresh reads GitHub again.
+      </p>
+      <nav aria-label="Data access">
+        <a
+          href="https://api.github.com/repos/devantler-tech/ksail/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Open JSON data</a
+        >
+        <a href="openapi.json" target="_blank" rel="noopener noreferrer"
+          >View API contract</a
+        >
+      </nav>
+    </main>
+    <script src="assets/product.js" defer></script>
+  </body>
+</html>

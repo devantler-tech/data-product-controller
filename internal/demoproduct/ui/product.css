@@ -81,6 +81,7 @@ label {
   font-weight: 600;
 }
 
+input,
 select,
 button {
   min-height: 2.75rem;
@@ -88,6 +89,7 @@ button {
   font: inherit;
 }
 
+input,
 select {
   width: 100%;
   border: 1px solid var(--line);
@@ -102,6 +104,15 @@ button {
   color: var(--canvas);
   background: var(--accent);
   cursor: pointer;
+}
+
+.release-channel {
+  flex: 0 1 12rem;
+}
+
+.source-note {
+  color: var(--muted);
+  font-size: 0.85rem;
 }
 
 :focus-visible {

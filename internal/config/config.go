@@ -45,6 +45,11 @@ func UIAppearanceEnabled(value string) (bool, error) {
 	return featureEnabled("UI_APPEARANCE_ENABLED", value)
 }
 
+// KSailReleasesEnabled parses the default-off public release-product gate.
+func KSailReleasesEnabled(value string) (bool, error) {
+	return featureEnabled("KSAIL_RELEASES_ENABLED", value)
+}
+
 // RegistryDiscoveryEnabled parses the default-off portable inventory and descriptor release gate.
 func RegistryDiscoveryEnabled(value string) (bool, error) {
 	return featureEnabled("REGISTRY_DISCOVERY_ENABLED", value)
