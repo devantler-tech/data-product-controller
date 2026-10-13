@@ -414,6 +414,46 @@ func TestWorkspaceAppearanceNavigation(t *testing.T) {
 	}
 }
 
+// TestWorkspaceAppearanceHistory follows real browser Back on both workspaces.
+func TestWorkspaceAppearanceHistory(t *testing.T) {
+	host := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
+		PublisherEnabled: func() bool { return true },
+		ContractEnabled:  func() bool { return true },
+	}))
+	defer host.Close()
+	page := contractBrowser(t).MustPage().Timeout(20 * time.Second).
+		MustNavigate(host.URL + "/").MustWaitLoad()
+	page.MustElement("#appearance").MustSelect("Light")
+	page.MustElement("#workspace-navigation a[href='/publisher-review']").MustClick()
+	page.MustWaitLoad()
+	page.MustElement("#theme").MustSelect("Dark")
+	page.MustNavigateBack().MustWaitLoad()
+	if page.MustElement("#appearance").MustProperty("value").Str() != "dark" ||
+		page.MustEval(`()=>document.querySelector('iframe').hasAttribute('src')`).Bool() {
+		t.Fatal("browser Back lost the product theme or reopened an interface")
+	}
+	page.MustElement("#appearance").MustSelect("Light")
+	page.MustElement("#workspace-navigation a[href='/publisher-review']").MustClick()
+	page.MustWaitLoad()
+	report, err := json.Marshal(publisherReport(t, false, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page.MustElement(".import-fields details summary").MustClick()
+	page.MustElement("#report-text").MustInput(string(report))
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+	page.MustElement("#workspace-navigation a[href='/']").MustClick()
+	page.MustWaitLoad()
+	page.MustElement("#appearance").MustSelect("Dark")
+	page.MustNavigateBack().MustWaitLoad()
+	if page.MustElement("#theme").MustProperty("value").Str() != "Dark" ||
+		page.MustEval(`()=>!document.querySelector('#review').hidden || !document.querySelector('#export-preview').disabled`).
+			Bool() {
+		t.Fatal("browser Back lost the publisher theme or retained a report")
+	}
+}
+
 // TestWorkspaceAppearancePreferences validates existing, legacy and malformed choices on both entry points.
 func TestWorkspaceAppearancePreferences(t *testing.T) {
 	for _, test := range []struct{ name, shared, legacy, want string }{
