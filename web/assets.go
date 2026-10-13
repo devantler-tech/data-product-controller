@@ -52,8 +52,10 @@ func KitHandlerWithOptions(options KitOptions) http.Handler {
 		case "/", "/index.html", "/kit.css", "/kit.js":
 			kitAsset = true
 		}
+		publisherRoot := publisher && !contract &&
+			(r.URL.Path == "/" || r.URL.Path == "/index.html")
 		allowed := publisher && reportAsset || (publisher || contract) && sharedAsset ||
-			contract && kitAsset
+			contract && kitAsset || publisherRoot
 		if !allowed ||
 			(r.Method != http.MethodGet && r.Method != http.MethodHead) {
 			http.NotFound(w, r)
@@ -69,11 +71,18 @@ func KitHandlerWithOptions(options KitOptions) http.Handler {
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if publisherRoot {
+			http.Redirect(w, r, "/publisher-review", http.StatusTemporaryRedirect)
+			return
+		}
 		if r.URL.Path == "/publisher-review" || r.URL.Path == "/publisher.html" {
 			page, err := Assets.ReadFile("publisher.html")
 			if err != nil {
 				http.Error(w, "publisher review unavailable", http.StatusInternalServerError)
 				return
+			}
+			if contract {
+				page = workspaceNavigation(page, true)
 			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			if r.Method == http.MethodGet {
@@ -95,6 +104,9 @@ func KitHandlerWithOptions(options KitOptions) http.Handler {
 				body += ` data-discovery-enabled="true"`
 			}
 			page = []byte(strings.Replace(string(page), "<body>", body+">", 1))
+			if publisher {
+				page = workspaceNavigation(page, false)
+			}
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Header().Set("Cache-Control", "no-store")
 			if r.Method == http.MethodGet {
@@ -104,4 +116,16 @@ func KitHandlerWithOptions(options KitOptions) http.Handler {
 		}
 		files.ServeHTTP(w, r)
 	})
+}
+
+// workspaceNavigation inserts only fixed local links when both workspaces are enabled.
+func workspaceNavigation(page []byte, publisherPage bool) []byte {
+	kitCurrent, publisherCurrent := ` aria-current="page"`, ""
+	if publisherPage {
+		kitCurrent, publisherCurrent = "", ` aria-current="page"`
+	}
+	navigation := `<nav id="workspace-navigation" class="workspace-navigation" aria-label="Workspaces">` +
+		`<a href="/"` + kitCurrent + `>Product UI workspace</a>` +
+		`<a href="/publisher-review"` + publisherCurrent + `>Publisher review</a></nav>`
+	return []byte(strings.Replace(string(page), "<!-- workspace-navigation -->", navigation, 1))
 }

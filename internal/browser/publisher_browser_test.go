@@ -95,6 +95,78 @@ func publisherHost(t *testing.T) *httptest.Server {
 	return host
 }
 
+// TestPublisherWorkspaceNavigation starts at the host, reviews a saved report and leaves it safely.
+func TestPublisherWorkspaceNavigation(t *testing.T) {
+	var requests atomic.Int64
+	product := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer product.Close()
+	report, err := json.Marshal(publisherReport(t, false, product.URL))
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
+		PublisherEnabled: func() bool { return true },
+		ContractEnabled:  func() bool { return true },
+	}))
+	defer host.Close()
+	page := contractBrowser(
+		t,
+	).MustPage().
+		Timeout(20 * time.Second).
+		MustNavigate(host.URL + "/").
+		MustWaitLoad()
+	page.MustElement("#workspace-navigation a[href='/publisher-review']").MustFocus()
+	page.KeyActions().Type(input.Enter).MustDo()
+	page.MustWaitLoad()
+	page.MustWait(`()=>location.pathname==='/publisher-review'`)
+	if page.MustElement("#workspace-navigation [aria-current='page']").
+		MustText() !=
+		"Publisher review" {
+		t.Fatal("navigation did not identify the current workspace")
+	}
+	page.MustElement(".import-fields details summary").MustClick()
+	page.MustElement("#report-text").MustInput(string(report))
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+	page.MustElement("#product-list button[data-key='products/a-consumer']").MustClick()
+	if !strings.Contains(page.MustElement(".product-inputs").MustText(), "products/z-producer") {
+		t.Fatal("root navigation lost report input inspection")
+	}
+	page.MustElement(".product-inputs button").MustClick()
+	if page.MustElement("#preview-title").MustText() != "z-producer" {
+		t.Fatal("root navigation lost local producer inspection")
+	}
+	for _, theme := range []string{"Light", "Dark"} {
+		page.MustElement("#theme").MustSelect(theme)
+		page.MustSetViewport(390, 844, 1, false)
+		if page.MustEval(`()=>document.documentElement.scrollWidth>innerWidth`).Bool() {
+			t.Fatal("workspace navigation overflowed on a narrow screen")
+		}
+	}
+	if requests.Load() != 0 || len(page.MustElements("iframe")) != 0 {
+		t.Fatal("publisher navigation contacted or mounted a product")
+	}
+	page.MustElement("#workspace-navigation a[href='/']").MustClick()
+	page.MustWaitLoad()
+	page.MustWait(`()=>location.pathname==='/'`)
+	if page.MustElement("#workspace-navigation [aria-current='page']").
+		MustText() !=
+		"Product UI workspace" {
+		t.Fatal("return navigation did not identify the product workspace")
+	}
+	page.MustEval(`()=>history.back()`)
+	page.MustWait(`()=>location.pathname==='/publisher-review'`)
+	page.MustWait(
+		`()=>document.querySelector('#review').hidden && document.querySelector('#export-preview').disabled`,
+	)
+	if requests.Load() != 0 || len(page.MustElements("iframe")) != 0 {
+		t.Fatal("history restoration contacted or mounted a product")
+	}
+}
+
 // TestPublisherDeclaredInputs reviews the shipped composition through a real saved report.
 func TestPublisherDeclaredInputs(t *testing.T) {
 	file, err := os.ReadFile("../../docs/examples/composition.yaml")
@@ -211,7 +283,7 @@ func TestPublisherReviewWorkflow(t *testing.T) {
 		t,
 	).MustPage().
 		Timeout(20 * time.Second).
-		MustNavigate(host.URL + "/publisher-review").
+		MustNavigate(host.URL + "/").
 		MustWaitLoad()
 	page.MustElement(".import-fields details summary").MustClick()
 	page.MustElement("#report-text").MustInput(string(encoded))

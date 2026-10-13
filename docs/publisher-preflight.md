@@ -7,6 +7,11 @@ The independent `ui-kit` host provides `/publisher-review`. Set
 states return 404. `UI_CONTRACT_ENABLED` can remain false. Use the host's documented
 TLS listener or explicit internal HTTP gateway transport.
 
+With publisher review enabled and product UIs disabled, the host root opens the
+report workspace. When both workspaces are enabled, navigation links let you move
+between them. Only enabled workspaces appear; the publisher gate does not grant
+product UI permissions or enable product-kit assets.
+
 Choose one local v2 JSON report file or paste one report, up to 2 MiB. Files decode
 as strict UTF-8. Nothing is uploaded, fetched from a declared link, or mounted as a
 product UI. Selecting a file clears pasted text; editing pasted text clears the selected file.
