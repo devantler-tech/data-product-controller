@@ -108,6 +108,13 @@ position is unavailable or applies to the selection as a whole. Reports contain
 no selected filenames. Source summaries count the documents examined and products
 parsed before validation stopped; later unexamined sources have zero counts.
 
+The `/publisher-review` workspace shows each selected product's declared inputs,
+including the supplied producer, named output, protocol and minimum version.
+Inputs without a contract requirement are labelled explicitly. Select a producer
+to inspect its preview locally; this clears the inventory filter and moves focus
+to the preview heading. These declarations do not establish live compatibility
+or readiness. Inspection never requests a producer's endpoint or mounts its UI.
+
 Admission findings use known API field paths and fixed wording. Dynamic map keys
 and unknown field names collapse to a known container. Dependency findings identify
 the offending input. Cycle and depth findings include at most 64 declared links;
