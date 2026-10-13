@@ -58,6 +58,25 @@ body {
   color: var(--text);
 }
 
+.workspace-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.25rem;
+  padding: 0 0 1rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-navigation a {
+  color: var(--accent);
+  text-underline-offset: .2em;
+}
+
+.workspace-navigation a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 650;
+}
+
 .app-header {
   display: flex;
   align-items: center;

@@ -172,9 +172,15 @@ func TestUIKitPublisherGate(t *testing.T) {
 					!strings.Contains(headers.Get("Content-Security-Policy"), "frame-src 'none'")) {
 					t.Fatal("real command lost offline publisher host policy")
 				}
-				status, _, _ = hostRequest(t, client, http.MethodGet, base+"/", "")
-				if status != 404 {
-					t.Fatal("publisher inspection enabled product-session kit")
+				status, body, headers = hostRequest(t, client, http.MethodGet, base+"/", "")
+				if status != want ||
+					(value == "true" && (!strings.Contains(body, "preflight-report.js") ||
+						!strings.Contains(headers.Get("Content-Security-Policy"), "frame-src 'none'"))) {
+					t.Fatal("publisher-only root did not lead to offline report review")
+				}
+				status, _, _ = hostRequest(t, client, http.MethodGet, base+"/kit.js", "")
+				if status != http.StatusNotFound {
+					t.Fatal("publisher root enabled product-session assets")
 				}
 			})
 		}
