@@ -362,6 +362,91 @@ func TestPublisherReviewWorkflow(t *testing.T) {
 	}
 }
 
+// TestWorkspaceAppearanceNavigation shares the author's choice without retaining report state.
+func TestWorkspaceAppearanceNavigation(t *testing.T) {
+	host := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
+		PublisherEnabled: func() bool { return true },
+		ContractEnabled:  func() bool { return true },
+	}))
+	defer host.Close()
+	page := contractBrowser(t).MustPage().Timeout(20 * time.Second).
+		MustNavigate(host.URL + "/").MustWaitLoad()
+	page.MustElement("#appearance").MustSelect("Dark")
+	page.MustElement("#workspace-navigation a[href='/publisher-review']").MustClick()
+	page.MustWaitLoad()
+	if page.MustElement("#theme").MustProperty("value").Str() != "Dark" {
+		t.Fatal("publisher navigation lost the selected dark theme")
+	}
+	page.MustElement("#theme").MustSelect("Light")
+	page.MustElement("#workspace-navigation a[href='/']").MustClick()
+	page.MustWaitLoad()
+	if page.MustElement("#appearance").MustProperty("value").Str() != "light" {
+		t.Fatal("product workspace navigation lost the selected light theme")
+	}
+	page.MustEval(`()=>{
+		dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+		localStorage.setItem('data-product-kit.appearance','dark');
+		dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+	}`)
+	if page.MustElement("#appearance").MustProperty("value").Str() != "dark" ||
+		page.MustEval(`()=>document.querySelector('iframe').hasAttribute('src')`).Bool() {
+		t.Fatal("restored product workspace lost the current theme or reopened an interface")
+	}
+	page.MustElement("#workspace-navigation a[href='/publisher-review']").MustClick()
+	page.MustWaitLoad()
+	report, err := json.Marshal(publisherReport(t, false, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page.MustElement(".import-fields details summary").MustClick()
+	page.MustElement("#report-text").MustInput(string(report))
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+	page.MustEval(`()=>{
+		dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+		localStorage.setItem('data-product-kit.appearance','system');
+		dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+	}`)
+	if page.MustElement("#theme").MustProperty("value").Str() != "System" ||
+		page.MustEval(`()=>!document.querySelector('#review').hidden || !document.querySelector('#export-preview').disabled`).
+			Bool() {
+		t.Fatal("restored publisher lost the current theme or retained a report")
+	}
+}
+
+// TestWorkspaceAppearancePreferences validates existing, legacy and malformed choices on both entry points.
+func TestWorkspaceAppearancePreferences(t *testing.T) {
+	for _, test := range []struct{ name, shared, legacy, want string }{
+		{"legacy-publisher", "", "Dark", "dark"},
+		{"existing-kit", "light", "", "light"},
+		{"shared-wins", "system", "Dark", "system"},
+		{"malformed", "DARK", "unexpected", "system"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			host := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
+				PublisherEnabled: func() bool { return true },
+				ContractEnabled:  func() bool { return true },
+			}))
+			defer host.Close()
+			page := contractBrowser(t).MustPage().Timeout(20 * time.Second)
+			page.MustEvalOnNewDocument(fmt.Sprintf(`(()=>{
+				const shared=%q,legacy=%q;
+				localStorage.clear();
+				if(shared)localStorage.setItem('data-product-kit.appearance',shared);
+				if(legacy)localStorage.setItem('dpc-publisher-theme',legacy);
+			})()`, test.shared, test.legacy))
+			for _, path := range []string{"/", "/publisher-review"} {
+				page.MustNavigate(host.URL + path).MustWaitLoad()
+				if page.MustEval(`()=>document.querySelector('#appearance,#theme').value.toLowerCase()`).
+					Str() !=
+					test.want {
+					t.Fatalf("%s did not preserve only the valid preference", path)
+				}
+			}
+		})
+	}
+}
+
 // TestPublisherSystemThemeWithDeniedStorage keeps System and manual controls usable without persistence.
 func TestPublisherSystemThemeWithDeniedStorage(t *testing.T) {
 	host := publisherHost(t)

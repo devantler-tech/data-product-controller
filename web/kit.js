@@ -30,12 +30,22 @@ function applyAppearance() {
   else document.documentElement.dataset.appearance = appearance.value;
   dispose.setAppearance?.(resolvedAppearance());
 }
-try {
-  const saved = localStorage.getItem("data-product-kit.appearance");
-  if (["system", "light", "dark"].includes(saved)) appearance.value = saved;
-} catch {
-  // Storage policy does not prevent choosing or following a theme.
+function restoreAppearance() {
+  try {
+    const saved = localStorage.getItem("data-product-kit.appearance");
+    if (["system", "light", "dark"].includes(saved)) appearance.value = saved;
+    else {
+      const legacy = localStorage.getItem("dpc-publisher-theme");
+      if (["System", "Light", "Dark"].includes(legacy)) {
+        appearance.value = legacy.toLowerCase();
+        localStorage.setItem("data-product-kit.appearance", appearance.value);
+      }
+    }
+  } catch {
+    // Storage policy does not prevent choosing or following a theme.
+  }
 }
+restoreAppearance();
 applyAppearance();
 appearance.addEventListener("change", () => {
   applyAppearance();
@@ -181,3 +191,7 @@ clearFile.addEventListener("click", () => {
 for (const id of ["grant-status", "grant-resize", "grant-appearance"])
   document.getElementById(id).addEventListener("change", closeInterface);
 window.addEventListener("pagehide", closeInterface);
+window.addEventListener("pageshow", () => {
+  restoreAppearance();
+  applyAppearance();
+});

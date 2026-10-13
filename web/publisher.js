@@ -287,13 +287,27 @@
     document.documentElement.dataset.theme = theme.value === "System"
       ? (system.matches ? "dark" : "light") : theme.value.toLowerCase();
   }
-  try {
-    const saved = localStorage.getItem("dpc-publisher-theme");
-    if (["System", "Light", "Dark"].includes(saved)) theme.value = saved;
-  } catch { /* Theme controls work without storage. */ }
+  function restoreTheme() {
+    try {
+      const saved = localStorage.getItem("data-product-kit.appearance");
+      if (["system", "light", "dark"].includes(saved))
+        theme.value = saved[0].toUpperCase() + saved.slice(1);
+      else {
+        const legacy = localStorage.getItem("dpc-publisher-theme");
+        if (["System", "Light", "Dark"].includes(legacy)) {
+          theme.value = legacy;
+          localStorage.setItem("data-product-kit.appearance", legacy.toLowerCase());
+        }
+      }
+    } catch { /* Theme controls work without storage. */ }
+  }
+  restoreTheme();
   theme.addEventListener("change", () => {
     applyTheme();
-    try { localStorage.setItem("dpc-publisher-theme", theme.value); } catch { /* Keep the live preference. */ }
+    try {
+      localStorage.setItem("data-product-kit.appearance", theme.value.toLowerCase());
+      localStorage.setItem("dpc-publisher-theme", theme.value);
+    } catch { /* Keep the live preference. */ }
   });
   system.addEventListener("change", applyTheme);
   applyTheme();
@@ -303,5 +317,9 @@
     status.textContent = "Report cleared.";
     system.removeEventListener("change", applyTheme);
   });
-  window.addEventListener("pageshow", () => { system.addEventListener("change", applyTheme); applyTheme(); });
+  window.addEventListener("pageshow", () => {
+    restoreTheme();
+    system.addEventListener("change", applyTheme);
+    applyTheme();
+  });
 })();
