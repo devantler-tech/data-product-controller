@@ -97,12 +97,11 @@ func publisherHost(t *testing.T) *httptest.Server {
 
 // TestPublisherDeclaredInputs reviews the shipped composition through a real saved report.
 func TestPublisherDeclaredInputs(t *testing.T) {
-	file, err := os.Open("../../docs/examples/composition.yaml")
+	file, err := os.ReadFile("../../docs/examples/composition.yaml")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer file.Close()
-	report := preflight.CheckBundle(t.Context(), []io.Reader{file}, "")
+	report := preflight.CheckBundle(t.Context(), []io.Reader{strings.NewReader(string(file))}, "")
 	if !report.Valid || !report.Complete {
 		t.Fatalf("invalid composition report: %+v", report.Diagnostics)
 	}

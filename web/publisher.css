@@ -283,6 +283,31 @@ article {
   margin: 0;
 }
 
+#plan-order button,#plan-edges button,.product-inputs button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: .2rem .3rem;
+  text-align: left;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+}
+
+.product-inputs {
+  list-style: none;
+  padding: 0;
+  margin: .5rem 0;
+}
+
+.product-inputs li {
+  border-top: 1px solid var(--border);
+  padding: .65rem 0;
+}
+
+.product-inputs p {
+  margin: .25rem 0;
+}
+
 #findings > li {
   padding: .75rem .25rem;
   border-top: 1px solid var(--border);
@@ -346,31 +371,6 @@ article {
 
 #findings details {
   margin-top: .5rem;
-}
-
-#plan-order button,#plan-edges button,.product-inputs button {
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  padding: .2rem .3rem;
-  text-align: left;
-  overflow-wrap: anywhere;
-  text-decoration: underline;
-}
-
-.product-inputs {
-  list-style: none;
-  padding: 0;
-  margin: .5rem 0;
-}
-
-.product-inputs li {
-  border-top: 1px solid var(--border);
-  padding: .65rem 0;
-}
-
-.product-inputs p {
-  margin: .25rem 0;
 }
 
 .sr-only {
