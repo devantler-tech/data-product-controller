@@ -129,6 +129,13 @@ for mode in tls gateway; do
 	for publisher in default false true; do
 		start_host "$mode" false false "$publisher"
 		if [[ "$publisher" == true ]]; then
+			for entry in / /index.html; do
+				request "$entry?ignored=1" 307
+				[[ $(awk 'tolower($1) == "location:" {sub(/\r$/, "", $2); print $2}' "$test_dir/headers") == /publisher-review ]]
+				grep -Fi 'cache-control: no-store' "$test_dir/headers" >/dev/null
+				grep -F "frame-src 'none'" "$test_dir/headers" >/dev/null
+				grep -F "connect-src 'none'" "$test_dir/headers" >/dev/null
+			done
 			request /publisher-review 200
 			grep -F 'preflight-report.js' "$test_dir/body" >/dev/null
 			grep -F "frame-src 'none'" "$test_dir/headers" >/dev/null
@@ -138,13 +145,30 @@ for mode in tls gateway; do
 			request /publisher.css 200
 			request /descriptor.js 200
 		else
+			request / 404
+			request /index.html 404
 			request /publisher-review 404
 			request /publisher.js 404
 		fi
-		request / 404
 		request /kit.js 404
+		request /kit.css 404
 		docker rm --force "$container_id" >/dev/null
 		container_id=''
 		echo "PASS: packaged publisher review ($mode, publisher preflight $publisher)"
 	done
+done
+
+for mode in tls gateway; do
+	start_host "$mode" true true true
+	request / 200
+	grep -F 'aria-current="page">Product UI workspace' "$test_dir/body" >/dev/null
+	grep -F 'href="/publisher-review"' "$test_dir/body" >/dev/null
+	request /publisher-review 200
+	grep -F 'aria-current="page">Publisher review' "$test_dir/body" >/dev/null
+	grep -F 'href="/"' "$test_dir/body" >/dev/null
+	grep -F "frame-src 'none'" "$test_dir/headers" >/dev/null
+	grep -F "connect-src 'none'" "$test_dir/headers" >/dev/null
+	docker rm --force "$container_id" >/dev/null
+	container_id=''
+	echo "PASS: packaged host links both enabled workspaces ($mode)"
 done
