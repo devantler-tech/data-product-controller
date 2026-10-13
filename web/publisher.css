@@ -283,7 +283,7 @@ article {
   margin: 0;
 }
 
-#plan-order button,#plan-edges button,.product-inputs button {
+.product-inputs button,#plan-order button,#plan-edges button {
   border: 0;
   background: transparent;
   color: var(--accent);
