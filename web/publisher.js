@@ -50,6 +50,30 @@
     row.append(node("dt", label), node("dd", value));
     return row;
   }
+  function renderInputs(product) {
+    const content = get("preview-content");
+    content.append(node("h4", "Inputs"));
+    if (!product.inputs?.length) {
+      content.append(node("p", "No inputs declared.", "muted"));
+      return;
+    }
+    content.append(node("p", "Declared requirements from this report. No live compatibility or readiness check.", "muted"));
+    const inputs = node("ul", undefined, "product-inputs");
+    for (const input of product.inputs) {
+      const producerKey = (input.productRef.namespace || product.namespace) + "/" + input.productRef.name;
+      const item = node("li");
+      item.append(node("strong", input.name));
+      const source = node("p");
+      source.append(node("span", "Producer "), productButton(producerKey),
+        node("span", " · Output " + input.productRef.output));
+      item.append(source, node("p", input.contract
+        ? "Requires " + input.contract.protocol + " from " + input.contract.minimumVersion +
+          " within the same major; major zero requires an exact match."
+        : "No contract requirement declared.", "muted"));
+      inputs.append(item);
+    }
+    content.append(inputs);
+  }
   function selectProduct(productKey) {
     const product = products.get(productKey);
     if (!product) return;
@@ -63,6 +87,7 @@
     content.append(meta, node("p", "Publication preview · Readiness unobserved · Generation 0", "muted"));
     if (product.ui) content.append(node("p", "Declared UI: " + product.ui.title + " · " + product.ui.url));
     else content.append(node("p", "No product UI declared.", "muted"));
+    renderInputs(product);
     content.append(node("h4", "Public outputs"));
     const outputs = node("ul");
     for (const output of product.outputs) {

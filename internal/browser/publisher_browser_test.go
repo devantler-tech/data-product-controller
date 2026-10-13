@@ -95,6 +95,103 @@ func publisherHost(t *testing.T) *httptest.Server {
 	return host
 }
 
+// TestPublisherDeclaredInputs reviews the shipped composition through a real saved report.
+func TestPublisherDeclaredInputs(t *testing.T) {
+	file, err := os.ReadFile("../../docs/examples/composition.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := preflight.CheckBundle(t.Context(), []io.Reader{strings.NewReader(string(file))}, "")
+	if !report.Valid || !report.Complete {
+		t.Fatalf("invalid composition report: %+v", report.Diagnostics)
+	}
+	encoded, err := json.Marshal(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := publisherHost(t)
+	page := contractBrowser(t).MustPage().Timeout(20 * time.Second).
+		MustNavigate(host.URL + "/publisher-review").MustWaitLoad()
+	page.MustEval(
+		`()=>{window.sourceReads=0;window.fetch=()=>{sourceReads++;throw new Error('Offline review');};}`,
+	)
+	page.MustElement(".import-fields details summary").MustClick()
+	page.MustElement("#report-text").MustInput(string(encoded))
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+	page.MustElement("#product-list button[data-key='products/coastal-summary']").MustClick()
+	inputs := page.MustElements(".product-inputs > li")
+	if len(inputs) != 2 {
+		t.Fatalf("expected two declared inputs, got %d", len(inputs))
+	}
+	for i, requirement := range []struct{ name, producer, version string }{
+		{"observations", "products/harbour", "v1.1.0"},
+		{"forecast", "products/weather", "v1.0.0"},
+	} {
+		text := inputs[i].MustText()
+		for _, want := range []string{requirement.name, requirement.producer, "query", "OpenAPI", requirement.version, "same major"} {
+			if !strings.Contains(text, want) {
+				t.Fatalf("input %d lost %q: %s", i, want, text)
+			}
+		}
+	}
+	// Navigation must work by keyboard and reveal an otherwise filtered-out producer.
+	page.MustElement("#product-search").MustInput("coastal-summary")
+	button := page.MustElement(".product-inputs button")
+	button.MustFocus()
+	page.KeyActions().Type(input.Enter).MustDo()
+	page.MustElement("#preview-title").MustWait(`()=>this.textContent==='Harbour observations'`)
+	page.MustWait(`()=>document.activeElement.id==='preview-title'`)
+	if page.MustElement("#preview-title").MustText() != "Harbour observations" ||
+		page.MustEval(`()=>document.querySelector('#product-search').value`).Str() != "" ||
+		page.MustEval(`()=>document.activeElement.id`).Str() != "preview-title" {
+		t.Fatalf(
+			"producer navigation lost selection, inventory or focus: %s",
+			page.MustEval(`()=>JSON.stringify({title:document.querySelector('#preview-title').textContent,search:document.querySelector('#product-search').value,focus:document.activeElement.id})`).
+				Str(),
+		)
+	}
+	if len(page.MustElements(".product-inputs > li")) != 0 ||
+		!strings.Contains(page.MustElement("#preview-content").MustText(), "No inputs declared.") {
+		t.Fatal("producer retained consumer requirements")
+	}
+	page.MustElement("#product-list button[data-key='products/coastal-summary']").MustClick()
+	for _, theme := range []string{"Light", "Dark"} {
+		page.MustElement("#theme").MustSelect(theme)
+		page.MustSetViewport(390, 844, 1, false)
+		if page.MustEval(`()=>document.documentElement.scrollWidth>innerWidth`).Bool() {
+			t.Fatalf("input review overflows in %s mode", theme)
+		}
+	}
+	// Replacing the report withdraws the earlier declarations before accepting new bytes.
+	replacement, err := json.Marshal(publisherReport(t, false, ""))
+	if err != nil {
+		t.Fatal(err)
+	}
+	page.MustEval(
+		`wire=>{const field=document.querySelector('#report-text');field.value=wire;field.dispatchEvent(new Event('input',{bubbles:true}));}`,
+		string(replacement),
+	)
+	if len(page.MustElements(".product-inputs")) != 0 {
+		t.Fatal("replacement retained earlier requirements")
+	}
+	page.MustElement("#read-report").MustClick()
+	page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+	page.MustElement("#product-list button[data-key='products/a-consumer']").MustClick()
+	if !strings.Contains(
+		page.MustElement(".product-inputs").MustText(),
+		"No contract requirement declared.",
+	) {
+		t.Fatal("unconstrained input fabricated a contract requirement")
+	}
+	page.MustElement("#clear-report").MustClick()
+	if len(page.MustElements(".product-inputs")) != 0 ||
+		page.MustEval(`()=>window.sourceReads`).Int() != 0 ||
+		len(page.MustElements("iframe")) != 0 {
+		t.Fatal("clear retained requirements or offline inspection read/mounted a product")
+	}
+}
+
 // TestPublisherReviewWorkflow exercises report production, identity joins, export and keyboard themes.
 func TestPublisherReviewWorkflow(t *testing.T) {
 	var requests atomic.Int64
