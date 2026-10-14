@@ -1,4 +1,4 @@
-# Contributing to data-product-controller
+# Contributing to KHoist
 
 You can help by improving the documentation, fixing an example, or changing the controller, the
 registry or the chart. Open or find an
@@ -18,8 +18,8 @@ no cluster and no credentials for any product or cloud service.
 Fork `devantler-tech/khoist` on GitHub. Replace `YOUR-LOGIN` with your login:
 
 ```sh
-git clone https://github.com/YOUR-LOGIN/data-product-controller.git
-cd data-product-controller
+git clone https://github.com/YOUR-LOGIN/khoist.git
+cd khoist
 git switch -c docs/first-contribution
 ```
 
