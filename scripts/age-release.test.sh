@@ -27,17 +27,17 @@ for workflow in "$cd" "$chart_publisher"; do
 done
 yq -e '.jobs.smoke.needs == "publish" and (.jobs.smoke | has("if") | not) and (.jobs."publish-age" | has("needs") | not) and (.jobs."publish-age" | has("if") | not)' "$cd" >/dev/null || fail 'proof tags must run AGE publication and skip dependent controller smoke'
 callee=$(yq '.jobs."publish-age".uses' "$cd")
-printf '%s\n' "$callee" | grep -Eq '^devantler-tech/data-product-controller/\.github/workflows/publish-age\.yaml@[a-f0-9]{40}$' || fail 'release must use the immutable owned publisher'
+printf '%s\n' "$callee" | grep -Eq '^devantler-tech/kweft/\.github/workflows/publish-age\.yaml@[a-f0-9]{40}$' || fail 'release must use the immutable owned publisher'
 yq -e '.jobs."publish-age".permissions.contents == "read" and .jobs."publish-age".permissions.packages == "write" and .jobs."publish-age".permissions."id-token" == "write"' "$cd" >/dev/null || fail 'release must grant only the required publisher permissions'
 
 # Exercise the actual workflow guards with synthetic contexts; no network or
 # release credentials are involved. Repository names may change, their ID may not.
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-yq -r '.jobs.publish.steps[] | select(.name == "Require the owned release source") | .run' "$publisher" > "$scratch/source.sh"
-yq -r '.jobs.publish.steps[] | select(.name == "Resolve and require immutable signing workflow") | .run' "$publisher" > "$scratch/identity.sh"
+yq -r '.jobs.publish.steps[] | select(.name == "Require the owned release source") | .run' "$publisher" >"$scratch/source.sh"
+yq -r '.jobs.publish.steps[] | select(.name == "Resolve and require immutable signing workflow") | .run' "$publisher" >"$scratch/identity.sh"
 mkdir "$scratch/bin"
-cat > "$scratch/bin/curl" <<'MOCK'
+cat >"$scratch/bin/curl" <<'MOCK'
 #!/bin/sh
 printf '%s\n' "$AGE_TEST_OIDC_RESPONSE"
 MOCK
@@ -69,6 +69,7 @@ pin=0123456789abcdef0123456789abcdef01234567
 for repository in devantler-tech/data-product-controller devantler-tech/kweft; do
 	identity_context "$repository" "$repository/.github/workflows/publish-age.yaml@$pin" || fail 'owned immutable signing workflow must be admitted'
 	if identity_context "$repository" "$repository/.github/workflows/publish-age.yaml@main"; then fail 'floating signing workflow was admitted'; fi
+	if identity_context "$repository" "$repository/.github/workflows/publish-age.yaml@publisher@$pin"; then fail 'mutable signing workflow ending in a commit hash was admitted'; fi
 	if identity_context "$repository" "someone/kweft/.github/workflows/publish-age.yaml@$pin"; then fail 'foreign signing workflow was admitted'; fi
 	if identity_context "$repository" "$repository/.github/workflows/publish-age.yaml@$pin" 999; then fail 'foreign OIDC repository ID was admitted'; fi
 	if identity_context "$repository" "$repository/.github/workflows/publish-age.yaml@$pin" 1350892700 someone/kweft; then fail 'mismatched OIDC repository name was admitted'; fi

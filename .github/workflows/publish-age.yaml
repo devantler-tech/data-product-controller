@@ -51,7 +51,8 @@ jobs:
             '.repository == $repository and .repository_id == $id' >/dev/null
           workflow=$(printf '%s' "$claims" | jq -er '.job_workflow_ref')
           [[ "$workflow" == "$REPOSITORY/.github/workflows/publish-age.yaml@"* ]]
-          [[ "${workflow##*@}" =~ ^[a-f0-9]{40}$ ]]
+          workflow_ref=${workflow#"$REPOSITORY/.github/workflows/publish-age.yaml@"}
+          [[ "$workflow_ref" =~ ^[a-f0-9]{40}$ ]]
           printf 'workflow=%s\n' "$workflow" >> "$GITHUB_OUTPUT"
 
       - name: Checkout released source
