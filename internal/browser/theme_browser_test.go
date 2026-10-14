@@ -33,10 +33,10 @@ func TestWorkspaceThemes(t *testing.T) {
 	page.MustElement(".product-card").MustClick()
 	page.MustElement("#product-owner").MustWait(`() => this.textContent === 'Harbour team'`)
 	page.MustElement("#appearance").MustSelect("Dark")
-	waitTheme(t, page, nil, "rgb(0, 0, 0)")
+	waitTheme(t, page, "rgb(0, 0, 0)")
 	page.MustElement("#appearance").MustFocus()
 	page.Keyboard.MustType(input.KeyL)
-	waitTheme(t, page, nil, "rgb(255, 255, 255)")
+	waitTheme(t, page, "rgb(255, 255, 255)")
 	if loads.Load() != 0 || page.MustElement("#product-owner").MustText() != "Harbour team" ||
 		len(page.MustElements("iframe")) != 0 {
 		t.Fatal("appearance change contacted the product or lost selected metadata")
@@ -134,7 +134,7 @@ func TestSystemThemeWithDeniedStorage(t *testing.T) {
 		); err != nil {
 			t.Fatal(err)
 		}
-		waitTheme(t, page, nil, theme.background)
+		waitTheme(t, page, theme.background)
 	}
 	if err := (proto.EmulationSetEmulatedMedia{}).Call(page); err != nil {
 		t.Fatal(err)
@@ -144,9 +144,9 @@ func TestSystemThemeWithDeniedStorage(t *testing.T) {
 		background = "rgb(0, 0, 0)"
 	}
 	page.MustElement("#appearance").MustSelect("Dark")
-	waitTheme(t, page, nil, "rgb(0, 0, 0)")
+	waitTheme(t, page, "rgb(0, 0, 0)")
 	page.MustElement("#appearance").MustSelect("System")
-	waitTheme(t, page, nil, background)
+	waitTheme(t, page, background)
 }
 
 // TestAppearanceGates proves legacy presentation flags cannot restore registry execution.
@@ -284,17 +284,11 @@ func TestAppearanceSessionLimits(t *testing.T) {
 	}
 }
 
-// waitTheme observes the actual palette in both documents, rather than a host-only state attribute.
-func waitTheme(t *testing.T, page, frame *rod.Page, background string) {
+// waitTheme observes the workspace's actual palette rather than a theme attribute.
+func waitTheme(t *testing.T, page *rod.Page, background string) {
 	t.Helper()
-	documents := []*rod.Page{page}
-	if frame != nil {
-		documents = append(documents, frame)
-	}
-	for _, document := range documents {
-		document.MustElement("html").
-			MustWait(`(color) => getComputedStyle(this).backgroundColor === color`, background)
-	}
+	page.MustElement("html").
+		MustWait(`(color) => getComputedStyle(this).backgroundColor === color`, background)
 }
 
 // themeWorkspace serves independently owned product metadata without registry execution.

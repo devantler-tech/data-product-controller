@@ -21,9 +21,11 @@ var uiFiles embed.FS
 
 // HandlerOptions controls registry discovery and declared input compatibility.
 type HandlerOptions struct {
-	// Deprecated: the API-only registry grants no product UI capabilities.
+	// ContractEnabled is an ignored legacy callback retained for compatibility testing.
+	// The API-only registry never evaluates it or grants product UI capabilities.
 	ContractEnabled func(context.Context) bool
-	// Deprecated: workspace appearance is local and grants no product capability.
+	// AppearanceEnabled is an ignored legacy callback retained for compatibility testing.
+	// Workspace appearance is local and grants no product capability.
 	AppearanceEnabled  func(context.Context) bool
 	DiscoveryEnabled   func(context.Context) bool
 	LineageEnabled     func(context.Context) bool

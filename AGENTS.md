@@ -131,6 +131,7 @@ sh scripts/scanner-suppressions.test.sh
 sh scripts/toolchain.test.sh
 helm lint charts/data-product-controller
 golangci-lint run
+golangci-lint run --build-tags=browser ./internal/browser/...
 (cd tests/provider/fixture && go test -race -count=1 ./... && go vet ./...)
 ```
 
