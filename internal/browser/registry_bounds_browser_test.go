@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// TestDeletingProductRevokesBrowserSurface catches opening a resource whose retained condition still says Ready.
-func TestDeletingProductRevokesBrowserSurface(t *testing.T) {
+// TestDeletingProductUpdatesRegistryObservation rejects retained Ready evidence after deletion starts.
+func TestDeletingProductUpdatesRegistryObservation(t *testing.T) {
 	for _, discovery := range []bool{false, true} {
 		t.Run(fmt.Sprintf("discovery-%t", discovery), func(t *testing.T) {
 			productServer := httptest.NewTLSServer(demoproduct.NewHandler())
@@ -51,7 +51,7 @@ func TestDeletingProductRevokesBrowserSurface(t *testing.T) {
 				MustNavigate(server.URL).
 				MustWaitLoad()
 			page.MustElement(".product-card").MustClick()
-			page.MustElement("#product-surface").MustWaitVisible()
+			page.MustElement("#product-readiness").MustWait(`() => this.textContent === "Ready"`)
 			if err := reader.Delete(t.Context(), product); err != nil {
 				t.Fatal(err)
 			}
@@ -63,7 +63,7 @@ func TestDeletingProductRevokesBrowserSurface(t *testing.T) {
 			}
 			page.MustElement("#product-readiness").
 				MustWait(`() => this.textContent === "Not ready"`)
-			if src := page.MustElement("#product-surface").MustAttribute("src"); src != nil {
+			if len(page.MustElements("iframe")) != 0 {
 				t.Fatal("deleting product opened or retained a surface")
 			}
 		})

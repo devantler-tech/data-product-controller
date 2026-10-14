@@ -2,7 +2,8 @@
 
 Date: 2026-09-30
 
-Status: Accepted
+Status: Superseded for registry embedding by [0023](0023-api-only-product-integration.md).
+The independent legacy compatibility kit remains bounded until its versioned retirement.
 
 ## Decision
 

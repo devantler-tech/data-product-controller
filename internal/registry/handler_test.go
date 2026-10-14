@@ -115,19 +115,22 @@ func TestRegistryUIAvailableByDefault(t *testing.T) {
 		t.Fatalf("status = %d, want %d", response.Code, http.StatusOK)
 	}
 	if got := response.Header().
-		Get("Content-Security-Policy"); got != "default-src 'self'; connect-src 'self'; frame-src https:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" {
+		Get("Content-Security-Policy"); got != "default-src 'self'; connect-src 'self'; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'" {
 		t.Fatalf("Content-Security-Policy = %q", got)
 	}
 	body := response.Body.String()
 	for _, required := range []string{
 		"<title>Data products</title>",
 		`id="data-product-grid"`,
-		`sandbox="allow-forms allow-scripts"`,
+		`id="product-interfaces"`,
 		`src="/assets/registry-`,
 	} {
 		if !strings.Contains(body, required) {
 			t.Fatalf("UI body does not contain %q", required)
 		}
+	}
+	if strings.Contains(body, "<iframe") {
+		t.Fatal("API-only workspace contains a product frame")
 	}
 }
 

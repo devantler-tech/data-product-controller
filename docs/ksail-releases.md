@@ -1,4 +1,11 @@
-# Browse live KSail releases
+# Consume live KSail releases
+
+The standard query output is the fixed public GitHub release API. Consumer
+applications own its presentation and transport. The API-only registry displays
+that output and its OpenAPI contract without loading the reference page or
+querying GitHub. Standalone reference pages and the independent embedding kit
+remain deprecated compatibility; see
+[ADR 0023](adr/0023-api-only-product-integration.md).
 
 The optional KSail release product shows published versions, UTC publication times and release
 channels from the existing public GitHub API. Version and channel filters use the loaded page.
@@ -30,7 +37,7 @@ not the current KSail tool version.
 
 No source Secret, Kubernetes API token, extra workload or workload source-egress permission is
 required. Public interface metadata grants no additional access. The chart's
-`uiContract` and `uiAppearance` settings control publisher-approved presentation hints;
+`uiContract` and `uiAppearance` settings control deprecated kit presentation hints;
 light/dark display preserves filters and does not request source data.
 
 The workload always serves `/ksail-releases/ui`, `/ksail-releases/openapi.json`,
@@ -61,8 +68,10 @@ GitHub currently responds.
 
 Navigation aborts pending reads and clears the retained page. Persisted history restoration rereads
 the public configuration and source; responses from an earlier refresh or page lifetime cannot
-replace the current view. The opaque iframe sandbox and exact publisher-origin/session checks remain
-required. The host receives bounded status and resize hints, never release records.
+replace the current view. If the deprecated kit is used, its opaque iframe sandbox
+and exact publisher-origin/session checks remain required. That host receives
+bounded status and resize hints, never release records. The registry grants no
+presentation capabilities and runs no product interface.
 
 Platform owns immutable signed adoption through normal GitOps. This public source does not
 establish the private credential-backed HTTP connector's rollout or authorization criteria.

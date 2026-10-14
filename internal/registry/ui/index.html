@@ -72,7 +72,7 @@
         <div class="interaction-copy">
           <h2 id="interaction-title" tabindex="-1">Select a product</h2>
           <p id="interaction-description">
-            Choose a product to view its details and data.
+            Inspect ownership, readiness and published APIs.
           </p>
           <dl id="product-metadata" hidden>
             <div>
@@ -120,12 +120,6 @@
             <p id="composition-status" role="status"></p>
             <ul id="product-lineage"></ul>
           </section>
-          <p
-            id="ui-contract-status"
-            role="status"
-            aria-live="polite"
-            hidden
-          ></p>
           <section id="dependency-trace" aria-labelledby="trace-title" hidden>
             <div class="trace-heading">
               <h3 id="trace-title">Dependency trace</h3>
@@ -150,16 +144,6 @@
               <p class="status">These are observations, not an access grant. Compatible contracts do not establish readiness or matching data schemas.</p>
             </div>
           </section>
-        </div>
-        <iframe
-          id="product-surface"
-          title="Selected data product"
-          sandbox="allow-forms allow-scripts"
-          referrerpolicy="no-referrer"
-          hidden
-        ></iframe>
-        <div id="surface-empty" class="surface-empty" hidden>
-          <p>No product view is open.</p>
         </div>
       </section>
     </main>

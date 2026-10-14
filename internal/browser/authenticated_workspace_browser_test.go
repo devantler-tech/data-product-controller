@@ -18,14 +18,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// TestAuthenticatedWorkspace keeps the catalog session on its own API while opening a credential-free product.
+// TestAuthenticatedWorkspace keeps catalog credentials on discovery without contacting publishers.
 func TestAuthenticatedWorkspace(t *testing.T) {
 	for _, version := range []string{"data-product-ui/v1", "data-product-ui/v2"} {
 		t.Run(version, func(t *testing.T) {
 			var productHandler http.Handler
 			var leakedCredentials atomic.Bool
+			var publisherRequests atomic.Int32
 			product := httptest.NewTLSServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					publisherRequests.Add(1)
 					if r.Header.Get("Cookie") != "" || r.Header.Get("Authorization") != "" {
 						leakedCredentials.Store(true)
 					}
@@ -105,26 +107,20 @@ func TestAuthenticatedWorkspace(t *testing.T) {
 			page := contractBrowser(t).MustPage().Timeout(15 * time.Second).
 				MustNavigate(catalog.URL).MustWaitLoad()
 			page.MustElement(".product-card").MustClick()
-			status := page.MustElement("#ui-contract-status").MustWait(
-				`() => this.dataset.state === 'ready' || this.dataset.state === 'unavailable'`,
-			)
-			if *status.MustAttribute("data-state") != "ready" {
-				t.Fatalf("authenticated product could not open: %s", status.MustText())
+			page.MustElement("#product-owner").MustWait(`() => this.textContent === 'Harbour team'`)
+			if len(page.MustElements("iframe")) != 0 {
+				t.Fatal("authenticated catalog mounted publisher code")
 			}
-			frame := page.MustElement("#product-surface").MustFrame()
-			frame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
-			frame.MustElement("#station").MustSelect("Nordhavn")
-			frame.MustElement("button[type=submit]").MustClick()
-			frame.MustElement("#status").MustWait(`() => this.textContent === '1 observation'`)
 			if appearance {
 				page.MustElement("#appearance").MustSelect("Dark")
-				waitTheme(t, page, frame, "rgb(0, 0, 0)")
-				if frame.MustElement("#status").MustText() != "1 observation" {
-					t.Fatal("authenticated appearance change lost the selected query")
+				page.MustElement("html").
+					MustWait(`() => getComputedStyle(this).backgroundColor === 'rgb(0, 0, 0)'`)
+				if page.MustElement("#product-owner").MustText() != "Harbour team" {
+					t.Fatal("authenticated appearance change lost selected metadata")
 				}
 			}
-			if leakedCredentials.Load() {
-				t.Fatal("catalog session reached the independently served product")
+			if leakedCredentials.Load() || publisherRequests.Load() != 0 {
+				t.Fatal("catalog inspection contacted the independently served publisher")
 			}
 		})
 	}

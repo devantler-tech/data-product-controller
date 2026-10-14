@@ -237,12 +237,6 @@ func main() {
 			DiscoveryEnabled: func(ctx context.Context) bool {
 				return featureflag.Enabled(ctx, flagClient, registryDiscoveryFlag)
 			},
-			ContractEnabled: func(ctx context.Context) bool {
-				return featureflag.Enabled(ctx, flagClient, uiContractFlag)
-			},
-			AppearanceEnabled: func(ctx context.Context) bool {
-				return featureflag.Enabled(ctx, flagClient, uiAppearanceFlag)
-			},
 		},
 	)
 	catalogHandler, err := catalog.NewHandler(controllerManager.GetAPIReader(), catalog.Options{

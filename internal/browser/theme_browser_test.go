@@ -24,32 +24,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// TestWorkspaceThemes changes appearance without reloading a sandboxed product or losing its query.
+// TestWorkspaceThemes changes local appearance without losing selected metadata or contacting a publisher.
 func TestWorkspaceThemes(t *testing.T) {
 	page, loads := themeWorkspace(t, false, true, true, true)
 	if !page.MustEval(`() => !!document.querySelector('select[aria-label="Theme"]')`).Bool() {
 		t.Fatal("workspace has no accessible theme selector")
 	}
 	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
-	frame := page.MustElement("#product-surface").MustFrame()
-	frame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
-	frame.MustElement("#station").MustSelect("Nordhavn")
-	frame.MustElement("button[type=submit]").MustClick()
-	frame.MustElement("#status").MustWait(`() => this.textContent === '1 observation'`)
+	page.MustElement("#product-owner").MustWait(`() => this.textContent === 'Harbour team'`)
 	page.MustElement("#appearance").MustSelect("Dark")
-	waitTheme(t, page, frame, "rgb(0, 0, 0)")
+	waitTheme(t, page, nil, "rgb(0, 0, 0)")
 	page.MustElement("#appearance").MustFocus()
 	page.Keyboard.MustType(input.KeyL)
-	waitTheme(t, page, frame, "rgb(255, 255, 255)")
-	if loads.Load() != 1 || frame.MustElement("#status").MustText() != "1 observation" ||
-		!strings.Contains(frame.MustElement("#observations").MustText(), "Nordhavn") {
-		t.Fatal("appearance change reloaded the product or lost the selected query")
-	}
-	if sandbox := page.MustElement("#product-surface").
-		MustAttribute("sandbox"); sandbox == nil ||
-		*sandbox != "allow-forms allow-scripts" {
-		t.Fatal("appearance change widened the product sandbox")
+	waitTheme(t, page, nil, "rgb(255, 255, 255)")
+	if loads.Load() != 0 || page.MustElement("#product-owner").MustText() != "Harbour team" ||
+		len(page.MustElements("iframe")) != 0 {
+		t.Fatal("appearance change contacted the product or lost selected metadata")
 	}
 	page.MustElement("#appearance").MustSelect("Dark")
 	page.MustReload().MustWaitLoad()
@@ -137,16 +127,14 @@ func TestKitAppearanceGrant(t *testing.T) {
 func TestSystemThemeWithDeniedStorage(t *testing.T) {
 	page, _ := themeWorkspace(t, true, true, true, true)
 	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
-	frame := page.MustElement("#product-surface").MustFrame()
-	frame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
+	page.MustElement("#product-owner").MustWait(`() => this.textContent === 'Harbour team'`)
 	for _, theme := range []struct{ preference, background string }{{"dark", "rgb(0, 0, 0)"}, {"light", "rgb(255, 255, 255)"}} {
 		if err := (proto.EmulationSetEmulatedMedia{Features: []*proto.EmulationMediaFeature{{Name: "prefers-color-scheme", Value: theme.preference}}}).Call(
 			page,
 		); err != nil {
 			t.Fatal(err)
 		}
-		waitTheme(t, page, frame, theme.background)
+		waitTheme(t, page, nil, theme.background)
 	}
 	if err := (proto.EmulationSetEmulatedMedia{}).Call(page); err != nil {
 		t.Fatal(err)
@@ -156,14 +144,14 @@ func TestSystemThemeWithDeniedStorage(t *testing.T) {
 		background = "rgb(0, 0, 0)"
 	}
 	page.MustElement("#appearance").MustSelect("Dark")
-	waitTheme(t, page, frame, "rgb(0, 0, 0)")
+	waitTheme(t, page, nil, "rgb(0, 0, 0)")
 	page.MustElement("#appearance").MustSelect("System")
-	waitTheme(t, page, frame, background)
+	waitTheme(t, page, nil, background)
 }
 
-// TestAppearanceGates refuses v2 navigation unless both independently controlled gates are enabled.
+// TestAppearanceGates proves legacy presentation flags cannot restore registry execution.
 func TestAppearanceGates(t *testing.T) {
-	for _, gates := range []struct{ contract, appearance bool }{{false, false}, {true, false}, {false, true}} {
+	for _, gates := range []struct{ contract, appearance bool }{{false, false}, {true, false}, {false, true}, {true, true}} {
 		t.Run(
 			fmt.Sprintf("contract=%t/appearance=%t", gates.contract, gates.appearance),
 			func(t *testing.T) {
@@ -175,12 +163,10 @@ func TestAppearanceGates(t *testing.T) {
 					gates.contract && gates.appearance,
 				)
 				page.MustElement(".product-card").MustClick()
-				page.MustElement("#ui-contract-status").
-					MustWait(`() => this.dataset.state === 'unavailable'`)
-				if loads.Load() != 0 ||
-					page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
-						Bool() {
-					t.Fatal("disabled appearance contract navigated a product")
+				page.MustElement("#product-owner").
+					MustWait(`() => this.textContent === 'Harbour team'`)
+				if loads.Load() != 0 || len(page.MustElements("iframe")) != 0 {
+					t.Fatal("legacy appearance flags restored a product frame")
 				}
 			},
 		)
@@ -189,10 +175,10 @@ func TestAppearanceGates(t *testing.T) {
 
 // TestAppearanceMessageBoundary rejects cosmetic messages from the wrong parent, origin or session.
 func TestAppearanceMessageBoundary(t *testing.T) {
-	page, _ := themeWorkspace(t, false, true, true, true)
+	page, _ := themeCompatibilityKit(t, true)
 	page.MustElement("#appearance").MustSelect("Light")
-	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
+	page.MustElement("#validate").MustClick()
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
 	frame := page.MustElement("#product-surface").MustFrame()
 	frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'light'`)
 	frame.MustEval(`() => {
@@ -220,7 +206,7 @@ func TestAppearanceMessageBoundary(t *testing.T) {
 	)
 	frame.MustEval(`() => location.reload()`)
 	page.MustWait(
-		`() => productNavigated && document.querySelector('#ui-contract-status').dataset.state === 'ready'`,
+		`() => productNavigated && document.querySelector('#kit-status').dataset.state === 'ready'`,
 	)
 	frame = page.MustElement("#product-surface").MustFrame()
 	frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'dark'`)
@@ -241,9 +227,9 @@ func TestAppearanceMessageBoundary(t *testing.T) {
 
 // TestProductAppearanceGate refuses the host handshake when only the product gate is disabled.
 func TestProductAppearanceGate(t *testing.T) {
-	page, loads := themeWorkspace(t, false, true, true, false)
-	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'timeout'`)
+	page, loads := themeCompatibilityKit(t, false)
+	page.MustElement("#validate").MustClick()
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'timeout'`)
 	if loads.Load() != 1 ||
 		page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
 			Bool() {
@@ -255,22 +241,22 @@ func TestProductAppearanceGate(t *testing.T) {
 func TestAppearanceSessionLimits(t *testing.T) {
 	for _, side := range []string{"host", "product"} {
 		t.Run(side, func(t *testing.T) {
-			page, _ := themeWorkspace(t, false, true, true, true)
+			page, _ := themeCompatibilityKit(t, true)
 			page.MustElement("#appearance").MustSelect("Light")
-			page.MustElement(".product-card").MustClick()
-			page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
+			page.MustElement("#validate").MustClick()
+			page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
 			frame := page.MustElement("#product-surface").MustFrame()
 			frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'light'`)
 			if side == "host" {
 				page.MustEval(
-					`() => {for(let i=0;i<255;i++) disposeSurface.setAppearance(i%2===0?'dark':'light')}`,
+					`() => {for(let i=0;i<255;i++) dispose.setAppearance(i%2===0?'dark':'light')}`,
 				)
 				frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'dark'`)
 				if !page.MustElement("#product-surface").MustVisible() {
 					t.Fatal("host revoked the connection before its hint allowance")
 				}
-				page.MustEval(`() => disposeSurface.setAppearance('light')`)
-				page.MustElement("#ui-contract-status").
+				page.MustEval(`() => dispose.setAppearance('light')`)
+				page.MustElement("#kit-status").
 					MustWait(`() => this.dataset.state === 'error'`)
 				if page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
 					Bool() {
@@ -301,13 +287,17 @@ func TestAppearanceSessionLimits(t *testing.T) {
 // waitTheme observes the actual palette in both documents, rather than a host-only state attribute.
 func waitTheme(t *testing.T, page, frame *rod.Page, background string) {
 	t.Helper()
-	for _, document := range []*rod.Page{page, frame} {
+	documents := []*rod.Page{page}
+	if frame != nil {
+		documents = append(documents, frame)
+	}
+	for _, document := range documents {
 		document.MustElement("html").
 			MustWait(`(color) => getComputedStyle(this).backgroundColor === color`, background)
 	}
 }
 
-// themeWorkspace serves the real registry and sample under separate origins with an unchanged opaque sandbox.
+// themeWorkspace serves independently owned product metadata without registry execution.
 func themeWorkspace(
 	t *testing.T,
 	deniedStorage, contractEnabled, appearanceEnabled, productAppearanceEnabled bool,
@@ -366,19 +356,68 @@ func themeWorkspace(
 	return page, &loads
 }
 
+// themeCompatibilityKit retains legacy protocol boundary coverage until runtime retirement.
+func themeCompatibilityKit(t *testing.T, productAppearanceEnabled bool) (*rod.Page, *atomic.Int32) {
+	t.Helper()
+	kit := httptest.NewTLSServer(
+		web.KitHandlerWithAppearance(func() bool { return true }, func() bool { return true }),
+	)
+	t.Cleanup(kit.Close)
+	var loads atomic.Int32
+	var handler http.Handler
+	product := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ui" {
+			loads.Add(1)
+		}
+		handler.ServeHTTP(w, r)
+	}))
+	t.Cleanup(product.Close)
+	var err error
+	handler, err = demoproduct.NewHandlerWithOptions(demoproduct.HandlerOptions{
+		PublicBaseURL:     product.URL,
+		HostOrigins:       []string{kit.URL},
+		AppearanceEnabled: productAppearanceEnabled,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := json.Marshal(datav1alpha1.ProductUI{
+		URL: product.URL + "/ui", Title: "Harbour observations",
+		Contract: &datav1alpha1.UIContract{
+			APIVersion:   "data-product-ui/v2",
+			HostOrigins:  []datav1alpha1.UIHostOrigin{datav1alpha1.UIHostOrigin(kit.URL)},
+			Capabilities: []datav1alpha1.UICapability{"status", "resize", "appearance"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	page := contractBrowser(
+		t,
+	).MustPage().
+		Timeout(20 * time.Second).
+		MustNavigate(kit.URL).
+		MustWaitLoad()
+	page.MustElement("#manifest").MustInput(string(manifest))
+	for _, name := range []string{"status", "resize", "appearance"} {
+		page.MustElement("#grant-" + name).MustClick()
+	}
+	return page, &loads
+}
+
 // TestDuplicateAppearanceHintsPreserveQuery retains the connection and its allowance for actual changes.
 func TestDuplicateAppearanceHintsPreserveQuery(t *testing.T) {
-	page, loads := themeWorkspace(t, false, true, true, true)
+	page, loads := themeCompatibilityKit(t, true)
 	page.MustElement("#appearance").MustSelect("Light")
-	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
+	page.MustElement("#validate").MustClick()
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
 	frame := page.MustElement("#product-surface").MustFrame()
 	frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'light'`)
 	frame.MustElement("#station").MustSelect("Nordhavn")
 	frame.MustElement("button[type=submit]").MustClick()
 	frame.MustElement("#status").MustWait(`() => this.textContent === '1 observation'`)
 	session := frame.MustEval(`() => connection.session`).Str()
-	page.MustEval(`() => {for(let i=0;i<1024;i++) disposeSurface.setAppearance('light')}`)
+	page.MustEval(`() => {for(let i=0;i<1024;i++) dispose.setAppearance('light')}`)
 	if loads.Load() != 1 || !page.MustElement("#product-surface").MustVisible() ||
 		frame.MustEval(`() => connection.session`).Str() != session ||
 		frame.MustElement("#status").MustText() != "1 observation" ||
@@ -386,14 +425,14 @@ func TestDuplicateAppearanceHintsPreserveQuery(t *testing.T) {
 		t.Fatal("duplicate appearance hints revoked the session or lost its query")
 	}
 	page.MustEval(
-		`() => {for(let i=0;i<255;i++) disposeSurface.setAppearance(i%2===0?'dark':'light')}`,
+		`() => {for(let i=0;i<255;i++) dispose.setAppearance(i%2===0?'dark':'light')}`,
 	)
 	frame.MustElement("html").MustWait(`() => this.dataset.appearance === 'dark'`)
 	if !page.MustElement("#product-surface").MustVisible() {
 		t.Fatal("duplicate hints consumed the distinct-change allowance")
 	}
-	page.MustEval(`() => disposeSurface.setAppearance('light')`)
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'error'`)
+	page.MustEval(`() => dispose.setAppearance('light')`)
+	page.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'error'`)
 	if page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
 		Bool() {
 		t.Fatal("distinct changes bypassed the appearance allowance")

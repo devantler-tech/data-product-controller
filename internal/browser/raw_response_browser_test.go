@@ -161,7 +161,7 @@ func TestRegistryRawResponseAdmission(t *testing.T) {
 						case "exact":
 							page.MustElement("#selection-status").
 								MustWait(`()=>(!this.hidden && !this.textContent.includes('Loading')) || !document.querySelector('#product-metadata').hidden`)
-							if !page.MustEval(`()=>document.querySelector('#product-metadata').hidden && document.querySelector('#descriptor-actions').hidden && document.querySelector('#interfaces-detail').hidden && document.querySelector('iframe').hidden && !document.querySelector('iframe').hasAttribute('src')`).
+							if !page.MustEval(`()=>document.querySelector('#product-metadata').hidden && document.querySelector('#descriptor-actions').hidden && document.querySelector('#interfaces-detail').hidden && document.querySelectorAll('iframe').length===0`).
 								Bool() {
 								t.Error(
 									"malformed exact response retained product metadata or access",

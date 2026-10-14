@@ -103,7 +103,7 @@ func TestCatalogRejectsMalformedDescriptors(t *testing.T) {
 				MustWait(`() => !this.hidden && !this.textContent.includes("Loading")`)
 			if !page.MustEval(`() => document.querySelector('#product-metadata').hidden &&
 				document.querySelector('#descriptor-actions').hidden &&
-				!document.querySelector('#product-surface').hasAttribute('src')`).Bool() {
+				document.querySelectorAll('iframe').length === 0`).Bool() {
 				t.Fatal("malformed exact response retained descriptor or surface state")
 			}
 		})
@@ -183,7 +183,7 @@ func TestCatalogSearchesCanonicalIdentity(t *testing.T) {
 	page.MustElement(".product-card").MustClick()
 	page.MustElement("#export-descriptor").MustWaitVisible()
 	if page.MustElement("#product-readiness").MustText() != "Not ready" ||
-		page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
+		page.MustEval(`() => document.querySelectorAll('iframe').length !== 0`).
 			Bool() {
 		t.Fatal("unready descriptor was not inspectable without a surface")
 	}
