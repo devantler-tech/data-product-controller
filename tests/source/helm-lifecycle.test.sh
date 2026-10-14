@@ -28,25 +28,25 @@ repo_root=$root
 test_dir=$work
 source "$root/tests/source/helm-lifecycle.sh"
 digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-jq -n --arg digest "$digest" '{metadata:{status:"deployed",revision:7,chart:"kweft",version:"1.2.3",appVersion:"1.2.3"},values:{image:{repository:"ghcr.io/devantler-tech/kweft",digest:$digest}}}' >"$work/good.json"
+jq -n --arg digest "$digest" '{metadata:{status:"deployed",revision:7,chart:"khoist",version:"1.2.3",appVersion:"1.2.3"},values:{image:{repository:"ghcr.io/devantler-tech/khoist",digest:$digest}}}' >"$work/good.json"
 cp "$work/good.json" "$HELM_TEST_RELEASE"
-helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/kweft@$digest"
+helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/khoist@$digest"
 for mutation in '.metadata.status="pending-upgrade"' '.metadata.version="1.2.4"' '.metadata.appVersion="1.2.4"' '.values.image.digest="latest"' '.values.image.repository="unapproved.example/controller"' '.metadata.chart="other"' '.metadata.revision=0'; do
 	jq "$mutation" "$work/good.json" >"$HELM_TEST_RELEASE"
-	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/kweft@$digest"; then
+	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/khoist@$digest"; then
 		echo 'installed release identity accepted drift' >&2
 		exit 1
 	fi
 done
 cp "$work/good.json" "$HELM_TEST_RELEASE"
 export CHANGE_REVISION=true
-if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/kweft@$digest"; then
+if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/khoist@$digest"; then
 	echo 'installed identity accepted a release changed during readback' >&2
 	exit 1
 fi
 unset CHANGE_REVISION
 printf '{}\n' >"$HELM_TEST_RELEASE"
-if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/kweft@$digest"; then
+if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/khoist@$digest"; then
 	echo 'installed release identity accepted incomplete response' >&2
 	exit 1
 fi
@@ -78,7 +78,7 @@ probe() {
 	if [[ $2 == */api/* ]]; then return 0; fi
 	[[ $page_title == "$4" ]]
 }
-page_title='<title>KWeft · Data products</title>'
+page_title='<title>KHoist · Data products</title>'
 registry_replicas_ready
 if registry_replicas_ready legacy; then
 	echo 'legacy proof accepted a canonical page' >&2

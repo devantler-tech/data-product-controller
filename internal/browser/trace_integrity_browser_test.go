@@ -9,9 +9,9 @@ import (
 	"sync/atomic"
 	"testing"
 
-	data "github.com/devantler-tech/kweft/api/v1alpha1"
-	"github.com/devantler-tech/kweft/internal/controller"
-	"github.com/devantler-tech/kweft/internal/registry"
+	data "github.com/devantler-tech/khoist/api/v1alpha1"
+	"github.com/devantler-tech/khoist/internal/controller"
+	"github.com/devantler-tech/khoist/internal/registry"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"

@@ -12,7 +12,7 @@ fail() {
 }
 tag='' source_sha='' image_digest='' chart_digest='' publisher_sha='' platform='' output_dir=''
 budget=180
-release_profile=kweft
+release_profile=khoist
 while [[ $# -gt 0 ]]; do
 	[[ $# -ge 2 ]] || fail configuration
 	case "$1" in
@@ -30,7 +30,7 @@ while [[ $# -gt 0 ]]; do
 	shift 2
 done
 case "$release_profile" in
-kweft) product=kweft ;;
+khoist) product=khoist ;;
 legacy) product=data-product-controller ;;
 *) fail configuration ;;
 esac

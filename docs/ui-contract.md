@@ -6,7 +6,7 @@ presentation capabilities. The API-only registry does not mount product UIs,
 send presentation messages or grant those capabilities. Its legacy configuration
 keys are always false, regardless of flag settings. See
 [ADR 0023](adr/0023-api-only-product-integration.md) and
-[#392](https://github.com/devantler-tech/kweft/issues/392) for
+[#392](https://github.com/devantler-tech/khoist/issues/392) for
 the versioned contract/runtime retirement. This guide describes the retained
 compatibility runtime, whose security controls remain required while it exists.
 
@@ -41,7 +41,7 @@ in the [installation guide](../README.md#install-on-a-cluster).
 
 Platform owns production activation and immutable artifact pins. Release, local
 browser tests, and a successful handshake do not prove a production rollout.
-[Issue #390](https://github.com/devantler-tech/kweft/issues/390)
+[Issue #390](https://github.com/devantler-tech/khoist/issues/390)
 tracks API-only migration and coordinated retirement.
 
 ## Publish a manifest
@@ -184,7 +184,7 @@ does not block inspection, and no product receives a hint.
 Legacy UIs and products without an appearance grant retain their own theme. The
 gate is a long-lived operator choice controlling optional presentation grants.
 Platform owns its production activation and readback in
-[issue 146](https://github.com/devantler-tech/kweft/issues/146).
+[issue 146](https://github.com/devantler-tech/khoist/issues/146).
 [ADR 0011](adr/0011-bounded-workspace-appearance.md) records the rationale.
 
 Another host opts in with `appearanceEnabled: true`, an `appearance` grant and

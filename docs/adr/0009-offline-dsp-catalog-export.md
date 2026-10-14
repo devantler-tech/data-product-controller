@@ -55,10 +55,10 @@ administration API is assumed. Production controller behavior is unchanged.
 
 Offline tests use unmodified pinned official schemas and contexts, an independent
 JSON Schema validator and JSON-LD expansion. Documentation includes runnable
-examples and [adoption/flag-retirement issue #126](https://github.com/devantler-tech/kweft/issues/126), with its review scheduled for 2026-10-30.
+examples and [adoption/flag-retirement issue #126](https://github.com/devantler-tech/khoist/issues/126), with its review scheduled for 2026-10-30.
 
 ## References
 
 - [DSP 2025-1-err2](https://eclipse-dataspace-protocol-base.github.io/DataspaceProtocol/2025-1-err2/)
 - [ODRL Offer](https://www.w3.org/TR/odrl-model/#policy-offer)
-- [Implementation issue #125](https://github.com/devantler-tech/kweft/issues/125)
+- [Implementation issue #125](https://github.com/devantler-tech/khoist/issues/125)

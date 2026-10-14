@@ -1,9 +1,9 @@
-{{- define "kweft.fullname" -}}
+{{- define "khoist.fullname" -}}
 {{- printf "%s" .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/* Keep the descriptor and independently served example's approvals identical. */}}
-{{- define "kweft.uiHostOrigins" -}}
+{{- define "khoist.uiHostOrigins" -}}
 {{- $origins := prepend .Values.uiContract.additionalHostOrigins (printf "https://%s" .Values.route.host) -}}
 {{- $seen := dict -}}
 {{- range $origin := $origins -}}
@@ -37,14 +37,14 @@
 {{- toJson $origins -}}
 {{- end -}}
 
-{{- define "kweft.labels" -}}
+{{- define "khoist.labels" -}}
 app.kubernetes.io/name: data-product-controller
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
-{{- define "kweft.image" -}}
+{{- define "khoist.image" -}}
 {{- if .Values.image.digest -}}
 {{ printf "%s@%s" .Values.image.repository .Values.image.digest }}
 {{- else -}}

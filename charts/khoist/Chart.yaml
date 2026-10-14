@@ -1,0 +1,10 @@
+apiVersion: v2
+name: khoist
+description: KHoist, the Kubernetes control plane for API-first composable data products
+home: https://github.com/devantler-tech/khoist
+sources:
+  - https://github.com/devantler-tech/khoist
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: ">=1.34.0-0"

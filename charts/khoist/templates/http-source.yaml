@@ -5,14 +5,14 @@
 {{- if not (regexMatch "^sha256:[a-f0-9]{64}$" .Values.image.digest) }}
 {{- fail "httpSource requires image.digest pinned to a released sha256 digest" }}
 {{- end }}
-{{- $name := printf "%s-http-source" (include "kweft.fullname" . | trunc 51 | trimSuffix "-") }}
+{{- $name := printf "%s-http-source" (include "khoist.fullname" . | trunc 51 | trimSuffix "-") }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: http-source
 automountServiceAccountToken: false
 ---
@@ -22,7 +22,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: http-source
 spec:
   replicas: {{ .Values.httpSource.replicas }}
@@ -49,7 +49,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: http-source
-          image: {{ include "kweft.image" . | quote }}
+          image: {{ include "khoist.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: [/http-source]
           env:
@@ -97,7 +97,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: http-source
 spec:
   type: ClusterIP
@@ -113,10 +113,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ printf "%s-http-source-metrics" (include "kweft.fullname" . | trunc 43 | trimSuffix "-") }}
+  name: {{ printf "%s-http-source-metrics" (include "khoist.fullname" . | trunc 43 | trimSuffix "-") }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: http-source
 spec:
   type: ClusterIP
@@ -136,7 +136,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: http-source
 spec:
   podSelector:

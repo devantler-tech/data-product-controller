@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

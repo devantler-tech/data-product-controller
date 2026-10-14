@@ -18,8 +18,8 @@ bash scripts/verify-release-artifacts.sh \
 ```
 
 Requires Cosign, Docker with Buildx, Helm, jq, yq and GNU `timeout` (or `gtimeout`).
-The default `kweft` release profile fixes the repositories and signing identities
-to the KWeft publishers. Historical baselines require the explicit `legacy`
+The default `khoist` release profile fixes the repositories and signing identities
+to the KHoist publishers. Historical baselines require the explicit `legacy`
 profile; there is no fallback between names. Signatures must bind the supplied digest, owned caller
 repository, release tag and source revision. A platform index must select exactly
 one matching Linux manifest; a single-platform manifest uses its signed digest

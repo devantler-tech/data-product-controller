@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"unicode/utf8"
 
-	"github.com/devantler-tech/kweft/internal/jsoninput"
+	"github.com/devantler-tech/khoist/internal/jsoninput"
 )
 
 var (

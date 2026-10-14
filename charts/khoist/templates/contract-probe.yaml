@@ -5,14 +5,14 @@
 {{- if not (regexMatch "^sha256:[a-f0-9]{64}$" .Values.image.digest) }}
 {{- fail "contractProbe requires image.digest pinned to a released sha256 digest" }}
 {{- end }}
-{{- $name := printf "%s-contract-probe" (include "kweft.fullname" . | trunc 48 | trimSuffix "-") }}
+{{- $name := printf "%s-contract-probe" (include "khoist.fullname" . | trunc 48 | trimSuffix "-") }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: contract-probe
 automountServiceAccountToken: false
 ---
@@ -22,7 +22,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: contract-probe
 spec:
   replicas: 1
@@ -48,7 +48,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: contract-probe
-          image: {{ include "kweft.image" . | quote }}
+          image: {{ include "khoist.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: [/contract-probe]
           env:
@@ -85,7 +85,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: contract-probe
 spec:
   type: ClusterIP
@@ -105,7 +105,7 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "kweft.labels" . | nindent 4 }}
+    {{- include "khoist.labels" . | nindent 4 }}
     app.kubernetes.io/component: contract-probe
 spec:
   podSelector:

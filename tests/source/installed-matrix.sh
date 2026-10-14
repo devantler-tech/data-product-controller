@@ -5,7 +5,7 @@
 
 # matrix_observation joins immutable workload identity, current product conditions and both serving registry replicas for one phase.
 matrix_observation() {
-	local phase=$1 image=$2 runtime=$3 profile=${4:-kweft}
+	local phase=$1 image=$2 runtime=$3 profile=${4:-khoist}
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
 		--context "$cluster_context" --namespace products --product existing-export \
 		--deployment dpc:controller --deployment dpc-http-source:http-source \

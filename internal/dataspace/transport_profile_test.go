@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/kweft/internal/dataspace"
+	"github.com/devantler-tech/khoist/internal/dataspace"
 )
 
 // TestConnectorServicePortProfile exercises the exported provider base, not only URL parsing.

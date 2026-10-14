@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -120,7 +120,7 @@ func TestRegistryUIAvailableByDefault(t *testing.T) {
 	}
 	body := response.Body.String()
 	for _, required := range []string{
-		"<title>KWeft · Data products</title>",
+		"<title>KHoist · Data products</title>",
 		`id="data-product-grid"`,
 		`id="product-interfaces"`,
 		`src="/assets/registry-`,

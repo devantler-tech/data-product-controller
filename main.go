@@ -7,14 +7,14 @@ import (
 	"os"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
-	"github.com/devantler-tech/kweft/internal/catalog"
-	"github.com/devantler-tech/kweft/internal/config"
-	connectorv1 "github.com/devantler-tech/kweft/internal/connector/v1"
-	productcontroller "github.com/devantler-tech/kweft/internal/controller"
-	providerv1 "github.com/devantler-tech/kweft/internal/provider/v1"
-	"github.com/devantler-tech/kweft/internal/registry"
-	"github.com/devantler-tech/kweft/pkg/featureflag"
+	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
+	"github.com/devantler-tech/khoist/internal/catalog"
+	"github.com/devantler-tech/khoist/internal/config"
+	connectorv1 "github.com/devantler-tech/khoist/internal/connector/v1"
+	productcontroller "github.com/devantler-tech/khoist/internal/controller"
+	providerv1 "github.com/devantler-tech/khoist/internal/provider/v1"
+	"github.com/devantler-tech/khoist/internal/registry"
+	"github.com/devantler-tech/khoist/pkg/featureflag"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -158,7 +158,7 @@ func main() {
 			registryLineageFlag:    registryLineageEnabled,
 		},
 	)
-	flagClient, err := featureflag.NewClient("kweft", flagProvider)
+	flagClient, err := featureflag.NewClient("khoist", flagProvider)
 	if err != nil {
 		setupLog.Error(err, "configure feature flags")
 		os.Exit(1)

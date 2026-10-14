@@ -1,9 +1,9 @@
-# KWeft
+# KHoist
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 A data product is a dataset or data service that a team publishes for others to use, together with
-a description of who owns it, how to query it and what it depends on. KWeft lets teams
+a description of who owns it, how to query it and what it depends on. KHoist lets teams
 describe their data products as Kubernetes resources. A controller checks that each product's
 dependencies exist and reports whether the product is ready, and a read-only registry lists the
 products so that people and tools can find them.
@@ -11,11 +11,11 @@ products so that people and tools can find them.
 The controller handles descriptions only. Product data and credentials stay with the team that
 owns the product.
 
-KWeft was previously named Data Product Controller. The repository, Go module,
-controller image and chart now use `kweft`. Existing `DataProduct` APIs and
+KHoist was previously named Data Product Controller. The repository, Go module,
+controller image and chart now use `khoist`. Existing `DataProduct` APIs and
 deployment identities remain compatible; keep an existing Helm release name
 when upgrading. Historical artifact verification uses `--release-profile legacy`.
-See [the naming decision](docs/adr/0024-kweft-product-name.md).
+See [the naming decision](docs/adr/0024-khoist-product-name.md).
 
 - **Try it:** [run the example product locally](#try-it-locally), with no cluster and no credentials.
 - **Use it:** [install the controller on a cluster](#install-on-a-cluster).
@@ -31,8 +31,8 @@ cluster, account or credentials.
 You need Git, `curl`, and Go at the version in [`go.mod`](go.mod) or newer.
 
 ```bash
-git clone https://github.com/devantler-tech/kweft.git
-cd kweft
+git clone https://github.com/devantler-tech/khoist.git
+cd khoist
 go run ./cmd/demo-product --listen-address 127.0.0.1:8080
 ```
 
@@ -181,7 +181,7 @@ The registry grants no product presentation capabilities, regardless of legacy
 flag settings. The independent compatibility kit remains deprecated and retains
 its restrictive sandbox and protocol controls; [its guide](docs/ui-contract.md)
 describes that existing runtime. Versioned schema/runtime retirement and normal
-Platform adoption are tracked in [#390](https://github.com/devantler-tech/kweft/issues/390).
+Platform adoption are tracked in [#390](https://github.com/devantler-tech/khoist/issues/390).
 
 The workspace offers System, Light and Dark appearance with an orange accent.
 An explicit choice stays in browser storage when available; denied storage does
@@ -254,9 +254,9 @@ when a product describes one logical dataset and every named output provides
 access to a representation of it. Enable the separate `dcatCatalog.enabled` chart
 flag and supply `dcatCatalog.id` to publish the catalog. Discovery grants no access
 to data and makes no availability claim. Production activation and flag retirement
-are tracked in [#123](https://github.com/devantler-tech/kweft/issues/123).
+are tracked in [#123](https://github.com/devantler-tech/khoist/issues/123).
 
-Engine-specific provisioning, additional source adapters, schema-content compatibility, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/kweft/issues/1).
+Engine-specific provisioning, additional source adapters, schema-content compatibility, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/khoist/issues/1).
 
 ## Install on a cluster
 
@@ -271,7 +271,7 @@ does not prove that a particular version is available. Before you depend on one,
 registry serves it:
 
 ```bash
-helm show chart oci://ghcr.io/devantler-tech/charts/kweft --version '<version>'
+helm show chart oci://ghcr.io/devantler-tech/charts/khoist --version '<version>'
 ```
 
 The command prints the chart's metadata when that version exists and fails when it does not.
@@ -281,14 +281,14 @@ Platform deployments should pin the released chart and an immutable image digest
 
 The chart publication job signs the digest returned by Helm and verifies its signature before
 succeeding. Chart signatures use the issuer `https://token.actions.githubusercontent.com` and the
-identity `https://github.com/devantler-tech/kweft/.github/workflows/publish-chart.yaml@refs/tags/<tag>`.
+identity `https://github.com/devantler-tech/khoist/.github/workflows/publish-chart.yaml@refs/tags/<tag>`.
 Verify a released chart using its published digest and tag:
 
 ```bash
 cosign verify \
-  --certificate-identity 'https://github.com/devantler-tech/kweft/.github/workflows/publish-chart.yaml@refs/tags/<tag>' \
+  --certificate-identity 'https://github.com/devantler-tech/khoist/.github/workflows/publish-chart.yaml@refs/tags/<tag>' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  'ghcr.io/devantler-tech/charts/kweft@sha256:<digest>'
+  'ghcr.io/devantler-tech/charts/khoist@sha256:<digest>'
 ```
 
 Deployment policy must match this chart identity separately from the shared controller-image and
@@ -307,7 +307,7 @@ image digest verified against the trusted publisher:
 
 ```bash
 helm upgrade --install data-product-controller \
-  oci://ghcr.io/devantler-tech/charts/kweft \
+  oci://ghcr.io/devantler-tech/charts/khoist \
   --version '<version>' \
   --namespace data-product-system \
   --create-namespace \
@@ -326,7 +326,7 @@ and never updates or removes it on `helm upgrade`, so a release that changes the
 does not reach clusters that already have the chart. Apply the new CRD before upgrading:
 
 ```bash
-helm show crds oci://ghcr.io/devantler-tech/charts/kweft --version <version> \
+helm show crds oci://ghcr.io/devantler-tech/charts/khoist --version <version> \
   | kubectl apply -f -
 ```
 

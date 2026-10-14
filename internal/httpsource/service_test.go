@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/kweft/pkg/featureflag"
+	"github.com/devantler-tech/khoist/pkg/featureflag"
 )
 
 // TestReleaseGate prevents a disabled connector from reading credentials or contacting a source.

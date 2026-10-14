@@ -3,7 +3,7 @@ set -eu
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 mega_config="$repo_root/.mega-linter.yml"
-chart="$repo_root/charts/kweft"
+chart="$repo_root/charts/khoist"
 trivy_ignore="$repo_root/.trivyignore.yaml"
 
 # fail rejects a scanner exception outside its reviewed contract.
@@ -99,8 +99,8 @@ expected_trivy_allowlist=$(
 		'KSV-0113 docs/examples/graph-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/hybrid-provider-observer-rbac.yaml' \
 		'KSV-0113 docs/examples/sql-provider-observer-rbac.yaml' \
-		'KSV-0125 charts/kweft/templates/controller-deployment.yaml' \
-		'KSV-0125 charts/kweft/templates/demo-deployment.yaml' \
+		'KSV-0125 charts/khoist/templates/controller-deployment.yaml' \
+		'KSV-0125 charts/khoist/templates/demo-deployment.yaml' \
 		'KSV-0125 deploy/deployment.yaml' \
 		'KSV-0125 tests/source/consumer.yaml' |
 		sort

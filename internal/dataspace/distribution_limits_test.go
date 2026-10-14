@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/kweft/internal/dataspace"
+	"github.com/devantler-tech/khoist/internal/dataspace"
 )
 
 // firstObject asserts the fixture structure before a test mutates nested metadata.

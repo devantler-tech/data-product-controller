@@ -12,7 +12,7 @@ deploy_network_policy="$repo_root/deploy/network-policy.yaml"
 generated_rbac="$repo_root/config/rbac/role.yaml"
 generated_crd="$repo_root/config/crd/bases/data.devantler.tech_dataproducts.yaml"
 deploy_crd="$repo_root/deploy/data.devantler.tech_dataproducts.yaml"
-chart_crd="$repo_root/charts/kweft/crds/data.devantler.tech_dataproducts.yaml"
+chart_crd="$repo_root/charts/khoist/crds/data.devantler.tech_dataproducts.yaml"
 
 fail() {
 	printf '%s\n' "release contract test failed: $1" >&2
@@ -30,7 +30,7 @@ yq -e '.jobs.release.permissions | ((.contents == "write") and (."id-token" == "
 
 grep -Eq 'uses: devantler-tech/actions/\.github/workflows/publish-app\.yaml@[0-9a-f]{40}' "$workflow" ||
 	fail 'CD must call the immutable shared publish-app workflow'
-grep -F 'app-name: kweft' "$workflow" >/dev/null ||
+grep -F 'app-name: khoist' "$workflow" >/dev/null ||
 	fail 'CD must identify the controller container for digest pinning'
 grep -F 'enable-caller-pin: true' "$workflow" >/dev/null ||
 	fail 'CD must require an immutable caller identity before signing'
@@ -48,10 +48,10 @@ printf '%s\n' "$smoke" | grep -F -- "--certificate-identity \"\$publisher_identi
 [ -f "$deployment" ] || fail 'deploy/deployment.yaml is required by publish-app'
 cmp "$generated_crd" "$deploy_crd" || fail 'published and generated CRDs differ'
 cmp "$generated_crd" "$chart_crd" || fail 'chart and generated CRDs differ'
-container_count=$(yq '[.spec.template.spec.containers[] | select(.name == "kweft")] | length' "$deployment")
+container_count=$(yq '[.spec.template.spec.containers[] | select(.name == "khoist")] | length' "$deployment")
 [ "$container_count" = '1' ] ||
-	fail 'deployment must contain exactly one kweft container'
-[ "$(yq '.spec.template.spec.containers[] | select(.name == "kweft") | .image' "$deployment")" = 'ghcr.io/devantler-tech/kweft:latest' ] ||
+	fail 'deployment must contain exactly one khoist container'
+[ "$(yq '.spec.template.spec.containers[] | select(.name == "khoist") | .image' "$deployment")" = 'ghcr.io/devantler-tech/khoist:latest' ] ||
 	fail 'publish-app must receive the expected mutable image placeholder'
 
 sh "$repo_root/scripts/chart-image.test.sh"

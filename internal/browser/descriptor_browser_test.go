@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/kweft/web"
+	"github.com/devantler-tech/khoist/web"
 )
 
 // TestOfflineDescriptorHandoff catches replacing the descriptor handoff with a URL fetch or bypassing UI grants.

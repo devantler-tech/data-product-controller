@@ -10,8 +10,8 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/devantler-tech/kweft/internal/dataspace"
-	"github.com/devantler-tech/kweft/pkg/featureflag"
+	"github.com/devantler-tech/khoist/internal/dataspace"
+	"github.com/devantler-tech/khoist/pkg/featureflag"
 )
 
 // main reports errors separately from catalog output and returns a failing exit status.

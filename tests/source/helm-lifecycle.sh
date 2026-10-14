@@ -7,7 +7,7 @@ helm_scoped() {
 }
 
 helm_installed_identity() {
-	local version=$1 image=$2 chart_name=${3:-kweft} metadata revision final
+	local version=$1 image=$2 chart_name=${3:-khoist} metadata revision final
 	metadata=$(helm_scoped get metadata dpc --output json) || return 1
 	revision=$(jq -ser --arg version "$version" --arg chart "$chart_name" '
     if length == 1 then .[0] else error("ambiguous metadata") end |
@@ -29,7 +29,7 @@ install_chart() {
 }
 
 installed_observation() {
-	local phase=$1 image=$2 runtime=$3 profile=${4:-kweft}
+	local phase=$1 image=$2 runtime=$3 profile=${4:-khoist}
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
 		--context "$cluster_context" --namespace products --product existing-export \
 		--deployment dpc:controller --deployment dpc-http-source:http-source \

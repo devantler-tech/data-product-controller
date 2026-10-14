@@ -2,7 +2,7 @@
 set -eu
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-chart="$repo_root/charts/kweft"
+chart="$repo_root/charts/khoist"
 generated_crd="$repo_root/config/crd/bases/data.devantler.tech_dataproducts.yaml"
 chart_crd="$chart/crds/data.devantler.tech_dataproducts.yaml"
 

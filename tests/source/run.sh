@@ -91,8 +91,8 @@ registry_ready() { probe --url http://dpc/api/v1/products --registry-product "pr
 # Probe every endpoint directly: a successful Service request can hide a non-serving follower.
 registry_replicas_ready() {
 	local addresses address expected_title
-	case "${1:-kweft}" in
-	kweft) expected_title='<title>KWeft · Data products</title>' ;;
+	case "${1:-khoist}" in
+	khoist) expected_title='<title>KHoist · Data products</title>' ;;
 	legacy) expected_title='<title>Data products</title>' ;;
 	*) return 1 ;;
 	esac
@@ -285,8 +285,8 @@ jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
 }' >"$test_dir/values.yaml"
 
 mkdir "$test_dir/candidate-chart"
-helm package "$repo_root/charts/kweft" --destination "$test_dir/candidate-chart" >/dev/null
-candidate_chart="$test_dir/candidate-chart/kweft-$(helm show chart "$repo_root/charts/kweft" | yq -r '.version').tgz"
+helm package "$repo_root/charts/khoist" --destination "$test_dir/candidate-chart" >/dev/null
+candidate_chart="$test_dir/candidate-chart/khoist-$(helm show chart "$repo_root/charts/khoist" | yq -r '.version').tgz"
 if source_suite_includes lifecycle; then
 	helm_release_lifecycle
 

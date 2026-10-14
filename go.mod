@@ -1,4 +1,4 @@
-module github.com/devantler-tech/kweft
+module github.com/devantler-tech/khoist
 
 go 1.26.9
 

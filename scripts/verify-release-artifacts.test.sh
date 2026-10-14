@@ -8,13 +8,13 @@ export REAL_HELM
 REAL_HELM=$(command -v helm)
 cat >"$work/chart/Chart.yaml" <<'EOF'
 apiVersion: v2
-name: kweft
+name: khoist
 version: 1.2.3
 appVersion: 1.2.3
 EOF
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
-export TEST_ARCHIVE="$work/kweft-1.2.3.tgz"
-export TEST_PRODUCT=kweft
+export TEST_ARCHIVE="$work/khoist-1.2.3.tgz"
+export TEST_PRODUCT=khoist
 export TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export TEST_IMAGE_DIGEST=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 export TEST_CHART_DIGEST=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -214,15 +214,15 @@ reject --release-profile unknown
 sed 's/1.2.3/1.2.4/g' "$work/chart/Chart.yaml" >"$work/chart/next.yaml"
 mv "$work/chart/next.yaml" "$work/chart/Chart.yaml"
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
-export TEST_ARCHIVE="$work/kweft-1.2.4.tgz"
+export TEST_ARCHIVE="$work/khoist-1.2.4.tgz"
 reject
 # The legacy profile is explicit; an old signed baseline never becomes a
-# canonical KWeft release through an automatic identity fallback.
+# canonical KHoist release through an automatic identity fallback.
 yq '.name = "data-product-controller" | .version = "1.2.3" | .appVersion = "1.2.3"' "$work/chart/Chart.yaml" >"$work/chart/legacy.yaml"
 mv "$work/chart/legacy.yaml" "$work/chart/Chart.yaml"
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
 export TEST_PRODUCT=data-product-controller TEST_ARCHIVE="$work/data-product-controller-1.2.3.tgz"
 run_verify --release-profile legacy || fail 'explicit verified legacy baseline was rejected'
 jq -e '.complete == true and .releaseProfile == "legacy"' "$work/result/release.json" >/dev/null || fail 'legacy evidence did not retain its profile'
-reject --release-profile kweft
+reject --release-profile khoist
 echo 'release artifact verification behavior tests passed'

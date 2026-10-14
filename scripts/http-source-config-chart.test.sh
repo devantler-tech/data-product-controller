@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-chart="$repo_root/charts/kweft"
+chart="$repo_root/charts/khoist"
 render_source() {
 	helm template source-config "$chart" --namespace products --set image.digest=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa --set httpSource.enabled=true --set httpSource.sourceCIDR=192.0.2.10/32 --set httpSource.consumerPodLabels.app=reader --set-string httpSource.secretName="$1"
 }

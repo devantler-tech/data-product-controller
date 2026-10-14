@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/devantler-tech/kweft
+  repository: ghcr.io/devantler-tech/khoist
   # Empty selects the packaged chart appVersion; digest takes precedence.
   tag: ""
   digest: ""

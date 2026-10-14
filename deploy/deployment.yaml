@@ -27,8 +27,8 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: kweft
-          image: ghcr.io/devantler-tech/kweft:latest
+        - name: khoist
+          image: ghcr.io/devantler-tech/khoist:latest
           imagePullPolicy: Always
           command: [/manager]
           args: [--leader-elect]

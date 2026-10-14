@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
-	"github.com/devantler-tech/kweft/internal/controller"
-	"github.com/devantler-tech/kweft/internal/registry"
+	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
+	"github.com/devantler-tech/khoist/internal/controller"
+	"github.com/devantler-tech/khoist/internal/registry"
 	"github.com/go-rod/rod/lib/input"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

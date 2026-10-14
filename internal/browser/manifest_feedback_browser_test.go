@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/kweft/internal/demoproduct"
-	"github.com/devantler-tech/kweft/web"
+	"github.com/devantler-tech/khoist/internal/demoproduct"
+	"github.com/devantler-tech/khoist/web"
 )
 
 // TestManifestMissingFields identifies repairs without navigating rejected declarations.

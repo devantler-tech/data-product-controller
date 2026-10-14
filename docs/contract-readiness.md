@@ -6,7 +6,7 @@ A separate `contract-probe` Deployment performs the network requests. The
 controller only observes the Deployment through an exact-name, uncached GET.
 
 The default-off OpenFeature `contract-readiness` flag controls controller
-observation and probe execution. Flag retirement is tracked in [#101](https://github.com/devantler-tech/kweft/issues/101).
+observation and probe execution. Flag retirement is tracked in [#101](https://github.com/devantler-tech/khoist/issues/101).
 Products without checks retain their existing behavior. A product that declares
 checks while observation is disabled reports `ContractFeatureDisabled` and is
 not Ready.

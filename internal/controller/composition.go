@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

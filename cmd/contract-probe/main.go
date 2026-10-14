@@ -11,9 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devantler-tech/kweft/internal/config"
-	"github.com/devantler-tech/kweft/internal/contractprobe"
-	"github.com/devantler-tech/kweft/pkg/featureflag"
+	"github.com/devantler-tech/khoist/internal/config"
+	"github.com/devantler-tech/khoist/internal/contractprobe"
+	"github.com/devantler-tech/khoist/pkg/featureflag"
 )
 
 // main exposes only private management endpoints and reports process failures without contract contents.

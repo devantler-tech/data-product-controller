@@ -2,14 +2,14 @@
 
 ## Project overview
 
-KWeft (`devantler-tech/kweft`) is the cloud-native control plane for portable, composable data products.
+KHoist (`devantler-tech/khoist`) is the cloud-native control plane for portable, composable data products.
 Its API describes ownership, standard query interfaces and dependencies between products. Consumers
 own their UIs. The controller observes metadata; it never stores product data or credentials.
 API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`;
 retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration. Naming
-and preserved compatibility identities are documented in `docs/adr/0024-kweft-product-name.md`.
+and preserved compatibility identities are documented in `docs/adr/0024-khoist-product-name.md`.
 
-The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/kweft/issues/1).
+The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/khoist/issues/1).
 
 ## Repository structure
 
@@ -28,7 +28,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
 - `pkg/featureflag/` — OpenFeature boundary; provisioned sources, connector readiness, contract readiness, composition, DCAT publication, and portable UI grants are default-off. The registry workspace is always available.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
-- `charts/kweft/` — installable controller, CRD, routing, and demo product.
+- `charts/khoist/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
 - `docs/adr/` — architectural decisions.
 - `main.go` — controller manager and registry process.
@@ -139,7 +139,7 @@ sh scripts/release.test.sh
 sh scripts/age-release.test.sh
 sh scripts/scanner-suppressions.test.sh
 sh scripts/toolchain.test.sh
-helm lint charts/kweft
+helm lint charts/khoist
 golangci-lint run
 golangci-lint run --build-tags=browser ./internal/browser/...
 (cd tests/provider/fixture && go test -race -count=1 ./... && go vet ./...)
@@ -179,10 +179,10 @@ go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   output:crd:artifacts:config=config/crd/bases \
   output:rbac:artifacts:config=config/rbac
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/kweft/crds/data.devantler.tech_dataproducts.yaml
+  charts/khoist/crds/data.devantler.tech_dataproducts.yaml
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 cmp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/kweft/crds/data.devantler.tech_dataproducts.yaml
+  charts/khoist/crds/data.devantler.tech_dataproducts.yaml
 cmp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 ```
 

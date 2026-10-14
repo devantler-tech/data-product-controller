@@ -19,7 +19,7 @@ jobs:
       id-token: write # Mint the keyless Sigstore signing identity.
     uses: devantler-tech/actions/.github/workflows/publish-app.yaml@10ab0f1c94b951c16f6db58d094b42d49e2f775f # v13.10.11
     with:
-      app-name: kweft
+      app-name: khoist
       enable-caller-pin: true
 
   publish-age:
@@ -28,7 +28,7 @@ jobs:
       contents: read # Build the tagged release source.
       packages: write # Publish only the independently versioned AGE image.
       id-token: write # Sign that artifact with the immutable publisher identity.
-    uses: devantler-tech/kweft/.github/workflows/publish-age.yaml@c6cd7c04ae91d968b5b6a7b51e1fc7c966844388
+    uses: devantler-tech/khoist/.github/workflows/publish-age.yaml@8ccf4f6b9754edf458faf99fa79b4cb69fb34b9f
 
   smoke:
     name: Verify published offline commands and portable UI host
@@ -58,15 +58,15 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          image="ghcr.io/devantler-tech/kweft:${RELEASE_TAG#v}"
+          image="ghcr.io/devantler-tech/khoist:${RELEASE_TAG#v}"
           docker pull "$image"
           digest=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')
-          [[ "$digest" =~ ^ghcr.io/devantler-tech/kweft@sha256:[a-f0-9]{64}$ ]]
+          [[ "$digest" =~ ^ghcr.io/devantler-tech/khoist@sha256:[a-f0-9]{64}$ ]]
           publisher_identity=$(go run ./scripts/publisher-identity)
           cosign verify \
             --certificate-identity "$publisher_identity" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-github-workflow-repository devantler-tech/kweft \
+            --certificate-github-workflow-repository devantler-tech/khoist \
             --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
             --certificate-github-workflow-sha "$EXPECTED_SHA" \
             "$digest"

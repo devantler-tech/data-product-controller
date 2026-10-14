@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/devantler-tech/kweft/internal/dataspace"
+	"github.com/devantler-tech/khoist/internal/dataspace"
 )
 
 // TestRound13SourceServiceGraph rejects incomplete, orphaned and shared service associations.

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/kweft/web"
+	"github.com/devantler-tech/khoist/web"
 )
 
 // TestKitDeclarationAndGrantRevocation exercises the actual portable host and an independent opaque frame.

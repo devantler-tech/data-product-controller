@@ -1,4 +1,4 @@
-# 0024: KWeft product name
+# 0024: KHoist product name
 
 Date: 2026-10-14
 
@@ -6,14 +6,15 @@ Status: Accepted
 
 ## Decision
 
-The product is **KWeft**. Its canonical repository and Go module are
-`devantler-tech/kweft` and `github.com/devantler-tech/kweft`.
-The name combines the cloud-native k prefix with weft, the connecting thread of
-a woven fabric. It describes products composed through their published APIs.
+The product is **KHoist**. Its canonical repository and Go module are
+`devantler-tech/khoist` and `github.com/devantler-tech/khoist`.
+The name combines the cloud-native k prefix with hoist, the active nautical verb
+for raising a sail or lifting cargo. It reflects the product's direction: make
+application data storage easier to set up and use through reusable data products.
 
 The registry, publisher review, chart, controller image and current documentation
 use the product name. New controller and chart artifacts are published as
-`ghcr.io/devantler-tech/kweft` and `ghcr.io/devantler-tech/charts/kweft`.
+`ghcr.io/devantler-tech/khoist` and `ghcr.io/devantler-tech/charts/khoist`.
 The repository is renamed in place, preserving its numeric identity, issues,
 pull requests, history and existing permissions. Consumer repository pointers
 and product navigation are migrated in their owning repositories.
@@ -27,11 +28,11 @@ or input/output names. Existing browser preferences retain their storage key.
 Existing Kubernetes namespaces, release names, resource names, chart workload
 selectors and service accounts remain stable. The controller retains the same
 leader-election lease ID so old and new instances coordinate during an upgrade.
-The standalone deployment's container is named `kweft` to match the shared
+The standalone deployment's container is named `khoist` to match the shared
 publisher's required digest-pinning target; its Deployment identity stays stable.
 
 Historical image/chart digests and signing identities remain unchanged. Release
-verification defaults to the KWeft profile; `--release-profile legacy` explicitly
+verification defaults to the KHoist profile; `--release-profile legacy` explicitly
 selects the old artifact and signing names for a historical baseline. Verification
 never falls back between profiles. Receipts state the verified profile. Helm
 lifecycle acceptance distinguishes old baseline and new candidate chart names
@@ -57,5 +58,5 @@ The repository rename, source merge, signed publication and Platform adoption
 are separate evidence. Platform changes use immutable verified artifacts and
 normal GitOps, preserving the existing deployment and recovery path. The complete
 coordinated rename is tracked in
-[#399](https://github.com/devantler-tech/kweft/issues/399), with its release
-prerequisite in [#400](https://github.com/devantler-tech/kweft/issues/400).
+[#399](https://github.com/devantler-tech/khoist/issues/399), with its release
+prerequisite in [#400](https://github.com/devantler-tech/khoist/issues/400).

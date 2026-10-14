@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	data "github.com/devantler-tech/kweft/api/v1alpha1"
+	data "github.com/devantler-tech/khoist/api/v1alpha1"
 )
 
 // TestV2RequiredGatesMatchHostAdmission keeps protocol requirements independent of optional hints.

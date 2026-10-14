@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	data "github.com/devantler-tech/kweft/api/v1alpha1"
-	"github.com/devantler-tech/kweft/internal/controller"
+	data "github.com/devantler-tech/khoist/api/v1alpha1"
+	"github.com/devantler-tech/khoist/internal/controller"
 )
 
 // checkGraph validates bounded local dependencies while keeping missing producers unresolved.
