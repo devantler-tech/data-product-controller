@@ -454,36 +454,53 @@ func TestWorkspaceAppearanceHistory(t *testing.T) {
 	}
 }
 
-// TestWorkspaceAppearancePreferences validates existing, legacy and malformed choices on both entry points.
+// TestWorkspaceAppearancePreferences validates existing, legacy and malformed choices from both entry points.
+// Storage is seeded once for each page, so the second workspace reads what the first one stored.
 func TestWorkspaceAppearancePreferences(t *testing.T) {
-	for _, test := range []struct{ name, shared, legacy, want string }{
-		{"legacy-publisher", "", "Dark", "dark"},
-		{"existing-kit", "light", "", "light"},
-		{"shared-wins", "system", "Dark", "system"},
-		{"malformed", "DARK", "unexpected", "system"},
+	for _, test := range []struct{ name, shared, legacy, want, stored string }{
+		{"legacy-publisher", "", "Dark", "dark", "dark"},
+		{"existing-kit", "light", "", "light", "light"},
+		{"shared-wins", "system", "Dark", "system", "system"},
+		{"malformed", "DARK", "unexpected", "system", "DARK"},
+		{"invalid-shared-valid-legacy", "DARK", "Light", "light", "light"},
 	} {
-		t.Run(test.name, func(t *testing.T) {
-			host := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
-				PublisherEnabled: func() bool { return true },
-				ContractEnabled:  func() bool { return true },
-			}))
-			defer host.Close()
-			page := contractBrowser(t).MustPage().Timeout(20 * time.Second)
-			page.MustEvalOnNewDocument(fmt.Sprintf(`(()=>{
-				const shared=%q,legacy=%q;
-				localStorage.clear();
-				if(shared)localStorage.setItem('data-product-kit.appearance',shared);
-				if(legacy)localStorage.setItem('dpc-publisher-theme',legacy);
-			})()`, test.shared, test.legacy))
-			for _, path := range []string{"/", "/publisher-review"} {
-				page.MustNavigate(host.URL + path).MustWaitLoad()
-				if page.MustEval(`()=>document.querySelector('#appearance,#theme').value.toLowerCase()`).
-					Str() !=
-					test.want {
-					t.Fatalf("%s did not preserve only the valid preference", path)
+		for _, entry := range []struct {
+			name  string
+			paths []string
+		}{
+			{"product-first", []string{"/", "/publisher-review"}},
+			{"publisher-first", []string{"/publisher-review", "/"}},
+		} {
+			t.Run(test.name+"/"+entry.name, func(t *testing.T) {
+				host := httptest.NewTLSServer(web.KitHandlerWithOptions(web.KitOptions{
+					PublisherEnabled: func() bool { return true },
+					ContractEnabled:  func() bool { return true },
+				}))
+				defer host.Close()
+				page := contractBrowser(t).MustPage().Timeout(20 * time.Second)
+				page.MustEvalOnNewDocument(fmt.Sprintf(`(()=>{
+					const shared=%q,legacy=%q;
+					if(sessionStorage.getItem('appearance-fixture-seeded'))return;
+					localStorage.clear();
+					if(shared)localStorage.setItem('data-product-kit.appearance',shared);
+					if(legacy)localStorage.setItem('dpc-publisher-theme',legacy);
+					sessionStorage.setItem('appearance-fixture-seeded','1');
+				})()`, test.shared, test.legacy))
+				for _, path := range entry.paths {
+					page.MustNavigate(host.URL + path).MustWaitLoad()
+					if page.MustEval(`()=>document.querySelector('#appearance,#theme').value.toLowerCase()`).
+						Str() !=
+						test.want {
+						t.Fatalf("%s did not preserve only the valid preference", path)
+					}
+					if page.MustEval(`()=>localStorage.getItem('data-product-kit.appearance')||''`).
+						Str() !=
+						test.stored {
+						t.Fatalf("%s did not leave the shared preference as %q", path, test.stored)
+					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
 
