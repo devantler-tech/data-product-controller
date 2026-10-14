@@ -25,6 +25,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
 - `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
+- `examples/api-consumer/` — opt-in, standard-library Harbour API consumer with caller-selected metadata and an independently approved endpoint.
 - `docs/adr/` — architectural decisions.
 - `main.go` — controller manager and registry process.
 

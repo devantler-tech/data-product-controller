@@ -13,6 +13,7 @@ owns the product.
 
 - **Try it:** [run the example product locally](#try-it-locally), with no cluster and no credentials.
 - **Use it:** [install the controller on a cluster](#install-on-a-cluster).
+- **Integrate it:** [run an independent API consumer](docs/api-consumer.md).
 - **Change it:** read the [contribution guide](CONTRIBUTING.md).
 
 ## Try it locally
