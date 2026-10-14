@@ -18,6 +18,10 @@ exclude = [
   "^https://token\\.actions\\.githubusercontent\\.com/?$",
   # This fixture-only loopback route is exercised inside its container by probes.
   "^http://127\\.0\\.0\\.1:9000/healthz$",
+  # The KSail release product's live data source is a GitHub REST API route. Hosted link checks
+  # read it unauthenticated from a shared runner address, so it answers HTTP 403 whenever that
+  # address's API quota is spent. The release product's Go, browser and chart tests pin this URL.
+  "^https://api\\.github\\.com/repos/devantler-tech/ksail/releases$",
 ]
 
 # The central registry's root-relative assets are runtime routes served by its Go handler, not files
