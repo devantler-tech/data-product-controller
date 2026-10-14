@@ -12,7 +12,7 @@ bash scripts/observe-rollout.sh \
   --deployment dpc-http-source:http-source \
   --deployment dpc-contract-probe:contract-probe \
   --condition Ready --condition ConnectorReady --condition ContractsReady \
-  --image ghcr.io/devantler-tech/khoist@sha256:<verified-index> \
+  --image ghcr.io/devantler-tech/data-product-controller@sha256:<verified-index> \
   --runtime-digest sha256:<verified-platform-manifest> \
   --timeout 120 --evidence-dir /private/operator/new-observation
 ```

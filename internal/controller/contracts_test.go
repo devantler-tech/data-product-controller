@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	connectorv1 "github.com/devantler-tech/khoist/internal/connector/v1"
-	"github.com/devantler-tech/khoist/pkg/featureflag"
+	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	connectorv1 "github.com/devantler-tech/data-product-controller/internal/connector/v1"
+	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

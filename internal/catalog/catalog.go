@@ -17,7 +17,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	datav1 "github.com/devantler-tech/khoist/api/v1alpha1"
+	datav1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

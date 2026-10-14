@@ -1,14 +1,14 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "khoist.fullname" . }}
+  name: {{ include "data-product-controller.fullname" . }}
   namespace: {{ .Release.Namespace }}
   annotations:
     checkov.io/skip1: CKV_K8S_38=The controller requires its scoped service-account token to watch and reconcile DataProducts.
     checkov.io/skip2: CKV_K8S_43=Deployments may supply image.digest; the chart must also support versioned tags for portable installs.
     checkov.io/skip3: CKV_K8S_21=Helm installs this resource into the tested release namespace.
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
+    {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.controller.replicas }}
   selector:
@@ -23,7 +23,7 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
         app.kubernetes.io/component: controller
     spec:
-      serviceAccountName: {{ include "khoist.fullname" . }}
+      serviceAccountName: {{ include "data-product-controller.fullname" . }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -32,7 +32,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: controller
-          image: {{ include "khoist.image" . | quote }}
+          image: {{ include "data-product-controller.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           command: [/manager]
           args: [--leader-elect]

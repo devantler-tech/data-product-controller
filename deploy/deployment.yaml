@@ -27,8 +27,8 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: khoist
-          image: ghcr.io/devantler-tech/khoist:latest
+        - name: data-product-controller
+          image: ghcr.io/devantler-tech/data-product-controller:latest
           imagePullPolicy: Always
           command: [/manager]
           args: [--leader-elect]

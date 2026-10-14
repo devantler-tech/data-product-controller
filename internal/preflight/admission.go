@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/devantler-tech/khoist/config/crd"
+	"github.com/devantler-tech/data-product-controller/config/crd"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions"
 	api "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	structural "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"

@@ -9,7 +9,6 @@ new; its parent must already exist.
 ```bash
 bash scripts/verify-release-artifacts.sh \
   --tag v1.12.0 \
-  --release-profile legacy \
   --source-sha ff7ddcf264f8ce4813ccdb6675a45b4d1e6d1b78 \
   --image-digest sha256:62350d68a853708357f463b74ea9ff847d94100d042125b4f2d0c6f25da54886 \
   --chart-digest sha256:9d57e4c7b26664a560a2b72cb8f89dfee4c1466223081a039579cc9ffa3d8575 \
@@ -18,9 +17,8 @@ bash scripts/verify-release-artifacts.sh \
 ```
 
 Requires Cosign, Docker with Buildx, Helm, jq, yq and GNU `timeout` (or `gtimeout`).
-The default `khoist` release profile fixes the repositories and signing identities
-to the KHoist publishers. Historical baselines require the explicit `legacy`
-profile; there is no fallback between names. Signatures must bind the supplied digest, owned caller
+The repositories and signing identities are fixed to the owned controller/image
+and chart publishers. Signatures must bind the supplied digest, owned caller
 repository, release tag and source revision. A platform index must select exactly
 one matching Linux manifest; a single-platform manifest uses its signed digest
 directly. The pulled image must report the requested OS and architecture and carry

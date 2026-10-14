@@ -1,19 +1,19 @@
-{{- if .Values.contractProbe.enabled }}
+{{- if .Values.httpSource.enabled }}
 {{- if eq .Release.Namespace "default" }}
-{{- fail "contractProbe requires an explicit non-default product namespace" }}
+{{- fail "httpSource requires an explicit non-default product namespace" }}
 {{- end }}
 {{- if not (regexMatch "^sha256:[a-f0-9]{64}$" .Values.image.digest) }}
-{{- fail "contractProbe requires image.digest pinned to a released sha256 digest" }}
+{{- fail "httpSource requires image.digest pinned to a released sha256 digest" }}
 {{- end }}
-{{- $name := printf "%s-contract-probe" (include "khoist.fullname" . | trunc 48 | trimSuffix "-") }}
+{{- $name := printf "%s-http-source" (include "data-product-controller.fullname" . | trunc 51 | trimSuffix "-") }}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
-    app.kubernetes.io/component: contract-probe
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
 automountServiceAccountToken: false
 ---
 apiVersion: apps/v1
@@ -22,21 +22,21 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
-    app.kubernetes.io/component: contract-probe
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
 spec:
-  replicas: 1
+  replicas: {{ .Values.httpSource.replicas }}
   selector:
     matchLabels:
       app.kubernetes.io/name: data-product-controller
       app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/component: contract-probe
+      app.kubernetes.io/component: http-source
   template:
     metadata:
       labels:
         app.kubernetes.io/name: data-product-controller
         app.kubernetes.io/instance: {{ .Release.Name }}
-        app.kubernetes.io/component: contract-probe
+        app.kubernetes.io/component: http-source
     spec:
       serviceAccountName: {{ $name }}
       automountServiceAccountToken: false
@@ -44,19 +44,20 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
+        fsGroup: 65532
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: contract-probe
-          image: {{ include "khoist.image" . | quote }}
+        - name: http-source
+          image: {{ include "data-product-controller.image" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: [/contract-probe]
+          command: [/http-source]
           env:
-            - name: CONTRACT_PROBE_URL
-              value: {{ .Values.contractProbe.url | quote }}
-            - name: CONTRACT_READINESS_ENABLED
+            - name: HTTP_SOURCE_ENABLED
               value: "true"
           ports:
+            - name: data
+              containerPort: 8080
             - name: management
               containerPort: 8081
           readinessProbe:
@@ -65,7 +66,6 @@ spec:
               port: management
             timeoutSeconds: 7
             periodSeconds: 30
-            failureThreshold: 1
           livenessProbe:
             httpGet:
               path: /healthz
@@ -77,7 +77,19 @@ spec:
               drop: [ALL]
             readOnlyRootFilesystem: true
           resources:
-            {{- toYaml .Values.contractProbe.resources | nindent 12 }}
+            {{- toYaml .Values.httpSource.resources | nindent 12 }}
+          volumeMounts:
+            - name: source-config
+              mountPath: /etc/http-source
+              readOnly: true
+      volumes:
+        - name: source-config
+          secret:
+            secretName: {{ .Values.httpSource.secretName | quote }}
+            defaultMode: 0440
+            items:
+              - key: config.json
+                path: config.json
 ---
 apiVersion: v1
 kind: Service
@@ -85,15 +97,34 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
-    app.kubernetes.io/component: contract-probe
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: data-product-controller
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: http-source
+  ports:
+    - name: data
+      port: 80
+      targetPort: data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ printf "%s-http-source-metrics" (include "data-product-controller.fullname" . | trunc 43 | trimSuffix "-") }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
 spec:
   type: ClusterIP
   publishNotReadyAddresses: true
   selector:
     app.kubernetes.io/name: data-product-controller
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/component: contract-probe
+    app.kubernetes.io/component: http-source
   ports:
     - name: management
       port: 8081
@@ -105,27 +136,36 @@ metadata:
   name: {{ $name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
-    app.kubernetes.io/component: contract-probe
+    {{- include "data-product-controller.labels" . | nindent 4 }}
+    app.kubernetes.io/component: http-source
 spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/name: data-product-controller
       app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/component: contract-probe
+      app.kubernetes.io/component: http-source
   policyTypes: [Ingress, Egress]
   ingress:
     - from:
         - podSelector:
             matchLabels:
-              {{- toYaml .Values.contractProbe.monitorPodLabels | nindent 14 }}
+              {{- toYaml .Values.httpSource.consumerPodLabels | nindent 14 }}
+      ports:
+        - port: data
+          protocol: TCP
+    {{- with .Values.httpSource.monitorPodLabels }}
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- toYaml . | nindent 14 }}
       ports:
         - port: management
           protocol: TCP
+    {{- end }}
   egress:
     - to:
         - ipBlock:
-            cidr: {{ .Values.contractProbe.targetCIDR | quote }}
+            cidr: {{ .Values.httpSource.sourceCIDR | quote }}
       ports:
         - port: 443
           protocol: TCP

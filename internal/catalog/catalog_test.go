@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	datav1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	"github.com/devantler-tech/khoist/internal/catalog"
-	"github.com/devantler-tech/khoist/internal/demoproduct"
+	datav1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/catalog"
+	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
 	"github.com/piprate/json-gold/ld"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

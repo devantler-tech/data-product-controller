@@ -2,14 +2,9 @@
 
 ## Project overview
 
-KHoist (`devantler-tech/khoist`) is the cloud-native control plane for portable, composable data products.
-Its API describes ownership, standard query interfaces and dependencies between products. Consumers
-own their UIs. The controller observes metadata; it never stores product data or credentials.
-API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`;
-retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration. Naming
-and preserved compatibility identities are documented in `docs/adr/0024-khoist-product-name.md`.
+`devantler-tech/data-product-controller` is the cloud-native control plane for portable, composable data products. Its API describes ownership, standard query interfaces and dependencies between products. Consumers own their UIs. The controller observes metadata; it never stores product data or credentials. API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`; retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration.
 
-The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/khoist/issues/1).
+The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/data-product-controller/issues/1).
 
 ## Repository structure
 
@@ -28,7 +23,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
 - `pkg/featureflag/` — OpenFeature boundary; provisioned sources, connector readiness, contract readiness, composition, DCAT publication, and portable UI grants are default-off. The registry workspace is always available.
 - `config/crd/bases/` and `config/rbac/` — generated Kubernetes manifests.
-- `charts/khoist/` — installable controller, CRD, routing, and demo product.
+- `charts/data-product-controller/` — installable controller, CRD, routing, and demo product.
 - `deploy/` — signed controller manifest artifact published with each release.
 - `docs/adr/` — architectural decisions.
 - `main.go` — controller manager and registry process.
@@ -80,12 +75,7 @@ Do not copy instructions into them.
   redirect rejection, local-only filters, refresh/navigation cancellation and public-source CSP.
   The controller and workload never read release data, and only presentation hints reach the host.
   Workload readiness does not establish GitHub availability. See `docs/ksail-releases.md`.
-- Legacy UI metadata remains bounded and validated until its versioned retirement. The registry's
-  presentation configuration keys are always false, regardless of legacy flags. The deprecated
-  independent kit retains v1/v2 status, resize and appearance controls: preserve its opaque origins,
-  exact source/session/shape checks, publisher host approval, grant intersection, revocation, message
-  bounds and timeout cleanup while that runtime exists. Preserve the separate useful publisher-review
-  application. See `docs/ui-contract.md` and `docs/adr/0023-api-only-product-integration.md`.
+- Legacy UI metadata remains bounded and validated until its versioned retirement. The registry's presentation configuration keys are always false, regardless of legacy flags. The deprecated independent kit retains v1/v2 status, resize and appearance controls: preserve its opaque origins, exact source/session/shape checks, publisher host approval, grant intersection, revocation, message bounds and timeout cleanup while that runtime exists. Preserve the separate useful publisher-review application. See `docs/ui-contract.md` and `docs/adr/0023-api-only-product-integration.md`.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - Discovery browser clients validate the closed public descriptor before display or export.
   Keep bounded streamed UTF-8 parsing and navigation cancellation; metadata inspection must allow
@@ -139,7 +129,7 @@ sh scripts/release.test.sh
 sh scripts/age-release.test.sh
 sh scripts/scanner-suppressions.test.sh
 sh scripts/toolchain.test.sh
-helm lint charts/khoist
+helm lint charts/data-product-controller
 golangci-lint run
 golangci-lint run --build-tags=browser ./internal/browser/...
 (cd tests/provider/fixture && go test -race -count=1 ./... && go vet ./...)
@@ -179,10 +169,10 @@ go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   output:crd:artifacts:config=config/crd/bases \
   output:rbac:artifacts:config=config/rbac
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/khoist/crds/data.devantler.tech_dataproducts.yaml
+  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 cmp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/khoist/crds/data.devantler.tech_dataproducts.yaml
+  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
 cmp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 ```
 

@@ -5,7 +5,7 @@
 
 # matrix_observation joins immutable workload identity, current product conditions and both serving registry replicas for one phase.
 matrix_observation() {
-	local phase=$1 image=$2 runtime=$3 profile=${4:-khoist}
+	local phase=$1 image=$2 runtime=$3
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
 		--context "$cluster_context" --namespace products --product existing-export \
 		--deployment dpc:controller --deployment dpc-http-source:http-source \
@@ -15,7 +15,7 @@ matrix_observation() {
 		--evidence-dir "$test_dir/observed-matrix-$phase"
 	[[ $(kube get dataproduct existing-export -o json | jq -er '.metadata.uid') == "$matrix_product_uid" ]]
 	registry_ready true
-	registry_replicas_ready "$profile"
+	registry_replicas_ready
 }
 
 # installed_lifecycle_matrix runs candidate faults, a stored released rollback and candidate restoration before testing product deletion.
@@ -38,7 +38,7 @@ installed_lifecycle_matrix() {
 	helm_scoped upgrade dpc "$test_dir/baseline/release-chart.tgz" --reset-values \
 		--values "$test_dir/operational-baseline-values.yaml" \
 		--post-renderer "$repo_root/tests/source/trust-test-ca.sh" --wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
+	helm_installed_identity 1.12.0 "$baseline_image"
 	baseline_revision=$(helm_scoped get metadata dpc --output json | jq -er '.revision | select(type == "number" and . > 0 and . == floor)')
 	[[ $baseline_revision =~ ^[1-9][0-9]*$ ]]
 	wait_for 'operational released baseline has a complete independent probe' 180 lifecycle_rollout dpc-contract-probe full
@@ -55,9 +55,9 @@ installed_lifecycle_matrix() {
 	matrix_observation candidate "$candidate_image" "$product_digest"
 	# Helm's actual stored revision, not a reapplied baseline rendering.
 	helm_scoped rollback dpc "$baseline_revision" --wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
+	helm_installed_identity 1.12.0 "$baseline_image"
 	wait_for 'operational rollback restores independent contracts' 180 contract_readiness True ContractsReady
-	matrix_observation rollback "$baseline_image" "$baseline_runtime" legacy
+	matrix_observation rollback "$baseline_image" "$baseline_runtime"
 	source_lifecycle_rollback_check
 	connector_matrix_rollback_check
 	contract_matrix_rollback_check

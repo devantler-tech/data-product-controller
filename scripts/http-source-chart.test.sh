@@ -2,7 +2,7 @@
 set -eu
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-chart="$repo_root/charts/khoist"
+chart="$repo_root/charts/data-product-controller"
 fail() {
 	printf '%s\n' "HTTP source chart test failed: $1" >&2
 	exit 1

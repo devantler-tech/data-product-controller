@@ -126,6 +126,6 @@ Deleting a DataProduct does not delete, mutate, or adopt the source or Secret. C
 backups, credential rotation, and deprovisioning in the provisioner. Removing `spec.source` removes
 the readiness dependency and leaves source lifecycle unchanged.
 
-The rollout gate remains until [#41](https://github.com/devantler-tech/khoist/issues/41)
+The rollout gate remains until [#41](https://github.com/devantler-tech/data-product-controller/issues/41)
 records real provisioner lifecycle evidence. Local API and browser tests do not establish production
 database availability.

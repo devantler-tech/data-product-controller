@@ -85,7 +85,7 @@ proxies product APIs.
 Run the container smoke against a built or verified immutable release image:
 
 ```bash
-bash tests/source/ui-kit.sh ghcr.io/devantler-tech/khoist@sha256:<verified-digest>
+bash tests/source/ui-kit.sh ghcr.io/devantler-tech/data-product-controller@sha256:<verified-digest>
 ```
 
 The smoke exercises TLS with a trusted disposable certificate and the internal HTTP
@@ -98,4 +98,4 @@ runs it against the signed image digest after verifying the publisher, tag and s
 revision.
 
 Packaging checks establish release behavior. Platform adoption and UI flag retirement
-remain tracked in [#120](https://github.com/devantler-tech/khoist/issues/120).
+remain tracked in [#120](https://github.com/devantler-tech/data-product-controller/issues/120).

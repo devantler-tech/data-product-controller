@@ -3,8 +3,8 @@ package v1
 import (
 	"context"
 
-	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	provisionerv1 "github.com/devantler-tech/khoist/internal/provisioner/v1"
+	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"

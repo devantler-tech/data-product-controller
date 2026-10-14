@@ -6,7 +6,7 @@ metadata:
   name: ksail-releases
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
+    {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:
   id: https://github.com/devantler-tech/ksail/releases
   name: KSail releases
@@ -15,7 +15,7 @@ spec:
   owner:
     name: devantler-tech
     url: https://github.com/devantler-tech/ksail
-  documentationUrl: https://github.com/devantler-tech/khoist
+  documentationUrl: https://github.com/devantler-tech/data-product-controller
   outputs:
     - name: releases
       protocol: OpenAPI
@@ -28,7 +28,7 @@ spec:
     {{- if .Values.uiContract.enabled }}
     contract:
       apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
-      hostOrigins: {{ include "khoist.uiHostOrigins" . }}
+      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
       capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
     {{- end }}
 {{- end }}

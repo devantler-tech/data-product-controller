@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/khoist/internal/dataspace"
+	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 	"github.com/piprate/json-gold/ld"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )

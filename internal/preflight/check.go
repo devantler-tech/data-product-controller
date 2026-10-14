@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	data "github.com/devantler-tech/khoist/api/v1alpha1"
-	"github.com/devantler-tech/khoist/internal/catalog"
-	"github.com/devantler-tech/khoist/internal/registry"
+	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/catalog"
+	"github.com/devantler-tech/data-product-controller/internal/registry"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"

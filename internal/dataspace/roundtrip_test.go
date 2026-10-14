@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	datav1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	"github.com/devantler-tech/khoist/internal/catalog"
-	"github.com/devantler-tech/khoist/internal/dataspace"
+	datav1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/catalog"
+	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 	"github.com/piprate/json-gold/ld"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"

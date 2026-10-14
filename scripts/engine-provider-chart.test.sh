@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-chart="$repo_root/charts/khoist"
+chart="$repo_root/charts/data-product-controller"
 for enabled in false true; do
 	rendered=$(helm template controller "$chart" --namespace data-product-system --set engineProviders.enabled="$enabled")
 	flag=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "controller") | .spec.template.spec.containers[0].env[] | select(.name == "ENGINE_PROVIDERS_ENABLED") | .value' -)

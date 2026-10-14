@@ -40,15 +40,15 @@ jobs:
           version="${RELEASE_TAG#v}"
           printf '%s' "$GHCR_TOKEN" | helm registry login ghcr.io --username "$GHCR_USER" --password-stdin
           printf '%s' "$GHCR_TOKEN" | cosign login ghcr.io --username "$GHCR_USER" --password-stdin
-          helm package charts/khoist --version "$version" --app-version "$version"
-          push_output=$(helm push "khoist-${version}.tgz" oci://ghcr.io/devantler-tech/charts 2>&1)
+          helm package charts/data-product-controller --version "$version" --app-version "$version"
+          push_output=$(helm push "data-product-controller-${version}.tgz" oci://ghcr.io/devantler-tech/charts 2>&1)
           printf '%s\n' "$push_output"
           digest=$(printf '%s\n' "$push_output" | awk '$1 == "Digest:" {print $2}')
           if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
             echo 'helm push did not return exactly one valid SHA-256 digest' >&2
             exit 1
           fi
-          artifact="ghcr.io/devantler-tech/charts/khoist@$digest"
+          artifact="ghcr.io/devantler-tech/charts/data-product-controller@$digest"
           cosign sign --yes "$artifact"
           cosign verify \
             --certificate-identity "https://github.com/$GITHUB_WORKFLOW_REF" \

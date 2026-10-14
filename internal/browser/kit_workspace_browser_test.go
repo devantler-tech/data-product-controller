@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/khoist/web"
+	"github.com/devantler-tech/data-product-controller/web"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"

@@ -1,0 +1,7 @@
+apiVersion: v2
+name: data-product-controller
+description: Controller, registry, and example for portable composable data products
+type: application
+version: 0.1.0
+appVersion: 0.1.0
+kubeVersion: ">=1.34.0-0"

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/khoist/internal/dataspace"
+	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 )
 
 // TestInvalidSourceAndJSON rejects ambiguous graphs, malformed JSON and oversized inputs.

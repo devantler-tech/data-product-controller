@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-chart="$repo_root/charts/khoist"
+chart="$repo_root/charts/data-product-controller"
 for enabled in false true; do
 	if [ "$enabled" = false ]; then
 		rendered=$(helm template controller "$chart" --namespace data-product-system --set route.enabled=true --set route.host=catalog.example)

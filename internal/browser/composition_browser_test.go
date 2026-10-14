@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	"github.com/devantler-tech/khoist/internal/controller"
-	"github.com/devantler-tech/khoist/internal/registry"
+	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/controller"
+	"github.com/devantler-tech/data-product-controller/internal/registry"
 	"github.com/go-rod/rod"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/yaml"

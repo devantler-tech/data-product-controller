@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	provisionerv1 "github.com/devantler-tech/khoist/internal/provisioner/v1"
+	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

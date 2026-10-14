@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	data "github.com/devantler-tech/khoist/api/v1alpha1"
+	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

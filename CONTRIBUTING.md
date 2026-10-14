@@ -1,13 +1,13 @@
-# Contributing to KHoist
+# Contributing to data-product-controller
 
 You can help by improving the documentation, fixing an example, or changing the controller, the
 registry or the chart. Open or find an
-[issue](https://github.com/devantler-tech/khoist/issues) before you start, and
+[issue](https://github.com/devantler-tech/data-product-controller/issues) before you start, and
 reference it in the pull request; only a small, obvious fix such as a typo or a broken link may go
 straight to a pull request. The
-[roadmap](https://github.com/devantler-tech/khoist/issues/1) shows what is
+[roadmap](https://github.com/devantler-tech/data-product-controller/issues/1) shows what is
 planned. Report sensitive vulnerabilities through this repository's private
-[Report a vulnerability](https://github.com/devantler-tech/khoist/security/advisories/new)
+[Report a vulnerability](https://github.com/devantler-tech/data-product-controller/security/advisories/new)
 form, not a public issue or pull request.
 
 ## Make a first documentation change
@@ -15,11 +15,11 @@ form, not a public issue or pull request.
 You need Git and a GitHub account that can push to your own fork. This path needs no Go toolchain,
 no cluster and no credentials for any product or cloud service.
 
-Fork `devantler-tech/khoist` on GitHub. Replace `YOUR-LOGIN` with your login:
+Fork `devantler-tech/data-product-controller` on GitHub. Replace `YOUR-LOGIN` with your login:
 
 ```sh
-git clone https://github.com/YOUR-LOGIN/khoist.git
-cd khoist
+git clone https://github.com/YOUR-LOGIN/data-product-controller.git
+cd data-product-controller
 git switch -c docs/first-contribution
 ```
 
@@ -59,11 +59,11 @@ dependencies and can take a few minutes.
 
 The other entries in that list need more tools:
 
-| Check                                                            | Needs                                                                                 |
-|------------------------------------------------------------------|---------------------------------------------------------------------------------------|
-| `go test -tags=browser ./internal/browser`                       | A Chromium-based browser; the test library downloads one when it finds none installed |
-| The `sh scripts/*.test.sh` entries and `helm lint charts/khoist` | Helm and yq                                                                           |
-| `golangci-lint fmt` and `golangci-lint run`                      | golangci-lint                                                                         |
+| Check                                                                             | Needs                                                                                 |
+|-----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| `go test -tags=browser ./internal/browser`                                        | A Chromium-based browser; the test library downloads one when it finds none installed |
+| The `sh scripts/*.test.sh` entries and `helm lint charts/data-product-controller` | Helm and yq                                                                           |
+| `golangci-lint fmt` and `golangci-lint run`                                       | golangci-lint                                                                         |
 
 The only checks you may leave to CI are the cluster-backed ones in the next section. CI runs the
 validation list on the pull request, except
@@ -105,7 +105,7 @@ Never edit these by hand:
 - `api/v1alpha1/zz_generated.deepcopy.go`;
 - `config/crd/bases/` and `config/rbac/`;
 - the two copies of the generated resource definition,
-  `charts/khoist/crds/data.devantler.tech_dataproducts.yaml` and
+  `charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml` and
   `deploy/data.devantler.tech_dataproducts.yaml`.
 
 After editing the API types in `api/v1alpha1/`, or any `+kubebuilder` marker anywhere in the code
@@ -118,7 +118,7 @@ go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   output:crd:artifacts:config=config/crd/bases \
   output:rbac:artifacts:config=config/rbac
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/khoist/crds/data.devantler.tech_dataproducts.yaml
+  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 ```
 

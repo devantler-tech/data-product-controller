@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/khoist/internal/dataspace"
+	"github.com/devantler-tech/data-product-controller/internal/dataspace"
 )
 
 func TestDSPUnicodeScalarsRemainLossless(t *testing.T) {

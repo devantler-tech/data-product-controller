@@ -80,7 +80,7 @@ replica independently; wait for every replica to recover before completing a cre
 The example digest and address are placeholders. Render for a non-default namespace before applying:
 
 ```bash
-helm template data-product-controller ./charts/khoist \
+helm template data-product-controller ./charts/data-product-controller \
   --namespace products --values /path/to/private-values.yaml
 ```
 
@@ -169,10 +169,10 @@ The connector does not write Kubernetes status or register a DataProduct. The co
 [Deployment observer](connector-readiness.md) reports `ConnectorReady` and includes it in aggregate
 readiness when an authored product declares `spec.connector`. Workload readiness reflects its probes;
 public contract reachability remains separate work under
-[#4](https://github.com/devantler-tech/khoist/issues/4).
+[#4](https://github.com/devantler-tech/data-product-controller/issues/4).
 
 Platform owns production deployment, routing, and verification of signed released artifacts.
 Local tests do not establish production access or adoption. The release gate remains until
-[#46](https://github.com/devantler-tech/khoist/issues/46) records real rollout,
+[#46](https://github.com/devantler-tech/data-product-controller/issues/46) records real rollout,
 rotation, recovery, and rollback evidence. [ADR 0003](adr/0003-read-only-http-source-connector.md)
 records the workload and credential boundaries.

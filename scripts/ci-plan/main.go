@@ -175,7 +175,7 @@ func admittedTest(repo, sha, path string) error {
 		if err != nil {
 			return err
 		}
-		const prefix = "github.com/devantler-tech/khoist/"
+		const prefix = "github.com/devantler-tech/data-product-controller/"
 		if strings.HasPrefix(value, prefix) &&
 			!firstPartyPackages[strings.TrimPrefix(value, prefix)] {
 			return errPlan("unreviewed first-party dependency")

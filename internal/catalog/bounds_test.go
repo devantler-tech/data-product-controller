@@ -10,8 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	datav1 "github.com/devantler-tech/khoist/api/v1alpha1"
-	"github.com/devantler-tech/khoist/internal/catalog"
+	datav1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	"github.com/devantler-tech/data-product-controller/internal/catalog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

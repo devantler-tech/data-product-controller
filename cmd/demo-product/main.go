@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devantler-tech/khoist/internal/config"
-	"github.com/devantler-tech/khoist/internal/demoproduct"
-	"github.com/devantler-tech/khoist/internal/httpserver"
-	"github.com/devantler-tech/khoist/pkg/featureflag"
+	"github.com/devantler-tech/data-product-controller/internal/config"
+	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
+	"github.com/devantler-tech/data-product-controller/internal/httpserver"
+	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
 )
 
 func main() {

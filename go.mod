@@ -1,4 +1,4 @@
-module github.com/devantler-tech/khoist
+module github.com/devantler-tech/data-product-controller
 
 go 1.26.9
 

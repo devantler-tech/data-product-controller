@@ -118,4 +118,4 @@ The browser acceptance test runs the same example through real reconciliation,
 the HTTP registry and Chromium. The required Kubernetes suite checks installed
 CRD persistence, both flag states, upgrades, cycles, missing ports, deletion and
 recovery. Production rollout and flag retirement remain tracked in
-[issue #113](https://github.com/devantler-tech/khoist/issues/113).
+[issue #113](https://github.com/devantler-tech/data-product-controller/issues/113).

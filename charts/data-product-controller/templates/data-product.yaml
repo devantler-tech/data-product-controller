@@ -9,7 +9,7 @@ metadata:
     data.devantler.tech/dcat-type: Dataset
   {{- end }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
+    {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:
   id: https://{{ .Values.route.host }}/products/harbour
   name: Harbour observations
@@ -17,8 +17,8 @@ spec:
   version: v1.0.0
   owner:
     name: devantler-tech
-    url: https://github.com/devantler-tech/khoist
-  documentationUrl: https://github.com/devantler-tech/khoist
+    url: https://github.com/devantler-tech/data-product-controller
+  documentationUrl: https://github.com/devantler-tech/data-product-controller
   outputs:
     - name: observations
       protocol: OpenAPI
@@ -31,7 +31,7 @@ spec:
     {{- if .Values.uiContract.enabled }}
     contract:
       apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
-      hostOrigins: {{ include "khoist.uiHostOrigins" . }}
+      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
       capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
     {{- end }}
 {{- end }}

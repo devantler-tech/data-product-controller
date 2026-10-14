@@ -2,10 +2,10 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: {{ include "khoist.fullname" . }}
+  name: {{ include "data-product-controller.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
+    {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:
   parentRefs:
     - name: {{ .Values.route.parentRef.name }}
@@ -26,7 +26,7 @@ spec:
               type: ReplacePrefixMatch
               replacePrefixMatch: /
       backendRefs:
-        - name: {{ include "khoist.fullname" . }}-harbour
+        - name: {{ include "data-product-controller.fullname" . }}-harbour
           port: 80
     {{- end }}
     - matches:
@@ -34,6 +34,6 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ include "khoist.fullname" . }}
+        - name: {{ include "data-product-controller.fullname" . }}
           port: 80
 {{- end }}

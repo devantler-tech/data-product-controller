@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	data "github.com/devantler-tech/khoist/api/v1alpha1"
+	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	yamlv2 "go.yaml.in/yaml/v2"
 	"go.yaml.in/yaml/v3"
 	structural "k8s.io/apiextensions-apiserver/pkg/apiserver/schema"

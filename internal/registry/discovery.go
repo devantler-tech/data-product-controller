@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/khoist/api/v1alpha1"
+	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"

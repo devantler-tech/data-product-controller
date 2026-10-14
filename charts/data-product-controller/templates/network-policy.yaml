@@ -1,10 +1,10 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "khoist.fullname" . }}
+  name: {{ include "data-product-controller.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
+    {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
@@ -22,10 +22,10 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "khoist.fullname" . }}-harbour
+  name: {{ include "data-product-controller.fullname" . }}-harbour
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "khoist.labels" . | nindent 4 }}
+    {{- include "data-product-controller.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:

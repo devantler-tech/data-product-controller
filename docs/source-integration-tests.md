@@ -146,7 +146,7 @@ discovers and queries the actual local TLS demo product. See the
 
 The hosted result is a controlled integration proxy. Platform rollout acceptance
 and release-flag retirement remain in issues #46, #49, #101, #113 and
-[#123](https://github.com/devantler-tech/khoist/issues/123).
+[#123](https://github.com/devantler-tech/data-product-controller/issues/123).
 The DCAT activation/retirement review is due 2026-10-30. The contract probe
 uses a real TLS endpoint on the private test network; this does not prove production
 public-route reachability. The controller never fetches its data-plane URLs.
@@ -175,4 +175,4 @@ effective application grants and lifecycle. The PostgreSQL profile covers SQL, J
 and AGE; the Document and Graph profiles cover native Percona and ArangoDB.
 These profiles provide disposable-environment evidence. Production rollout and
 engine-provider gate retirement for all five supported native and hybrid selections
-remain in [#128](https://github.com/devantler-tech/khoist/issues/128).
+remain in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).

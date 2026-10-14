@@ -90,12 +90,7 @@ probe() { kube exec consumer -- /fixture probe --timeout 10s "$@"; }
 registry_ready() { probe --url http://dpc/api/v1/products --registry-product "products/${2:-existing-export}" --registry-ready "$1"; }
 # Probe every endpoint directly: a successful Service request can hide a non-serving follower.
 registry_replicas_ready() {
-	local addresses address expected_title
-	case "${1:-khoist}" in
-	khoist) expected_title='<title>KHoist · Data products</title>' ;;
-	legacy) expected_title='<title>Data products</title>' ;;
-	*) return 1 ;;
-	esac
+	local addresses address
 	kube get deployment/dpc -o json >"$test_dir/registry-deployment.json" || return 1
 	kube get replicasets -o json >"$test_dir/registry-replicasets.json" || return 1
 	addresses=$(kube get pods -l app.kubernetes.io/component=controller -o json |
@@ -114,7 +109,7 @@ registry_replicas_ready() {
       .status.podIP // empty] | if length == 2 then .[] else error("expected two current ready registry endpoints") end end') || return 1
 	while IFS= read -r address; do
 		probe --url "http://$address:8082/api/v1/products" --contains '"products":' || return 1
-		probe --url "http://$address:8082/" --contains "$expected_title" || return 1
+		probe --url "http://$address:8082/" --contains '<title>Data products</title>' || return 1
 		probe --url "http://$address:8082/api/v1/ui-config" --contains '"uiContractEnabled":false,"uiAppearanceEnabled":false' || return 1
 	done <<<"$addresses"
 }
@@ -285,8 +280,8 @@ jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
 }' >"$test_dir/values.yaml"
 
 mkdir "$test_dir/candidate-chart"
-helm package "$repo_root/charts/khoist" --destination "$test_dir/candidate-chart" >/dev/null
-candidate_chart="$test_dir/candidate-chart/khoist-$(helm show chart "$repo_root/charts/khoist" | yq -r '.version').tgz"
+helm package "$repo_root/charts/data-product-controller" --destination "$test_dir/candidate-chart" >/dev/null
+candidate_chart="$test_dir/candidate-chart/data-product-controller-$(helm show chart "$repo_root/charts/data-product-controller" | yq -r '.version').tgz"
 if source_suite_includes lifecycle; then
 	helm_release_lifecycle
 

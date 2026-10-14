@@ -42,7 +42,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /out/usr/ /usr/
 LABEL org.opencontainers.image.title="Data Product Controller PostgreSQL with Apache AGE" \
-      org.opencontainers.image.source="https://github.com/devantler-tech/khoist" \
+      org.opencontainers.image.source="https://github.com/devantler-tech/data-product-controller" \
       org.opencontainers.image.licenses="PostgreSQL AND Apache-2.0" \
       io.devantler.postgresql.major="17" \
       io.devantler.postgresql.version="17.11" \

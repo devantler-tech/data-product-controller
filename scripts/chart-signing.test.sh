@@ -22,7 +22,7 @@ case "$1" in
 registry) cat >/dev/null ;;
 package) exit "${PACKAGE_EXIT:-0}" ;;
 push)
-	printf '%s\n' 'Pushed: ghcr.io/devantler-tech/charts/khoist:1.2.3' >&2
+	printf '%s\n' 'Pushed: ghcr.io/devantler-tech/charts/data-product-controller:1.2.3' >&2
 	printf '%s\n' "$PUSH_OUTPUT" >&2
 	exit "${PUSH_EXIT:-0}"
 	;;
@@ -44,9 +44,9 @@ chmod +x "$work/bin/helm" "$work/bin/cosign"
 
 export PATH="$work/bin:$PATH" CALLS="$work/calls"
 export GHCR_TOKEN='test-token' GHCR_USER='test-user' RELEASE_TAG='v1.2.3'
-export GITHUB_WORKFLOW_REF='devantler-tech/khoist/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3'
+export GITHUB_WORKFLOW_REF='devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3'
 digest='sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef'
-artifact="ghcr.io/devantler-tech/charts/khoist@$digest"
+artifact="ghcr.io/devantler-tech/charts/data-product-controller@$digest"
 export PUSH_OUTPUT="Digest: $digest"
 
 run_publish() {
