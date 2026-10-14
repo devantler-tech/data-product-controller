@@ -18,16 +18,24 @@ jobs:
       - name: Require the owned release source
         env:
           REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
           EVENT: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          [[ "$REPOSITORY" == devantler-tech/data-product-controller && "$EVENT" == push && "$REF_TYPE" == tag ]]
+          [[ "$REPOSITORY_ID" == 1350892700 && "$EVENT" == push && "$REF_TYPE" == tag ]]
+          case "$REPOSITORY" in
+            devantler-tech/data-product-controller|devantler-tech/kweft) ;;
+            *) exit 1 ;;
+          esac
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
 
       - name: Resolve and require immutable signing workflow
         id: identity
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
         run: |
           set -euo pipefail
           token=$(curl --fail --silent --show-error --max-time 10 \
@@ -38,8 +46,12 @@ jobs:
             2) payload="${payload}==" ;;
             3) payload="${payload}=" ;;
           esac
-          workflow=$(printf '%s' "$payload" | tr '_-' '/+' | base64 -d | jq -er '.job_workflow_ref')
-          [[ "$workflow" =~ ^devantler-tech/data-product-controller/\.github/workflows/publish-age\.yaml@[a-f0-9]{40}$ ]]
+          claims=$(printf '%s' "$payload" | tr '_-' '/+' | base64 -d)
+          printf '%s' "$claims" | jq -e --arg repository "$REPOSITORY" --arg id "$REPOSITORY_ID" \
+            '.repository == $repository and .repository_id == $id' >/dev/null
+          workflow=$(printf '%s' "$claims" | jq -er '.job_workflow_ref')
+          [[ "$workflow" == "$REPOSITORY/.github/workflows/publish-age.yaml@"* ]]
+          [[ "${workflow##*@}" =~ ^[a-f0-9]{40}$ ]]
           printf 'workflow=%s\n' "$workflow" >> "$GITHUB_OUTPUT"
 
       - name: Checkout released source
@@ -76,6 +88,7 @@ jobs:
 
       - name: Publish, sign and read back the immutable artifact
         env:
+          REPOSITORY: ${{ github.repository }}
           IMAGE_TAG: ${{ steps.image.outputs.tag }}
           SIGNING_WORKFLOW: ${{ steps.identity.outputs.workflow }}
           RELEASE_TAG: ${{ github.ref_name }}
@@ -91,7 +104,7 @@ jobs:
           docker logout ghcr.io
           cosign verify --certificate-identity "https://github.com/$SIGNING_WORKFLOW" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-github-workflow-repository devantler-tech/data-product-controller \
+            --certificate-github-workflow-repository "$REPOSITORY" \
             --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
             --certificate-github-workflow-sha "$SOURCE_SHA" "$digest"
           docker pull "$digest"
