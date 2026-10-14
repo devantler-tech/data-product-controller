@@ -18,7 +18,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
 - `internal/preflight/` and `cmd/product-check/` — default-off local publisher validation using the embedded delivered CRD and bounded public descriptor preview.
 - `web/` and `cmd/ui-kit/` — portable UI protocol library and independent, default-off compatibility host.
-- `internal/demoproduct/` and `cmd/demo-product/` — independent harbour reference and default-off live KSail release surface, contracts, and UIs.
+- `internal/demoproduct/` and `cmd/demo-product/` — independent harbour reference and standard live KSail release interfaces, with default-off optional catalogue publication.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
 - `pkg/featureflag/` — OpenFeature boundary; provisioned sources, connector readiness, contract readiness, composition, DCAT publication, and portable UI grants are default-off. The registry workspace is always available.
