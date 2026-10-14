@@ -15,7 +15,7 @@ spec:
   owner:
     name: devantler-tech
     url: https://github.com/devantler-tech/ksail
-  documentationUrl: https://github.com/devantler-tech/data-product-controller
+  documentationUrl: https://github.com/devantler-tech/kweft
   outputs:
     - name: releases
       protocol: OpenAPI

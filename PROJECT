@@ -1,8 +1,8 @@
 domain: devantler.tech
 layout:
 - go.kubebuilder.io/v4
-projectName: data-product-controller
-repo: github.com/devantler-tech/data-product-controller
+projectName: kweft
+repo: github.com/devantler-tech/kweft
 resources:
 - api:
     crdVersion: v1
@@ -11,6 +11,6 @@ resources:
   domain: devantler.tech
   group: data
   kind: DataProduct
-  path: github.com/devantler-tech/data-product-controller/api/v1alpha1
+  path: github.com/devantler-tech/kweft/api/v1alpha1
   version: v1alpha1
 version: "3"

@@ -15,7 +15,7 @@ form, not a public issue or pull request.
 You need Git and a GitHub account that can push to your own fork. This path needs no Go toolchain,
 no cluster and no credentials for any product or cloud service.
 
-Fork `devantler-tech/data-product-controller` on GitHub. Replace `YOUR-LOGIN` with your login:
+Fork `devantler-tech/kweft` on GitHub. Replace `YOUR-LOGIN` with your login:
 
 ```sh
 git clone https://github.com/YOUR-LOGIN/data-product-controller.git
