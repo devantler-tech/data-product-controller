@@ -33,11 +33,18 @@ required. Public interface metadata grants no additional access. The chart's
 `uiContract` and `uiAppearance` settings control publisher-approved presentation hints;
 light/dark display preserves filters and does not request source data.
 
-The binary's `KSAIL_RELEASES_ENABLED` environment setting supplies the default-off
-`ksail-releases` OpenFeature gate. The chart keeps it false by default. False or unset withdraws
-the release surface, its route-specific assets and contract; the harbour reference stays available.
-An invalid boolean stops startup. The optional publication setting remains an operator choice.
-Release-gate acceptance and retirement are tracked in [#373](https://github.com/devantler-tech/data-product-controller/issues/373).
+The workload always serves `/ksail-releases/ui`, `/ksail-releases/openapi.json`,
+`/ksail-releases/ui-contract-config` and its route-specific assets. The temporary
+`KSAIL_RELEASES_ENABLED` / `ksail-releases` runtime gate has been removed after live acceptance.
+The chart no longer emits that environment setting; remove it from hand-authored deployments
+when adopting this breaking release. The remaining chart publication setting is independent:
+false or unset removes the optional catalogue entry but leaves direct interfaces available.
+
+To withdraw the direct surface, restore a previously verified release with the gate through
+normal GitOps. Platform must adopt a compatible artifact-bound rollout verifier before upgrading;
+its legacy verifier still expects the removed environment setting. See
+[ADR 0022](adr/0022-standard-ksail-release-interface.md) and acceptance/consumer adoption in
+[#373](https://github.com/devantler-tech/data-product-controller/issues/373).
 
 ## Request and failure boundaries
 

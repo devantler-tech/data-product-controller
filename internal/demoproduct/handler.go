@@ -43,10 +43,9 @@ var observations = []observation{
 
 // HandlerOptions binds public endpoints and optional presentation to publisher-owned configuration.
 type HandlerOptions struct {
-	PublicBaseURL        string
-	HostOrigins          []string
-	AppearanceEnabled    bool
-	KSailReleasesEnabled bool
+	PublicBaseURL     string
+	HostOrigins       []string
+	AppearanceEnabled bool
 }
 
 // NewHandler returns the example product's API, contract, and decentralized UI.
@@ -139,9 +138,7 @@ func newHandler(options HandlerOptions) http.Handler {
 	mux.HandleFunc("/openapi.json", openAPIHandler)
 	mux.HandleFunc("/ui", serveUI)
 	mux.HandleFunc("/assets/{asset}", serveUI)
-	if options.KSailReleasesEnabled {
-		registerReleaseSurface(mux, options)
-	}
+	registerReleaseSurface(mux, options)
 	mux.HandleFunc("/healthz", func(response http.ResponseWriter, request *http.Request) {
 		if request.Method != http.MethodGet {
 			response.WriteHeader(http.StatusMethodNotAllowed)

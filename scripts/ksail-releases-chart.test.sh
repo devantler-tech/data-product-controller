@@ -8,12 +8,12 @@ fail() {
 }
 default=$(helm template products "$chart" --namespace products)
 flag=$(printf '%s' "$default" | yq ea 'select(.kind=="Deployment" and .spec.template.spec.containers[0].name=="product") | .spec.template.spec.containers[0].env[] | select(.name=="KSAIL_RELEASES_ENABLED") | .value' -)
-[ "$flag" = false ] || fail 'live release product must default off'
+[ -z "$flag" ] || fail 'standard release interfaces must not depend on a runtime gate'
 count=$(printf '%s' "$default" | yq ea '[select(.kind=="DataProduct" and .metadata.name=="ksail-releases")] | length' -)
 [ "$count" = 0 ] || fail 'disabled source must not publish a product'
 enabled=$(helm template products "$chart" --namespace products --set route.enabled=true --set route.host=products.example.test --set demoProduct.ksailReleases.enabled=true --set uiContract.enabled=true --set uiAppearance.enabled=true)
 flag=$(printf '%s' "$enabled" | yq ea 'select(.kind=="Deployment" and .spec.template.spec.containers[0].name=="product") | .spec.template.spec.containers[0].env[] | select(.name=="KSAIL_RELEASES_ENABLED") | .value' -)
-[ "$flag" = true ] || fail 'enabled source must reach the independent binary'
+[ -z "$flag" ] || fail 'optional publication must not restore the retired runtime gate'
 product=$(printf '%s' "$enabled" | yq ea -o=json -I=0 'select(.kind=="DataProduct" and .metadata.name=="ksail-releases")' -)
 printf '%s' "$product" | jq -e '
   .metadata.namespace=="products" and .spec.id=="https://github.com/devantler-tech/ksail/releases"
