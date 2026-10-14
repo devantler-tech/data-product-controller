@@ -98,7 +98,7 @@ func selectOutput(input io.Reader, name, approved string) (string, error) {
 	if !literalHTTPS(approved) || selected.URL != approved {
 		return "", errEndpoint
 	}
-	return selected.URL, nil
+	return approved, nil
 }
 
 // literalHTTPS refuses alternate spellings and embedded authentication before any request.
@@ -176,6 +176,8 @@ func consume(
 	owned := *client
 	owned.Jar = nil
 	owned.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	// #nosec G704 -- The caller independently approves this exact literal HTTPS endpoint;
+	// selectOutput rejects any descriptor mismatch before access, and redirects and cookies are denied.
 	response, err := owned.Do(request)
 	if err != nil {
 		return nil, errQuery
