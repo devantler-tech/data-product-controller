@@ -26,7 +26,7 @@ jobs:
           set -euo pipefail
           [[ "$REPOSITORY_ID" == 1350892700 && "$EVENT" == push && "$REF_TYPE" == tag ]]
           case "$REPOSITORY" in
-            devantler-tech/data-product-controller|devantler-tech/kweft) ;;
+            devantler-tech/data-product-controller|devantler-tech/khoist) ;;
             *) exit 1 ;;
           esac
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
