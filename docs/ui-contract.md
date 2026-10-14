@@ -59,7 +59,13 @@ an arbitrary manifest URL. See [the example](../examples/ui-manifest.json):
 ```
 
 All fields shown are required and unknown fields are rejected by the browser
-validator. Use `capabilities: []` when no presentation hints are needed. A manifest
+validator. The compatibility kit identifies missing fields before opening a
+product frame. Copy the public descriptor's `ui` object, including its `title`.
+Legacy descriptors may omit `contract`; obtain the publisher's supported contract
+before connecting through the kit. Adding metadata alone does not make a legacy
+UI implement the protocol or approve a host. The kit requires `apiVersion`,
+`hostOrigins` and `capabilities` in the contract, even when no optional hints are
+requested. Use `capabilities: []` in that case. A manifest
 is at most 16 KiB of UTF-8 JSON; a title has 1–200 characters. The HTTPS entrypoint
 is at most 2,048 characters, with no credentials, whitespace, backslashes, or
 fragment. URLs and manifests are public metadata: never put credentials in a URL,

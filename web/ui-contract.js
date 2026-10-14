@@ -17,6 +17,18 @@
     );
   }
 
+  /** Name only fixed required fields; never reflect unknown keys or publisher values. */
+  function requireFields(value, keys, label) {
+    if (value === null || typeof value !== "object" || Array.isArray(value) ||
+        Object.keys(value).some(key => !keys.includes(key))) {
+      throw new Error(`Use a ${label} with only ${keys.join(", ")}.`);
+    }
+    const missing = keys.filter(key => !Object.hasOwn(value, key));
+    if (missing.length) {
+      throw new Error(`Add the missing ${label} fields: ${missing.join(", ")}.`);
+    }
+  }
+
   /** Validate the literal public HTTPS profile without normalizing malformed declarations or fetching them. */
   function httpsURL(value) {
     const invalid = () => { throw new Error("Use a literal public HTTPS URL without credentials, whitespace or fragments."); };
@@ -44,14 +56,9 @@
 
   /** Validate public presentation metadata without granting any host permission. */
   function validateMetadata(manifest) {
-    if (
-      new TextEncoder().encode(JSON.stringify(manifest)).length > 16384 ||
-      !shape(manifest, ["url", "title", "contract"])
-    ) {
-      throw new Error(
-        "Use a UI manifest with only url, title and contract, at most 16 KiB.",
-      );
-    }
+    if (new TextEncoder().encode(JSON.stringify(manifest)).length > 16384)
+      throw new Error("Keep the UI manifest within 16 KiB.");
+    requireFields(manifest, ["url", "title", "contract"], "UI manifest");
     if (typeof manifest.url !== "string" || manifest.url.length > 2048)
       throw new Error("Keep the UI URL within 2048 characters.");
     httpsURL(manifest.url);
@@ -63,8 +70,8 @@
       throw new Error("Give the product UI a title of 1–200 characters.");
     }
     const contract = manifest.contract;
+    requireFields(contract, ["apiVersion", "hostOrigins", "capabilities"], "UI contract");
     if (
-      !shape(contract, ["apiVersion", "hostOrigins", "capabilities"]) ||
       typeof contract.apiVersion !== "string" ||
       !Object.hasOwn(capabilities, contract.apiVersion)
     ) {
