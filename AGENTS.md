@@ -2,7 +2,7 @@
 
 ## Project overview
 
-`devantler-tech/data-product-controller` is the cloud-native control plane for portable, composable data products. Its API describes ownership, standard query interfaces and dependencies between products. Consumers own their UIs. The controller observes metadata; it never stores product data or credentials. API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`; retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration.
+KHoist (`devantler-tech/data-product-controller`) is the cloud-native control plane for portable, composable data products. Its API describes ownership, standard query interfaces and dependencies between products. Consumers own their UIs. The controller observes metadata; it never stores product data or credentials. API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`; retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration.
 
 The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/data-product-controller/issues/1).
 

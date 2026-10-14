@@ -120,7 +120,7 @@ func TestRegistryUIAvailableByDefault(t *testing.T) {
 	}
 	body := response.Body.String()
 	for _, required := range []string{
-		"<title>Data products</title>",
+		"<title>KHoist</title>",
 		`id="data-product-grid"`,
 		`id="product-interfaces"`,
 		`src="/assets/registry-`,
