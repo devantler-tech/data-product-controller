@@ -28,15 +28,15 @@ without adding cluster-wide watches or rewriting unchanged status.
 
 Creation, storage sizing, backup, credential rotation, and deletion remain with the provisioner.
 Deleting a DataProduct retains its source. The `provisioned-sources` OpenFeature release flag is
-default-off; removal is tracked by [#41](https://github.com/devantler-tech/data-product-controller/issues/41).
+default-off; removal is tracked by [#41](https://github.com/devantler-tech/kweft/issues/41).
 
 ## Consequences
 
-- [#3](https://github.com/devantler-tech/data-product-controller/issues/3) remains the foundational
+- [#3](https://github.com/devantler-tech/kweft/issues/3) remains the foundational
   provisioner-reference contract.
-- The engine choices in [#33](https://github.com/devantler-tech/data-product-controller/issues/33)
+- The engine choices in [#33](https://github.com/devantler-tech/kweft/issues/33)
   can use external provisioners and additional versioned adapters. The engine dispatch and admission
-  matrix in [#34](https://github.com/devantler-tech/data-product-controller/issues/34) remains separate work.
+  matrix in [#34](https://github.com/devantler-tech/kweft/issues/34) remains separate work.
 - A successful observation proves control-plane readiness and publication ownership. It does not
   authenticate a database connection, validate Secret contents, or prove query availability.
 - Operators explicitly install and authorize each provisioner. A missing API or permission produces
