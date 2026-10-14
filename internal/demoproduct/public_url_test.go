@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
+	"github.com/devantler-tech/kweft/internal/demoproduct"
 )
 
 // TestPublicURLPolicy binds reads to configured endpoints rather than attacker-controlled host headers.

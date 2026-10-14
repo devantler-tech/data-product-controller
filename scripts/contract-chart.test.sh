@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-chart="$repo_root/charts/data-product-controller"
+chart="$repo_root/charts/kweft"
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 fail() {

@@ -8,12 +8,13 @@ export REAL_HELM
 REAL_HELM=$(command -v helm)
 cat >"$work/chart/Chart.yaml" <<'EOF'
 apiVersion: v2
-name: data-product-controller
+name: kweft
 version: 1.2.3
 appVersion: 1.2.3
 EOF
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
-export TEST_ARCHIVE="$work/data-product-controller-1.2.3.tgz"
+export TEST_ARCHIVE="$work/kweft-1.2.3.tgz"
+export TEST_PRODUCT=kweft
 export TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export TEST_IMAGE_DIGEST=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 export TEST_CHART_DIGEST=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -27,17 +28,17 @@ args=" $* "
 if [[ ${EMPTY_SIGNATURE:-false} == true ]]; then exit 0; fi
 if [[ ${MULTI_SIGNATURE:-false} == true ]]; then printf '[{"critical":{"image":{"docker-manifest-digest":"sha256:wrong"}}}]\n'; fi
 [[ $args == *' --certificate-oidc-issuer https://token.actions.githubusercontent.com '* &&
-   $args == *' --certificate-github-workflow-repository devantler-tech/data-product-controller '* &&
+   $args == *" --certificate-github-workflow-repository devantler-tech/$TEST_PRODUCT "* &&
    $args == *' --certificate-github-workflow-ref refs/tags/v1.2.3 '* &&
    $args == *" --certificate-github-workflow-sha $TEST_SHA "* ]] || exit 91
 last=${!#}
 case "$last" in
-"ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST")
+"ghcr.io/devantler-tech/$TEST_PRODUCT@$TEST_IMAGE_DIGEST")
  [[ $args == *' --certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb '* ]] || exit 92
  [[ ${IMAGE_VERIFY_EXIT:-0} == 0 ]] || exit "$IMAGE_VERIFY_EXIT"
  printf '[{"critical":{"image":{"docker-manifest-digest":"%s"}}}]\n' "$TEST_IMAGE_DIGEST" ;;
-"ghcr.io/devantler-tech/charts/data-product-controller@$TEST_CHART_DIGEST")
- [[ $args == *' --certificate-identity https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3 '* ]] || exit 93
+"ghcr.io/devantler-tech/charts/$TEST_PRODUCT@$TEST_CHART_DIGEST")
+ [[ $args == *" --certificate-identity https://github.com/devantler-tech/$TEST_PRODUCT/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3 "* ]] || exit 93
  [[ ${CHART_VERIFY_EXIT:-0} == 0 ]] || exit "$CHART_VERIFY_EXIT"
  printf '[{"critical":{"image":{"docker-manifest-digest":"%s"}}}]\n' "$TEST_CHART_DIGEST" ;;
 *) exit 94 ;;
@@ -48,9 +49,9 @@ cat >"$work/bin/helm" <<'EOF'
 set -eu
 case "$1" in
 pull)
- [[ $2 == "oci://ghcr.io/devantler-tech/charts/data-product-controller@$TEST_CHART_DIGEST" && $3 == --destination ]] || exit 90
+ [[ $2 == "oci://ghcr.io/devantler-tech/charts/$TEST_PRODUCT@$TEST_CHART_DIGEST" && $3 == --destination ]] || exit 90
  [[ ${PULL_EXIT:-0} == 0 ]] || exit "$PULL_EXIT"
- cp "$TEST_ARCHIVE" "$4/data-product-controller-1.2.3.tgz" ;;
+ cp "$TEST_ARCHIVE" "$4/fixture.tgz" ;;
 show) exec "$REAL_HELM" "$@" ;;
 *) exit 91 ;;
 esac
@@ -61,11 +62,11 @@ set -eu
 case "$1 $2" in
 'pull --platform')
  [[ $3 == linux/amd64 || $3 == linux/arm64 ]] || exit 93
- [[ $4 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" ]] || exit 94
+ [[ $4 == "ghcr.io/devantler-tech/$TEST_PRODUCT@$TEST_IMAGE_DIGEST" ]] || exit 94
  [[ ${IMAGE_PULL_EXIT:-0} == 0 ]] || exit "$IMAGE_PULL_EXIT"
  printf '%s\n' "$3" >"$TEST_PULL_MARKER" ;;
 'image inspect')
- [[ $3 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" && $4 == --format ]] || exit 90
+ [[ $3 == "ghcr.io/devantler-tech/$TEST_PRODUCT@$TEST_IMAGE_DIGEST" && $4 == --format ]] || exit 90
  [[ -f $TEST_PULL_MARKER ]] || exit 95
  case "$5" in
  '{{index .Config.Labels "org.opencontainers.image.revision"}}') printf '%s\n' "${REVISION:-$TEST_SHA}" ;;
@@ -75,7 +76,7 @@ case "$1 $2" in
  *) exit 96 ;;
  esac ;;
 'buildx imagetools')
- [[ $3 == inspect && $4 == --raw && $5 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" ]] || exit 91
+ [[ $3 == inspect && $4 == --raw && $5 == "ghcr.io/devantler-tech/$TEST_PRODUCT@$TEST_IMAGE_DIGEST" ]] || exit 91
  if [[ ${MANIFEST_EMPTY:-false} == true ]]; then printf '{}\n'; exit; fi
  case "${MANIFEST_KIND:-oci-index}" in
  oci-index) media_type=application/vnd.oci.image.index.v1+json ;;
@@ -209,9 +210,19 @@ reject --chart-digest latest
 reject --platform linux/arm64
 reject --timeout 0
 reject --unknown unsafe
+reject --release-profile unknown
 sed 's/1.2.3/1.2.4/g' "$work/chart/Chart.yaml" >"$work/chart/next.yaml"
 mv "$work/chart/next.yaml" "$work/chart/Chart.yaml"
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
-export TEST_ARCHIVE="$work/data-product-controller-1.2.4.tgz"
+export TEST_ARCHIVE="$work/kweft-1.2.4.tgz"
 reject
+# The legacy profile is explicit; an old signed baseline never becomes a
+# canonical KWeft release through an automatic identity fallback.
+yq '.name = "data-product-controller" | .version = "1.2.3" | .appVersion = "1.2.3"' "$work/chart/Chart.yaml" >"$work/chart/legacy.yaml"
+mv "$work/chart/legacy.yaml" "$work/chart/Chart.yaml"
+"$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
+export TEST_PRODUCT=data-product-controller TEST_ARCHIVE="$work/data-product-controller-1.2.3.tgz"
+run_verify --release-profile legacy || fail 'explicit verified legacy baseline was rejected'
+jq -e '.complete == true and .releaseProfile == "legacy"' "$work/result/release.json" >/dev/null || fail 'legacy evidence did not retain its profile'
+reject --release-profile kweft
 echo 'release artifact verification behavior tests passed'

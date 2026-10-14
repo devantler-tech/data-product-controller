@@ -13,8 +13,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/devantler-tech/data-product-controller/internal/preflight"
-	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
+	"github.com/devantler-tech/kweft/internal/preflight"
+	"github.com/devantler-tech/kweft/pkg/featureflag"
 )
 
 // main reports command errors to stderr and exits with the offline validation result.

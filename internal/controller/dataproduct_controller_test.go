@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"

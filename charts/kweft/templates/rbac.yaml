@@ -1,9 +1,9 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: {{ include "data-product-controller.fullname" . }}
+  name: {{ include "kweft.fullname" . }}
   labels:
-    {{- include "data-product-controller.labels" . | nindent 4 }}
+    {{- include "kweft.labels" . | nindent 4 }}
 rules:
   - apiGroups: [data.devantler.tech]
     resources: [dataproducts]
@@ -15,27 +15,27 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "data-product-controller.fullname" . }}
+  name: {{ include "kweft.fullname" . }}
   labels:
-    {{- include "data-product-controller.labels" . | nindent 4 }}
+    {{- include "kweft.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "data-product-controller.fullname" . }}
+  name: {{ include "kweft.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "data-product-controller.fullname" . }}
+    name: {{ include "kweft.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: {{ include "data-product-controller.fullname" . }}-leader-election
+  name: {{ include "kweft.fullname" . }}-leader-election
   namespace: {{ .Release.Namespace }}
   annotations:
     checkov.io/skip1: CKV_K8S_21=Helm installs this resource into the tested release namespace.
   labels:
-    {{- include "data-product-controller.labels" . | nindent 4 }}
+    {{- include "kweft.labels" . | nindent 4 }}
 rules:
   - apiGroups: [coordination.k8s.io]
     resources: [leases]
@@ -47,17 +47,17 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: {{ include "data-product-controller.fullname" . }}-leader-election
+  name: {{ include "kweft.fullname" . }}-leader-election
   namespace: {{ .Release.Namespace }}
   annotations:
     checkov.io/skip1: CKV_K8S_21=Helm installs this resource into the tested release namespace.
   labels:
-    {{- include "data-product-controller.labels" . | nindent 4 }}
+    {{- include "kweft.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: {{ include "data-product-controller.fullname" . }}-leader-election
+  name: {{ include "kweft.fullname" . }}-leader-election
 subjects:
   - kind: ServiceAccount
-    name: {{ include "data-product-controller.fullname" . }}
+    name: {{ include "kweft.fullname" . }}
     namespace: {{ .Release.Namespace }}

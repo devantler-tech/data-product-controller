@@ -65,7 +65,7 @@ docker run --rm --network none --read-only --cap-drop ALL \
   --env PUBLISHER_PREFLIGHT_ENABLED=true \
   --mount "type=bind,src=$PWD/docs/examples,dst=/input,readonly" \
   --entrypoint /product-check \
-  ghcr.io/devantler-tech/data-product-controller@sha256:<verified-image-digest> \
+  ghcr.io/devantler-tech/kweft@sha256:<verified-image-digest> \
   --file /input/composition.yaml --format json
 ```
 
@@ -214,4 +214,4 @@ published image's signature, source revision and digest. Those checks prove the
 released command works; production adoption remains separate.
 
 Independent publisher evaluation and retirement of the temporary gate are
-tracked in [#205](https://github.com/devantler-tech/data-product-controller/issues/205).
+tracked in [#205](https://github.com/devantler-tech/kweft/issues/205).

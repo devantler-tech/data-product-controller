@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devantler-tech/data-product-controller/internal/httpsource"
-	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
+	"github.com/devantler-tech/kweft/internal/httpsource"
+	"github.com/devantler-tech/kweft/pkg/featureflag"
 )
 
 // main reports startup or shutdown failure through the process exit status.

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
-	"github.com/devantler-tech/data-product-controller/internal/registry"
+	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	"github.com/devantler-tech/kweft/internal/demoproduct"
+	"github.com/devantler-tech/kweft/internal/registry"
 	"github.com/go-rod/rod"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

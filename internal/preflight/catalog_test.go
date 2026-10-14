@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"github.com/devantler-tech/data-product-controller/internal/catalog"
+	data "github.com/devantler-tech/kweft/api/v1alpha1"
+	"github.com/devantler-tech/kweft/internal/catalog"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )

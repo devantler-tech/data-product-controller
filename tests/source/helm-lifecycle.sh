@@ -7,11 +7,11 @@ helm_scoped() {
 }
 
 helm_installed_identity() {
-	local version=$1 image=$2 metadata revision final
+	local version=$1 image=$2 chart_name=${3:-kweft} metadata revision final
 	metadata=$(helm_scoped get metadata dpc --output json) || return 1
-	revision=$(jq -ser --arg version "$version" '
+	revision=$(jq -ser --arg version "$version" --arg chart "$chart_name" '
     if length == 1 then .[0] else error("ambiguous metadata") end |
-    select(.status == "deployed" and .chart == "data-product-controller" and
+    select(.status == "deployed" and .chart == $chart and
       .version == $version and .appVersion == $version and
       (.revision | type == "number" and . > 0 and . == floor)) | .revision' <<<"$metadata") || return 1
 	[[ $revision =~ ^[1-9][0-9]*$ ]] || return 1
@@ -29,14 +29,14 @@ install_chart() {
 }
 
 installed_observation() {
-	local phase=$1 image=$2 runtime=$3
+	local phase=$1 image=$2 runtime=$3 profile=${4:-kweft}
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
 		--context "$cluster_context" --namespace products --product existing-export \
 		--deployment dpc:controller --deployment dpc-http-source:http-source \
 		--condition Ready --condition ConnectorReady --image "$image" \
 		--runtime-digest "$runtime" --timeout 180 --evidence-dir "$test_dir/observed-$phase"
 	registry_ready true
-	registry_replicas_ready
+	registry_replicas_ready "$profile"
 }
 
 installed_query_check() {
@@ -49,7 +49,7 @@ installed_query_check() {
 helm_release_lifecycle() {
 	: "${product_digest:?immutable candidate image required}"
 	local baseline_dir=$test_dir/baseline baseline_image baseline_runtime baseline_revision baseline_crd_uid candidate_version
-	bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v1.12.0 \
+	bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v1.12.0 --release-profile legacy \
 		--source-sha ff7ddcf264f8ce4813ccdb6675a45b4d1e6d1b78 \
 		--image-digest sha256:62350d68a853708357f463b74ea9ff847d94100d042125b4f2d0c6f25da54886 \
 		--chart-digest sha256:9d57e4c7b26664a560a2b72cb8f89dfee4c1466223081a039579cc9ffa3d8575 \
@@ -63,7 +63,7 @@ helm_release_lifecycle() {
 	helm_scoped upgrade --install dpc "$baseline_dir/release-chart.tgz" --reset-values \
 		--values "$test_dir/baseline-values.yaml" --post-renderer "$repo_root/tests/source/trust-test-ca.sh" \
 		--wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image"
+	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
 	baseline_revision=$(helm_scoped history dpc --output json | jq -er '[.[] | select(.status == "deployed")] | if length == 1 then .[0].revision else error("ambiguous deployed revision") end')
 	[[ $baseline_revision =~ ^[1-9][0-9]*$ ]] || {
 		echo 'invalid installed baseline revision' >&2
@@ -82,7 +82,7 @@ helm_release_lifecycle() {
 	wait_for 'installed signed baseline reaches exact product readiness' 240 readiness True true
 	lifecycle_product_uid=$(kube get dataproduct existing-export -o json | jq -er '.metadata.uid')
 	lifecycle_resource_uids=$(independent_resource_uids "$lifecycle_product_uid")
-	installed_observation baseline "$baseline_image" "$baseline_runtime"
+	installed_observation baseline "$baseline_image" "$baseline_runtime" legacy
 	installed_query_check
 	helm show crds "$candidate_chart" | kubectl --request-timeout=15s apply -f - >/dev/null
 	kubectl --request-timeout=0 wait crd/dataproducts.data.devantler.tech --for=condition=Established --timeout=60s >/dev/null
@@ -96,9 +96,9 @@ helm_release_lifecycle() {
 	installed_observation candidate "localhost:5055/data-product-controller@$product_digest" "$product_digest"
 	installed_query_check
 	helm_scoped rollback dpc "$baseline_revision" --wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image"
+	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
 	wait_for 'real Helm rollback restores the released baseline and query' 240 readiness True true
-	installed_observation rollback "$baseline_image" "$baseline_runtime"
+	installed_observation rollback "$baseline_image" "$baseline_runtime" legacy
 	installed_query_check
 	[[ $(kubectl --request-timeout=15s get crd/dataproducts.data.devantler.tech -o json | jq -er '.metadata.uid') == "$baseline_crd_uid" ]]
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true

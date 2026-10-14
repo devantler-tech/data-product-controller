@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	provisionerv1 "github.com/devantler-tech/data-product-controller/internal/provisioner/v1"
+	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	provisionerv1 "github.com/devantler-tech/kweft/internal/provisioner/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"

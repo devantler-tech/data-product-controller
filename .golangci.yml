@@ -61,7 +61,7 @@ linters:
             # The trusted-base CI selector parses test syntax without executing it.
             - go/parser$
             - go/token$
-            - github.com/devantler-tech/data-product-controller
+            - github.com/devantler-tech/kweft
             # Pinned API serialization supplies the ArangoDB specification checksum;
             # no operator runtime or database client is instantiated.
             - github.com/arangodb/kube-arangodb/pkg/apis/deployment/v1$

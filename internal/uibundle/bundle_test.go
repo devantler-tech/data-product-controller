@@ -8,7 +8,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/devantler-tech/data-product-controller/internal/uibundle"
+	"github.com/devantler-tech/kweft/internal/uibundle"
 )
 
 // TestDocumentReferencesTheExactImmutableAsset prevents stale or mismatched release bytes being served.

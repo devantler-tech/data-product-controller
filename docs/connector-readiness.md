@@ -65,4 +65,4 @@ is the last observation, not a liveness lease: a stopped controller can leave it
 `lastTransitionTime` changes only with condition state and must not be treated as a last-check
 timestamp. Identical observations do not rewrite status.
 
-Removing `spec.connector` removes its condition and leaves the workload alone. Deleting a DataProduct does not delete or adopt the Deployment, source, credentials, or routes. Release rollout and gate retirement are tracked in [#49](https://github.com/devantler-tech/data-product-controller/issues/49); these semantics are recorded in [ADR 0004](adr/0004-connector-workload-observation.md).
+Removing `spec.connector` removes its condition and leaves the workload alone. Deleting a DataProduct does not delete or adopt the Deployment, source, credentials, or routes. Release rollout and gate retirement are tracked in [#49](https://github.com/devantler-tech/kweft/issues/49); these semantics are recorded in [ADR 0004](adr/0004-connector-workload-observation.md).

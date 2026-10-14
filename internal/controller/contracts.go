@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	connectorv1 "github.com/devantler-tech/data-product-controller/internal/connector/v1"
+	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	connectorv1 "github.com/devantler-tech/kweft/internal/connector/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

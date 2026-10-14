@@ -12,6 +12,7 @@ fail() {
 }
 tag='' source_sha='' image_digest='' chart_digest='' publisher_sha='' platform='' output_dir=''
 budget=180
+release_profile=kweft
 while [[ $# -gt 0 ]]; do
 	[[ $# -ge 2 ]] || fail configuration
 	case "$1" in
@@ -23,10 +24,16 @@ while [[ $# -gt 0 ]]; do
 	--platform) platform=$2 ;;
 	--output-dir) output_dir=$2 ;;
 	--timeout) budget=$2 ;;
+	--release-profile) release_profile=$2 ;;
 	*) fail configuration ;;
 	esac
 	shift 2
 done
+case "$release_profile" in
+kweft) product=kweft ;;
+legacy) product=data-product-controller ;;
+*) fail configuration ;;
+esac
 [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && $source_sha =~ ^[a-f0-9]{40}$ &&
 	$publisher_sha =~ ^[a-f0-9]{40}$ && $image_digest =~ ^sha256:[a-f0-9]{64}$ &&
 	$chart_digest =~ ^sha256:[a-f0-9]{64}$ && $platform =~ ^linux/(amd64|arm64)$ &&
@@ -50,11 +57,11 @@ bounded() {
 	((remaining > 0)) || return 124
 	"$timeout_tool" --signal=TERM --kill-after=5 "${remaining}s" "$@"
 }
-image="ghcr.io/devantler-tech/data-product-controller@$image_digest"
-chart="ghcr.io/devantler-tech/charts/data-product-controller@$chart_digest"
+image="ghcr.io/devantler-tech/$product@$image_digest"
+chart="ghcr.io/devantler-tech/charts/$product@$chart_digest"
 issuer=https://token.actions.githubusercontent.com
 caller=(--certificate-oidc-issuer "$issuer"
-	--certificate-github-workflow-repository devantler-tech/data-product-controller
+	--certificate-github-workflow-repository "devantler-tech/$product"
 	--certificate-github-workflow-ref "refs/tags/$tag"
 	--certificate-github-workflow-sha "$source_sha")
 # Require one bounded signature result whose entries all bind the expected digest.
@@ -67,7 +74,7 @@ bounded cosign verify --certificate-identity \
 	"${caller[@]}" "$image" >"$output_dir/image-signature.json" 2>"$output_dir/image-verification.log" || fail image-unverified
 signature_bound "$output_dir/image-signature.json" "$image_digest" || fail image-signature-incomplete
 bounded cosign verify --certificate-identity \
-	"https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/$tag" \
+	"https://github.com/devantler-tech/$product/.github/workflows/publish-chart.yaml@refs/tags/$tag" \
 	"${caller[@]}" "$chart" >"$output_dir/chart-signature.json" 2>"$output_dir/chart-verification.log" || fail chart-unverified
 signature_bound "$output_dir/chart-signature.json" "$chart_digest" || fail chart-signature-incomplete
 bounded docker buildx imagetools inspect --raw "$image" >"$output_dir/image-manifest.json" 2>"$output_dir/manifest-read.log" || fail manifest-unverified
@@ -87,11 +94,13 @@ archives=("$work/charts/"*.tgz)
 bounded helm show chart "${archives[0]}" >"$output_dir/chart-metadata.yaml" 2>"$output_dir/chart-metadata.log" || fail chart-metadata-unverified
 version=${tag#v}
 export RELEASE_EXPECTED_VERSION="$version"
-bounded yq -e '.name == "data-product-controller" and .version == strenv(RELEASE_EXPECTED_VERSION) and .appVersion == strenv(RELEASE_EXPECTED_VERSION)' "$output_dir/chart-metadata.yaml" >/dev/null 2>&1 || fail chart-version-mismatch
+export RELEASE_EXPECTED_CHART="$product"
+bounded yq -e '.name == strenv(RELEASE_EXPECTED_CHART) and .version == strenv(RELEASE_EXPECTED_VERSION) and .appVersion == strenv(RELEASE_EXPECTED_VERSION)' "$output_dir/chart-metadata.yaml" >/dev/null 2>&1 || fail chart-version-mismatch
 ((SECONDS < deadline)) || fail deadline
 bounded cp "${archives[0]}" "$output_dir/release-chart.tgz" || fail finalization
 bounded jq -n --arg mode receipt --arg tag "$tag" --arg sha "$source_sha" --arg publisher "$publisher_sha" \
 	--arg image "$image_digest" --arg chart "$chart_digest" --arg platform "$platform" --arg runtime "$runtime_digest" \
+	--arg profile "$release_profile" \
 	-f "$script_dir/verify-release-artifacts.jq" \
 	>"$work/release.json" || fail finalization
 ((SECONDS < deadline)) || fail deadline

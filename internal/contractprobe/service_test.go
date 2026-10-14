@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
+	"github.com/devantler-tech/kweft/pkg/featureflag"
 )
 
 // TestReachabilityFailuresAndRecovery requires complete, bounded successful responses, with no response leakage.

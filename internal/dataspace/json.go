@@ -7,7 +7,7 @@ import (
 	"io"
 	"unicode/utf8"
 
-	"github.com/devantler-tech/data-product-controller/internal/jsoninput"
+	"github.com/devantler-tech/kweft/internal/jsoninput"
 )
 
 // checkJSON rejects ambiguity that encoding/json normally accepts, including

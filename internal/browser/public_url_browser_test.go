@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
+	"github.com/devantler-tech/kweft/internal/demoproduct"
 )
 
 // TestPublicURLSandboxQueries permits only the sample's declared reads from an opaque iframe.

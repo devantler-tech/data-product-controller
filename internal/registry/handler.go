@@ -9,9 +9,9 @@ import (
 	"sort"
 	"time"
 
-	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"github.com/devantler-tech/data-product-controller/internal/uibundle"
-	"github.com/devantler-tech/data-product-controller/web"
+	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	"github.com/devantler-tech/kweft/internal/uibundle"
+	"github.com/devantler-tech/kweft/web"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

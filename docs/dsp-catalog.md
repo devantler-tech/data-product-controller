@@ -35,7 +35,7 @@ docker run --rm --network none --read-only \
   -e DSP_CATALOG_EXPORT_ENABLED=true \
   -v "$PWD/docs/examples/dsp-catalog:/input:ro" \
   --entrypoint /dsp-catalog \
-  ghcr.io/devantler-tech/data-product-controller@RELEASE_DIGEST \
+  ghcr.io/devantler-tech/kweft@RELEASE_DIGEST \
   --catalog /input/catalog.json --bindings /input/bindings.json
 ```
 
@@ -139,6 +139,6 @@ pinned publisher and this repository's exact release tag and commit, checks the
 image's source revision, and runs the same smoke test against its immutable digest.
 
 [ADR 0009](adr/0009-offline-dsp-catalog-export.md) records the design.
-[Adoption and flag retirement #126](https://github.com/devantler-tech/data-product-controller/issues/126)
+[Adoption and flag retirement #126](https://github.com/devantler-tech/kweft/issues/126)
 has an owner and a review on **2026-10-30**. Enabling or removing the flag requires
 that follow-up's provider/consumer evidence; the date itself changes no behavior.

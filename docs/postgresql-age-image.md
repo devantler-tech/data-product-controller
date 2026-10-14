@@ -40,14 +40,19 @@ signer or any repository release is insufficient.
 [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$PUBLISHER_SHA" =~ ^[a-f0-9]{40}$ ]]
 [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
 cosign verify \
-  --certificate-identity "https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@$PUBLISHER_SHA" \
+  --certificate-identity "https://github.com/devantler-tech/kweft/.github/workflows/publish-age.yaml@$PUBLISHER_SHA" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-github-workflow-repository devantler-tech/data-product-controller \
+  --certificate-github-workflow-repository devantler-tech/kweft \
   --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
   --certificate-github-workflow-sha "$SOURCE_SHA" "$AGE_IMAGE"
 docker pull "$AGE_IMAGE"
 [[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]]
 ```
+
+For a release published before the KWeft rename, use its original
+`devantler-tech/data-product-controller` signing repository and workflow identity.
+Historical digests and signatures do not change with the product name. The image
+family retains its existing package name; see [ADR 0024](adr/0024-kweft-product-name.md).
 
 ## CloudNativePG configuration
 

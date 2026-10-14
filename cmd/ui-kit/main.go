@@ -16,10 +16,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/devantler-tech/data-product-controller/internal/config"
-	"github.com/devantler-tech/data-product-controller/internal/httpserver"
-	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
-	"github.com/devantler-tech/data-product-controller/web"
+	"github.com/devantler-tech/kweft/internal/config"
+	"github.com/devantler-tech/kweft/internal/httpserver"
+	"github.com/devantler-tech/kweft/pkg/featureflag"
+	"github.com/devantler-tech/kweft/web"
 )
 
 // main starts the independently deployed host and reports configuration failures before listening.

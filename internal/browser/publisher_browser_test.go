@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"github.com/devantler-tech/data-product-controller/internal/preflight"
-	"github.com/devantler-tech/data-product-controller/web"
+	data "github.com/devantler-tech/kweft/api/v1alpha1"
+	"github.com/devantler-tech/kweft/internal/preflight"
+	"github.com/devantler-tech/kweft/web"
 	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/proto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

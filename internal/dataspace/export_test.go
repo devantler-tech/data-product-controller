@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/devantler-tech/data-product-controller/internal/dataspace"
+	"github.com/devantler-tech/kweft/internal/dataspace"
 )
 
 // example uses the runnable operator examples as shared consumer fixtures.

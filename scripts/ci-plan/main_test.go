@@ -65,7 +65,7 @@ func TestBrowserPlan(t *testing.T) {
 				write(
 					t,
 					p,
-					"//go:build browser\npackage browser_test\nimport _ \"github.com/devantler-tech/data-product-controller/internal/httpsource\"\n",
+					"//go:build browser\npackage browser_test\nimport _ \"github.com/devantler-tech/kweft/internal/httpsource\"\n",
 				)
 			case "untag":
 				write(t, p, "package browser_test\n")
@@ -304,7 +304,7 @@ func fixture(t *testing.T) (string, string) {
 	write(
 		t,
 		filepath.Join(repo, "go.mod"),
-		"module github.com/devantler-tech/data-product-controller\n",
+		"module github.com/devantler-tech/kweft\n",
 	)
 	gitTest(t, repo, "add", "--", "internal/browser", "go.mod")
 	gitTest(t, repo, "commit", "-qm", "trusted base")
@@ -428,7 +428,7 @@ func TestBrowserFirstPartyDependencyClosure(t *testing.T) {
 			t.Fatal(err)
 		}
 		if pkg.Module == nil ||
-			pkg.Module.Path != "github.com/devantler-tech/data-product-controller" ||
+			pkg.Module.Path != "github.com/devantler-tech/kweft" ||
 			strings.Contains(pkg.ImportPath, " [") {
 			continue
 		}

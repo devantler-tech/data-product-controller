@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/devantler-tech/data-product-controller/pkg/featureflag"
+	"github.com/devantler-tech/kweft/pkg/featureflag"
 )
 
 func TestEnabled(t *testing.T) {

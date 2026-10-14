@@ -13,6 +13,8 @@ elif $ARGS.named.mode == "manifest" then
     $ARGS.named.digest
   else error("unsupported image manifest") end
 elif $ARGS.named.mode == "receipt" then
-  {complete:true,tag:$ARGS.named.tag,sourceSHA:$ARGS.named.sha,publisherSHA:$ARGS.named.publisher,
+  if $ARGS.named.profile != "kweft" and $ARGS.named.profile != "legacy" then error("unsupported release profile") else
+  {complete:true,releaseProfile:$ARGS.named.profile,tag:$ARGS.named.tag,sourceSHA:$ARGS.named.sha,publisherSHA:$ARGS.named.publisher,
     imageDigest:$ARGS.named.image,chartDigest:$ARGS.named.chart,platform:$ARGS.named.platform,runtimeDigest:$ARGS.named.runtime}
+  end
 else error("unsupported verification mode") end

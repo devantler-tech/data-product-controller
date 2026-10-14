@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devantler-tech/data-product-controller/internal/config"
-	"github.com/devantler-tech/data-product-controller/internal/uibundle"
+	"github.com/devantler-tech/kweft/internal/config"
+	"github.com/devantler-tech/kweft/internal/uibundle"
 )
 
 //go:embed ui/*

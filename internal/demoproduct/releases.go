@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/devantler-tech/data-product-controller/internal/uibundle"
+	"github.com/devantler-tech/kweft/internal/uibundle"
 )
 
 const releaseSourceURL = "https://api.github.com/repos/devantler-tech/ksail/releases"

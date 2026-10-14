@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
+	"github.com/devantler-tech/kweft/internal/demoproduct"
 	"github.com/go-rod/rod"
 )
 

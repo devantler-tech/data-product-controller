@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	data "github.com/devantler-tech/kweft/api/v1alpha1"
 )
 
 // selected evaluates explicit in-memory sources as a v2 bundle for regression fixtures.

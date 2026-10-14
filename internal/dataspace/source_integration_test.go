@@ -11,9 +11,9 @@ import (
 	"strings"
 	"testing"
 
-	datav1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"github.com/devantler-tech/data-product-controller/internal/catalog"
-	"github.com/devantler-tech/data-product-controller/internal/dataspace"
+	datav1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	"github.com/devantler-tech/kweft/internal/catalog"
+	"github.com/devantler-tech/kweft/internal/dataspace"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"

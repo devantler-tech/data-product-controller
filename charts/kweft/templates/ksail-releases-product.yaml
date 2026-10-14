@@ -6,7 +6,7 @@ metadata:
   name: ksail-releases
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "data-product-controller.labels" . | nindent 4 }}
+    {{- include "kweft.labels" . | nindent 4 }}
 spec:
   id: https://github.com/devantler-tech/ksail/releases
   name: KSail releases
@@ -28,7 +28,7 @@ spec:
     {{- if .Values.uiContract.enabled }}
     contract:
       apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
-      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
+      hostOrigins: {{ include "kweft.uiHostOrigins" . }}
       capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
     {{- end }}
 {{- end }}

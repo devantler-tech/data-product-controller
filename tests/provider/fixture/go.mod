@@ -1,4 +1,4 @@
-module github.com/devantler-tech/data-product-controller/tests/provider/fixture
+module github.com/devantler-tech/kweft/tests/provider/fixture
 
 go 1.26.9
 

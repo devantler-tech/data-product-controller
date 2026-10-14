@@ -72,7 +72,7 @@ install_controller() {
 	if [[ ${controller_installed:-false} == true ]]; then
 		capture_controller_logs
 	fi
-	bounded helm template dpc "$repo_root/charts/data-product-controller" --include-crds --namespace products \
+	bounded helm template dpc "$repo_root/charts/kweft" --include-crds --namespace products \
 		--set "image.repository=$1" --set "image.tag=$2" --set "image.digest=$3" --set image.pullPolicy=Never \
 		--set demoProduct.enabled=false --set provisionedSources.enabled=true --set engineProviders.enabled=true >"$test_dir/controller.yaml"
 	bounded kubectl --request-timeout=0 -n products apply -f "$test_dir/controller.yaml" >/dev/null

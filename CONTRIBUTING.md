@@ -2,12 +2,12 @@
 
 You can help by improving the documentation, fixing an example, or changing the controller, the
 registry or the chart. Open or find an
-[issue](https://github.com/devantler-tech/data-product-controller/issues) before you start, and
+[issue](https://github.com/devantler-tech/kweft/issues) before you start, and
 reference it in the pull request; only a small, obvious fix such as a typo or a broken link may go
 straight to a pull request. The
-[roadmap](https://github.com/devantler-tech/data-product-controller/issues/1) shows what is
+[roadmap](https://github.com/devantler-tech/kweft/issues/1) shows what is
 planned. Report sensitive vulnerabilities through this repository's private
-[Report a vulnerability](https://github.com/devantler-tech/data-product-controller/security/advisories/new)
+[Report a vulnerability](https://github.com/devantler-tech/kweft/security/advisories/new)
 form, not a public issue or pull request.
 
 ## Make a first documentation change
@@ -62,7 +62,7 @@ The other entries in that list need more tools:
 | Check                                                                             | Needs                                                                                 |
 |-----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
 | `go test -tags=browser ./internal/browser`                                        | A Chromium-based browser; the test library downloads one when it finds none installed |
-| The `sh scripts/*.test.sh` entries and `helm lint charts/data-product-controller` | Helm and yq                                                                           |
+| The `sh scripts/*.test.sh` entries and `helm lint charts/kweft` | Helm and yq                                                                           |
 | `golangci-lint fmt` and `golangci-lint run`                                       | golangci-lint                                                                         |
 
 The only checks you may leave to CI are the cluster-backed ones in the next section. CI runs the
@@ -105,7 +105,7 @@ Never edit these by hand:
 - `api/v1alpha1/zz_generated.deepcopy.go`;
 - `config/crd/bases/` and `config/rbac/`;
 - the two copies of the generated resource definition,
-  `charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml` and
+  `charts/kweft/crds/data.devantler.tech_dataproducts.yaml` and
   `deploy/data.devantler.tech_dataproducts.yaml`.
 
 After editing the API types in `api/v1alpha1/`, or any `+kubebuilder` marker anywhere in the code
@@ -118,7 +118,7 @@ go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.21.0 \
   output:crd:artifacts:config=config/crd/bases \
   output:rbac:artifacts:config=config/rbac
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml \
-  charts/data-product-controller/crds/data.devantler.tech_dataproducts.yaml
+  charts/kweft/crds/data.devantler.tech_dataproducts.yaml
 cp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler.tech_dataproducts.yaml
 ```
 

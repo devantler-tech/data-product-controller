@@ -11,7 +11,7 @@ Tracing is available when both `registryDiscovery.enabled` and
 `REGISTRY_DISCOVERY_ENABLED` and `REGISTRY_LINEAGE_ENABLED`; both default to false.
 The `registry-lineage` OpenFeature gate is evaluated on every request. Invalid
 settings fail startup. The workspace advertises the capability as `lineageEnabled`.
-The adoption decision is tracked in [#217](https://github.com/devantler-tech/data-product-controller/issues/217).
+The adoption decision is tracked in [#217](https://github.com/devantler-tech/kweft/issues/217).
 
 ## Read a trace from another client
 

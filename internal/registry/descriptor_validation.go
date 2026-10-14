@@ -10,8 +10,8 @@ import (
 	"unicode"
 	"unicode/utf16"
 
-	datav1alpha1 "github.com/devantler-tech/data-product-controller/api/v1alpha1"
-	"github.com/devantler-tech/data-product-controller/internal/config"
+	datav1alpha1 "github.com/devantler-tech/kweft/api/v1alpha1"
+	"github.com/devantler-tech/kweft/internal/config"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 

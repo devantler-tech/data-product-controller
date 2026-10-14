@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"testing"
 
-	data "github.com/devantler-tech/data-product-controller/api/v1alpha1"
+	data "github.com/devantler-tech/kweft/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
