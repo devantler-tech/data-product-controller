@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -470,6 +471,56 @@ func TestQueryBindingMakesNoAlteredRequest(t *testing.T) {
 		if err == nil || items != nil || requests.Load() != 0 {
 			t.Fatal("caller-approved query was changed before access")
 		}
+	}
+}
+
+// Only complete responses within the record budget may become application data.
+func TestRecordBudgetAndPartialHTTPResponse(t *testing.T) {
+	record := `{"station":"nordhavn","temperatureCelsius":16.8,"salinityPsu":14.2,"observedAt":"2026-08-29T12:00:00Z"}`
+	for _, count := range []int{64, 65} {
+		t.Run(fmt.Sprint(count), func(t *testing.T) {
+			body := `{"items":[` + strings.TrimSuffix(strings.Repeat(record+",", count), ",") + `]}`
+			server := httptest.NewTLSServer(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = io.WriteString(w, body)
+				}),
+			)
+			defer server.Close()
+			endpoint := server.URL + "/api/observations"
+			items, err := consume(
+				context.Background(),
+				bytes.NewReader(exportedDescriptor(t, endpoint)),
+				"observations",
+				endpoint,
+				"",
+				server.Client(),
+			)
+			if count == 64 && (err != nil || len(items) != 64) {
+				t.Fatal("valid boundary rejected")
+			}
+			if count == 65 && (!errors.Is(err, errResponse) || items != nil) {
+				t.Fatal("record budget was not enforced")
+			}
+		})
+	}
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Length", "4096")
+		_, _ = io.WriteString(w, `{"items":[`+record+`]}`)
+	}))
+	defer server.Close()
+	endpoint := server.URL + "/api/observations"
+	items, err := consume(
+		context.Background(),
+		bytes.NewReader(exportedDescriptor(t, endpoint)),
+		"observations",
+		endpoint,
+		"",
+		server.Client(),
+	)
+	if !errors.Is(err, errResponse) || items != nil {
+		t.Fatal("complete JSON prefix from an incomplete HTTP response was accepted")
 	}
 }
 
