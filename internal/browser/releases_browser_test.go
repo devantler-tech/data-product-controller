@@ -3,7 +3,6 @@
 package browser_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -49,9 +48,6 @@ func releaseBrowserPage(t *testing.T, body string, contentType string, code int)
 		PublicBaseURL:     product.URL,
 		HostOrigins:       []string{host.URL},
 		AppearanceEnabled: true,
-	}
-	if err := json.Unmarshal([]byte(`{"KSailReleasesEnabled":true}`), &options); err != nil {
-		t.Fatal(err)
 	}
 	handler, err := demoproduct.NewHandlerWithOptions(options)
 	if err != nil {

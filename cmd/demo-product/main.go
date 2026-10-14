@@ -36,17 +36,12 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	releasesEnabled, err := config.KSailReleasesEnabled(os.Getenv("KSAIL_RELEASES_ENABLED"))
-	if err != nil {
-		return err
-	}
 	flagClient, err := featureflag.NewClient(
 		"demo-product",
 		featureflag.NewProvider(
 			map[string]bool{
-				"ui-contract":    enabled,
-				"ui-appearance":  appearanceEnabled,
-				"ksail-releases": releasesEnabled,
+				"ui-contract":   enabled,
+				"ui-appearance": appearanceEnabled,
 			},
 		),
 	)
@@ -66,11 +61,6 @@ func run() error {
 		HostOrigins:   origins,
 		AppearanceEnabled: featureflag.Enabled(context.Background(), flagClient, "ui-contract") &&
 			featureflag.Enabled(context.Background(), flagClient, "ui-appearance"),
-		KSailReleasesEnabled: featureflag.Enabled(
-			context.Background(),
-			flagClient,
-			"ksail-releases",
-		),
 	})
 	if err != nil {
 		return err

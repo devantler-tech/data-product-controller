@@ -10,14 +10,14 @@ import (
 	"github.com/devantler-tech/data-product-controller/internal/demoproduct"
 )
 
-func TestKSailReleaseSurfaceDefaultsDisabled(t *testing.T) {
+func TestKSailReleaseSurfaceServesWithoutOptIn(t *testing.T) {
 	t.Parallel()
 	for _, path := range []string{"/ksail-releases/ui", "/ksail-releases/openapi.json", "/ksail-releases/ui-contract-config", "/ksail-releases/assets/product.js"} {
 		response := httptest.NewRecorder()
 		demoproduct.NewHandler().
 			ServeHTTP(response, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
-		if response.Code != http.StatusNotFound {
-			t.Fatalf("disabled GET %s = %d, want 404", path, response.Code)
+		if response.Code != http.StatusOK {
+			t.Fatalf("standard GET %s = %d, want 200", path, response.Code)
 		}
 	}
 }
@@ -25,8 +25,7 @@ func TestKSailReleaseSurfaceDefaultsDisabled(t *testing.T) {
 func TestKSailReleaseSurfacePublishesFixedPublicSource(t *testing.T) {
 	t.Parallel()
 	options := demoproduct.HandlerOptions{
-		PublicBaseURL:        "https://harbour.example.test",
-		KSailReleasesEnabled: true,
+		PublicBaseURL: "https://harbour.example.test",
 	}
 	handler, err := demoproduct.NewHandlerWithOptions(options)
 	if err != nil {
@@ -38,7 +37,7 @@ func TestKSailReleaseSurfacePublishesFixedPublicSource(t *testing.T) {
 		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ksail-releases/ui", nil),
 	)
 	if response.Code != http.StatusOK {
-		t.Fatalf("enabled release UI = %d, want 200", response.Code)
+		t.Fatalf("release UI = %d, want 200", response.Code)
 	}
 	if !strings.Contains(response.Body.String(), "<title>KSail releases</title>") {
 		t.Fatal("release surface has no product identity")

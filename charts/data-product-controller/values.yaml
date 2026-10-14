@@ -86,6 +86,7 @@ controller:
 
 demoProduct:
   enabled: true
+  # Publishes the optional DataProduct entry; direct KSail interfaces are always served.
   ksailReleases:
     enabled: false
   replicas: 1
