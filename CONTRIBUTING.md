@@ -59,11 +59,11 @@ dependencies and can take a few minutes.
 
 The other entries in that list need more tools:
 
-| Check                                                           | Needs                                                                                 |
-|-----------------------------------------------------------------|---------------------------------------------------------------------------------------|
-| `go test -tags=browser ./internal/browser`                      | A Chromium-based browser; the test library downloads one when it finds none installed |
+| Check                                                            | Needs                                                                                 |
+|------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| `go test -tags=browser ./internal/browser`                       | A Chromium-based browser; the test library downloads one when it finds none installed |
 | The `sh scripts/*.test.sh` entries and `helm lint charts/khoist` | Helm and yq                                                                           |
-| `golangci-lint fmt` and `golangci-lint run`                     | golangci-lint                                                                         |
+| `golangci-lint fmt` and `golangci-lint run`                      | golangci-lint                                                                         |
 
 The only checks you may leave to CI are the cluster-backed ones in the next section. CI runs the
 validation list on the pull request, except
