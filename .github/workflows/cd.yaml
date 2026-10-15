@@ -28,7 +28,7 @@ jobs:
       contents: read # Build the tagged release source.
       packages: write # Publish only the independently versioned AGE image.
       id-token: write # Sign that artifact with the immutable publisher identity.
-    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@86f0f95e5ac93ec914f5717f561af878b7d09bf1
+    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@d25a9d5494010615ccf3b56cc19aeab46976c445
 
   smoke:
     name: Verify published offline commands and portable UI host
