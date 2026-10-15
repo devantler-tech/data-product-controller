@@ -10,7 +10,9 @@ API; the service keeps its data, authentication, deployment and lifecycle.
 
 Download the [example declaration](/examples/harbour-product.yaml). Replace its
 `example.com` identities and URLs with values your team controls, and set the
-owner, namespace and contract version. The example URLs are placeholders.
+owner and contract version. Keep `metadata.namespace: products` for the commands
+below. If you choose another namespace, replace `products` in every command as
+well as in the declaration. The example URLs are placeholders.
 
 ```yaml
 outputs:

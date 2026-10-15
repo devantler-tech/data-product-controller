@@ -17,6 +17,11 @@ Open the local address printed by the preview command. Check navigation, search,
 keyboard focus, narrow screens and both themes after changing layout or content.
 The build checks internal routes and fragments and generates the search index.
 
+The dependency overrides retain patched build tooling while upstream dependencies
+catch up. The selector-parser pin addresses
+[GHSA-rj75-hqrm-r3gf](https://github.com/advisories/GHSA-rj75-hqrm-r3gf);
+remove it when the upstream code-highlighting dependency selects a patched version.
+
 Check the downloadable declaration with the product's real offline checker:
 
 ```bash

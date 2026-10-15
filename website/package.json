@@ -14,10 +14,11 @@
   "dependencies": {
     "@astrojs/starlight": "0.41.11",
     "astro": "7.2.10",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "starlight-links-validator": "0.25.3"
   },
   "overrides": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "postcss-selector-parser": "7.1.6"
   }
 }
