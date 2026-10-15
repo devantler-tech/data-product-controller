@@ -40,13 +40,18 @@ source "$edc_fixture/deadline.sh"
 
 bounded bash "$edc_fixture/artifacts.test.sh"
 bounded bash "$edc_fixture/deadline.test.sh"
-bounded bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v4.0.0 \
+bounded bash "$repo_root/scripts/verify-release-artifacts.sh" --profile data-product-controller --tag v4.0.0 \
 	--source-sha 4fbc7d215b3ce30091e74e9909a3ad822e878a05 \
 	--image-digest sha256:cc5bc6b165426daec27e70bbeb90f41a2e30699f99455f8b0733c247fbe57862 \
 	--chart-digest sha256:338521dc3e85774d6fff817a1af073ed1a462ee67e61459bf37f15e9a370ec89 \
 	--publisher-sha ea4df9004d4ab43b6c9af5b0c5f55712f7211328 \
 	--platform linux/amd64 --output-dir "$edc_work/release" --timeout 120
-released="ghcr.io/devantler-tech/data-product-controller@$(jq -er '.imageDigest' "$edc_work/release/release.json")"
+jq -se 'length == 1 and (.[0] | .complete == true and .platform == "linux/amd64" and
+  .releaseProfile == "data-product-controller" and
+  .imageReference == ("ghcr.io/devantler-tech/data-product-controller@" + .imageDigest) and
+  .chartReference == ("ghcr.io/devantler-tech/charts/data-product-controller@" + .chartDigest))' \
+	"$edc_work/release/release.json" >/dev/null
+released=$(jq -er '.imageReference' "$edc_work/release/release.json")
 cp "$snapshot" "$edc_work/catalog.json"
 cp "$edc_fixture/bindings.json" "$edc_work/bindings.json"
 cp "$edc_fixture/expected.json" "$edc_work/expected.json"

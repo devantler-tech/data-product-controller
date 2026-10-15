@@ -47,7 +47,9 @@ diagnostic output remains in the private directory.
 The required verifier fixtures exercise both profiles with controlled signer and registry
 responses and real Helm archives. They reject mixed identities, partial failures and missing
 receipt bindings; they do not prove real KHoist publication or deployment. Historical lifecycle
-checks explicitly require the original profile, including the signed v5 rollback receipt.
+checks explicitly require the original profile, including the signed v5 rollback receipt
+and the signed v4 exporter used by the offline EDC importer. These consumers reject
+missing or mixed profile/reference receipts before requesting images or installing charts.
 The independently versioned AGE image family and its verification are separate from this selector.
 
 The required source integration job verifies this baseline against the real public
