@@ -81,7 +81,9 @@ func TestAPIOnlyProfileRequiresDataInterfaces(t *testing.T) {
 					if err := json.Unmarshal(output.Bytes(), &report); err != nil {
 						t.Fatal(err)
 					}
-					if code != 1 || report.Valid || report.Complete || len(report.Descriptors) != 0 || report.Plan != nil ||
+					if code != 1 || report.Valid || report.Complete ||
+						len(report.Descriptors) != 0 ||
+						report.Plan != nil ||
 						!strings.Contains(output.String(), "InvalidUI") ||
 						!strings.Contains(output.String(), "Remove spec.ui") ||
 						strings.Contains(output.String(), "PRIVATE_") {
