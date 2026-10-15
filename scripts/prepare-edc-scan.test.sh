@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+# Stop the fixture with the violated cache-publication invariant.
 fail() {
 	printf 'EDC scanner cache test failed: %s\n' "$1" >&2
 	exit 1
@@ -72,6 +73,7 @@ if [[ $SCAN_CASE == artifacts ]]; then printf 'unexpected\n' >"$libraries/extra.
 MOCK
 chmod +x "$scratch/bin/"* "$scratch/archive/apache-maven-3.10.0/bin/mvn"
 tar -czf "$scratch/archive.tar.gz" -C "$scratch/archive" apache-maven-3.10.0
+# Execute the actual configured hook, requiring its published Maven path on success.
 run_hook() (
 	cd "$scratch/repo"
 	bash -c 'eval "$1" || exit $?; printf "%s\n" "${MAVEN_HOME:?}"' cache-hook "$hook"

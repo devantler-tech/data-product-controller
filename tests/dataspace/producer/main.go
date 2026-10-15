@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// main publishes the synthetic snapshot or exits without claiming a usable catalog.
 func main() {
 	if err := snapshot(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

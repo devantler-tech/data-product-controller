@@ -11,9 +11,13 @@ repo_root=$CATALOG_TEST_ROOT
 cluster_context=owned-fixture
 integration_deadline=$((SECONDS + 60))
 KUBECONFIG=$test_dir/config
+# This unit fixture isolates orchestration; endpoint behavior is exercised by hosted acceptance.
 probe() { :; }
+# Chart installation is outside the absence-read regression under test.
 install_chart() { :; }
+# Evaluate the real absence predicate immediately instead of retrying a synthetic response.
 wait_for() { shift 2; "$@"; }
+# Inject absent, present, partial or failed reads at the selected pre/post-import boundary.
 kube() {
  case "$*" in
  'get dataproduct edc-harbour edc-buoy --ignore-not-found -o name')
@@ -36,7 +40,9 @@ kube() {
  *) return 99 ;;
  esac
 }
+# Supply synthetic catalog bytes without contacting Kubernetes.
 kubectl() { printf '{}\n'; }
+# Record importer reachability while refusing every other subprocess request.
 bash() {
  [[ $1 == "$repo_root/tests/source/edc-import.sh" ]] || return 99
  touch "$test_dir/imported"

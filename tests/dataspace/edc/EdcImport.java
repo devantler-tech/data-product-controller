@@ -57,6 +57,7 @@ public final class EdcImport {
                 .maxNestingDepth(32).maxStringLength(16384).maxNumberLength(128).build());
     }
 
+    /** This command has no instance state or product-runtime entrypoint. */
     private EdcImport() {}
 
     /** Emit one receipt only after expansion, typed import and the independent oracle agree. */
@@ -100,11 +101,13 @@ public final class EdcImport {
             var registry = new TypeTransformerRegistryImpl(monitor);
             registry.register(new JsonValueToGenericTypeTransformer(types, CoreConstants.JSON_LD));
             ParticipantIdMapper identity = new ParticipantIdMapper() {
+                /** Preserve the export's declared participant IRI without inventing a resolver. */
                 @Override
                 public String toIri(String id) {
                     return id;
                 }
 
+                /** Preserve the imported IRI; this fixture does not establish native participant identity. */
                 @Override
                 public String fromIri(String id) {
                     return id;

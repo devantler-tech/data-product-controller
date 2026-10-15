@@ -13,6 +13,7 @@ fi
 scan_deadline=$((SECONDS + 300))
 scan_work=$(mktemp -d /tmp/dpc-edc-scan.XXXXXX)
 scan_complete=false
+# Preserve the failure status and remove the cache unless every preparation step completed.
 cleanup() {
 	local result=$?
 	trap - EXIT
@@ -22,6 +23,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
+# Charge each download, resolver and verification command to the same preparation deadline.
 scan_run() {
 	local remaining=$((scan_deadline - SECONDS))
 	((remaining > 0)) || return 124

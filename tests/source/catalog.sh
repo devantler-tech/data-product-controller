@@ -3,6 +3,7 @@
 : "${repo_root:?run through tests/source/run.sh}"
 : "${test_dir:?}" "${cluster_context:?}" "${integration_deadline:?}"
 
+# Require a complete successful absence read before fixture creation and after deletion.
 catalog_edc_products_absent() {
 	local products
 	products=$(kube get dataproduct edc-harbour edc-buoy --ignore-not-found -o name) || return 1
