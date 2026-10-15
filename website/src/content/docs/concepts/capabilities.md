@@ -15,7 +15,7 @@ The [quickstart](/start/quickstart/) uses synthetic data and no external account
 ## Optional capabilities
 
 | Capability                                 | State and boundary                                                                      |
-| ------------------------------------------ | --------------------------------------------------------------------------------------- |
+|--------------------------------------------|-----------------------------------------------------------------------------------------|
 | Source and engine observation              | Default-off; observes externally owned resources and publication metadata               |
 | Connector and contract readiness           | Default-off; uses independently operated workloads and probes                           |
 | Declared composition and lineage           | Default-off; checks declared contracts and observations, never executes transformations |

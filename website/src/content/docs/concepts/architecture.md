@@ -10,7 +10,7 @@ and dependencies; the registry presents public metadata.
 ## Who owns what?
 
 | Responsibility                                              | Owner                            |
-| ----------------------------------------------------------- | -------------------------------- |
+|-------------------------------------------------------------|----------------------------------|
 | Product identity, owner, named outputs and contracts        | Publisher                        |
 | Records, query execution, authentication and credentials    | Product service and its operator |
 | Database creation, backups, upgrades, rotation and deletion | Independent database operator    |

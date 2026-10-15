@@ -8,7 +8,7 @@ product records or grant permission to use a published URL.
 Deployment authentication and access policy are owned by the platform.
 
 | Route                                             | Purpose                          | Required optional capability   |
-| ------------------------------------------------- | -------------------------------- | ------------------------------ |
+|---------------------------------------------------|----------------------------------|--------------------------------|
 | `GET /`                                           | API-only registry workspace      | None                           |
 | `GET /api/v1/products`                            | Existing product-list projection | None                           |
 | `GET /api/v1/ui-config`                           | Workspace capability settings    | None                           |

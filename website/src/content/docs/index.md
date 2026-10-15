@@ -21,7 +21,7 @@ then [publish an API](/guides/publish-an-api/) that your team already operates.
 ## Work with products
 
 | I want to…                                 | Start with                                            |
-| ------------------------------------------ | ----------------------------------------------------- |
+|--------------------------------------------|-------------------------------------------------------|
 | Describe a service my team owns            | [Publish an API](/guides/publish-an-api/)             |
 | Catch declaration errors before deployment | [Check declarations](/guides/check-declarations/)     |
 | Use a product in an application            | [Consume a product](/guides/consume-a-product/)       |

@@ -19,7 +19,7 @@ Check the Kubernetes name, conditions, reasons and observed generation.
 Use the controller's current-generation observation; an old Ready condition may be stale.
 
 | Observation                      | Next action                                                                |
-| -------------------------------- | -------------------------------------------------------------------------- |
+|----------------------------------|----------------------------------------------------------------------------|
 | Missing product or output        | Correct the reference or publish the named producer/output                 |
 | `CrossNamespaceDependencyDenied` | Keep producer and consumer in the same namespace                           |
 | `CompositionFeatureDisabled`     | Ask the operator to configure composition before requiring contract checks |

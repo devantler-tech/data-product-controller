@@ -1,6 +1,6 @@
 :root {
   --sl-font: "Hanken Grotesque", system-ui, sans-serif;
-  --sl-font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --sl-font-mono: ui-monospace, "SFMono-Regular", consolas, monospace;
   --sl-color-accent-low: #422108;
   --sl-color-accent: #f97316;
   --sl-color-accent-high: #ffbd83;

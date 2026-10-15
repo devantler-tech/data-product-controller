@@ -14,7 +14,7 @@ helm show values oci://ghcr.io/devantler-tech/charts/data-product-controller \
 ## Installation controls
 
 | Helm value                                       | Purpose                                    |
-| ------------------------------------------------ | ------------------------------------------ |
+|--------------------------------------------------|--------------------------------------------|
 | `image.repository`, `image.tag`, `image.digest`  | Workload identity; digest takes precedence |
 | `controller.replicas`, `controller.resources`    | Controller capacity                        |
 | `route.enabled`, `route.host`, `route.parentRef` | Optional Gateway API route                 |
@@ -27,7 +27,7 @@ These `enabled` switches default to `false`. Enable only the capabilities you ha
 and evaluated:
 
 | Helm value                   | Capability                                                                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
+|------------------------------|-----------------------------------------------------------------------------------------------|
 | `provisionedSources.enabled` | Externally owned source observation                                                           |
 | `engineProviders.enabled`    | Supported engine/provider dispatch; also needs source observation                             |
 | `connectorReadiness.enabled` | Independent connector Deployment observation                                                  |

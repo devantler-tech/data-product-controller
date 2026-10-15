@@ -14,7 +14,7 @@ kubectl explain dataproduct.spec --api-version=data.devantler.tech/v1alpha1
 ## Publisher fields
 
 | Field                                  | Purpose                                                      |
-| -------------------------------------- | ------------------------------------------------------------ |
+|----------------------------------------|--------------------------------------------------------------|
 | `metadata.name`, `metadata.namespace`  | Kubernetes lookup identity and namespace boundary            |
 | `spec.id`                              | Public absolute product identity                             |
 | `spec.name`, `spec.description`        | Human-readable public description                            |
