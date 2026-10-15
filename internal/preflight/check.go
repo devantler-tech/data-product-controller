@@ -74,7 +74,16 @@ func checkSelected(
 		report.add(0, "InvalidNamespace", "metadata.namespace")
 		return report
 	}
-	documents, summaries, code, number, failure := readSelected(ctx, sources)
+	var uiDeclarations []uiDeclarationVisitor
+	if apiOnly {
+		uiDeclarations = append(uiDeclarations, func(number int, position Position) {
+			// Record the fixed remedy before typed decoding can reject a malformed UI field.
+			// Only numeric provenance escapes the input boundary; submitted values stay private.
+			report.failure = position
+			report.add(number, "InvalidUI", "spec.ui")
+		})
+	}
+	documents, summaries, code, number, failure := readSelected(ctx, sources, uiDeclarations...)
 	report.sources = summaries
 	report.failure = failure
 	if code != "" {
@@ -99,9 +108,6 @@ func checkSelected(
 		doc := &documents[index]
 		product := &doc.product
 		apiOnlyUI := apiOnly && product.Spec.UI != nil
-		if apiOnlyUI {
-			report.add(index+1, "InvalidUI", "spec.ui")
-		}
 		if product.Namespace == "" {
 			product.Namespace = namespace
 		}

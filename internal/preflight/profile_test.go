@@ -119,3 +119,33 @@ func TestAPIOnlyRejectsSchemaInvalidUI(t *testing.T) {
 		}
 	}
 }
+
+// TestAPIOnlyRejectsStructurallyInvalidUI retains parse failures and the API-only remedy.
+func TestAPIOnlyRejectsStructurallyInvalidUI(t *testing.T) {
+	for _, value := range []string{`"PRIVATE_UI"`, `17`, `[]`, `{"url":17}`, `{"url":"https://ui.example.test","PRIVATE_FIELD":true}`} {
+		selection := strings.Replace(
+			bundle(t, product("invalid-ui")),
+			`"spec":{`,
+			`"spec":{"ui":`+value+`,`,
+			1,
+		)
+		legacy := selected(t, selection)
+		if legacy.Valid || legacy.Complete || len(legacy.Diagnostics) != 1 {
+			t.Fatalf("compatibility control did not reject malformed UI: %+v", legacy)
+		}
+		r := apiBundle(t, selection)
+		d := richCode(t, r, "InvalidUI")
+		if r.Valid || r.Complete || len(r.Descriptors) != 0 || r.Plan != nil ||
+			d.Path != "/spec/ui" || !strings.Contains(d.Message, "Remove spec.ui") ||
+			len(r.Diagnostics) != 2 || r.Diagnostics[1].Code != legacy.Diagnostics[0].Code {
+			t.Fatalf("structural UI failure lost the profile remedy or original rejection: %+v", r)
+		}
+		encoded, err := json.Marshal(r)
+		if err != nil || strings.Contains(string(encoded), "PRIVATE_") {
+			t.Fatal("structural UI failure disclosed submitted metadata")
+		}
+		if err := reportSchema(t).Validate(reportValue(t, r)); err != nil {
+			t.Fatalf("structural UI failure left the existing report contract: %v", err)
+		}
+	}
+}
