@@ -20,6 +20,7 @@ jq -n --slurpfile observed "$edc_work/receipt.json" --slurpfile release "$edc_wo
    suppliedSnapshotSha256:$snapshot,publicBindingsSha256:$bindings,
    releasedExporter:$release[0],
    importer:{version:"0.18.1",source:"3a22ff4aa90213a564309b5a05851e6d7f27f9ff",
+     dependencyProfile:"pinned-security-overrides",
      toolchainRef:$toolchain,toolchainImageId:$image,javaSourceSha256:$source,
      pomSha256:$pom,settingsSha256:$settings,dependencyLockSha256:$lock,
      compiledClassManifestSha256:$classes},

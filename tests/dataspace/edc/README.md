@@ -4,6 +4,9 @@ This test uses Eclipse EDC Connector **0.18.1**, source
 `3a22ff4aa90213a564309b5a05851e6d7f27f9ff`, to import an unchanged DSP export.
 It runs real Titanium JSON-LD expansion and the DSP 2025 catalog and ODRL
 transformers. It does not boot a Connector or implement IAM, negotiation or transfer.
+The tested dependency profile applies the Jackson 2.21.7 and OpenTelemetry 1.62.0
+security BOMs to EDC's transitive dependencies. Results describe this locked
+combination, not the unmodified upstream dependency graph.
 
 The independently authored `expected.json` compares catalog, participant,
 dataset, offer and assigner identities; metadata; every supported rule category;
@@ -31,7 +34,7 @@ The runner uses one immutable official Maven 3.10.0 / Temurin 17 linux/amd64
 toolchain for three separate, nonroot and resource-bounded container phases.
 Only dependency resolution has network access; it uses public Maven Central,
 strict checksum checking and a fresh repository without host Maven settings.
-The complete set and bytes of 54 runtime JARs must match `dependencies.sha256`.
+The complete set and bytes of 55 runtime JARs must match `dependencies.sha256`.
 Compilation then runs without networking, with the locked JARs read-only and
 only its output directory writable. The importer runs offline with both JARs
 and compiled classes read-only. No custom image or scanner exception is needed,
