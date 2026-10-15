@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -47,7 +48,8 @@ func TestDescriptorInspectionWithoutPresentationRuntime(t *testing.T) {
 			descriptorObject(t, d, "ui", "contract")["capabilities"] = []string{"credentials"}
 		}},
 		{name: "credential URL", mutate: func(d map[string]any) {
-			descriptorEntry(t, d["outputs"])["url"] = "https://private:secret@example.test/query"
+			endpoint := url.URL{Scheme: "https", Host: "example.test", Path: "/query", User: url.UserPassword("fixture", "invalid")}
+			descriptorEntry(t, d["outputs"])["url"] = endpoint.String()
 		}},
 		{name: "malformed URL", mutate: func(d map[string]any) { descriptorObject(t, d, "owner")["url"] = "https:///example.test/owner" }},
 		{name: "stale health", mutate: func(d map[string]any) { descriptorObject(t, d, "health", "source")["observedGeneration"] = 6 }},
