@@ -27,6 +27,15 @@ publication_kube() {
 	timeout "${allowance}s" kubectl --kubeconfig "$KUBECONFIG" --context "$cluster_context" \
 		--request-timeout=15s --namespace products "$@"
 }
+# An ignored NotFound prints no object, rather than an empty JSON List. Failed reads never prove absence.
+publication_products_absent() {
+	local products
+	products=$(publication_kube get dataproduct harbour-observations ksail-releases --ignore-not-found -o name) || return 1
+	[[ -z $products ]] || {
+		echo 'publication fixture products already exist or remain installed' >&2
+		return 1
+	}
+}
 # publication_snapshot requires both stored and live spec.ui states, retaining exact Helm ownership and non-UI specs.
 publication_snapshot() {
 	local phase=$1 has_ui=$2
@@ -72,7 +81,7 @@ chart_publication_lifecycle() {
 	: "${candidate_chart:?packaged candidate required}"
 	local baseline_dir=$test_dir/publication-release revision allowance
 	publication_helm list --all --filter '^dpc-publication$' --output json | jq -e 'length == 0' >/dev/null
-	publication_kube get dataproduct harbour-observations ksail-releases --ignore-not-found -o json | jq -e '.items | length == 0' >/dev/null
+	publication_products_absent
 	allowance=$(publication_budget)
 	((allowance <= 180)) || allowance=180
 	bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v4.0.0 \
@@ -116,7 +125,7 @@ YAML
 		--wait --timeout 180s >/dev/null
 	publication_snapshot restored false
 	publication_helm uninstall dpc-publication --wait --timeout 60s >/dev/null
-	publication_kube get dataproduct harbour-observations ksail-releases --ignore-not-found -o json | jq -e '.items | length == 0' >/dev/null
+	publication_products_absent
 	installed_query_check
 	echo 'PASS: signed v4 product metadata, real Helm UI removal, stored rollback, repeated removal, stable identities and fixture-only cleanup'
 }

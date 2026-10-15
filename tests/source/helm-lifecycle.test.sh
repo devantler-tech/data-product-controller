@@ -77,3 +77,70 @@ for observation in 'candidate:KHoist' 'rollback:Data products' 'restored-candida
 	matrix_observation "$phase" candidate-image "$product_digest"
 done
 echo 'installed matrix observation selects each released registry page'
+
+# Named --ignore-not-found reads succeed without output when both objects are absent.
+# Exercise the real lifecycle preflight and the shared post-uninstall guard; only external I/O is fault-injected.
+cat >"$work/bin/helm" <<'EOF'
+#!/usr/bin/env bash
+set -eu
+while [[ $1 == --* ]]; do shift 2; done
+[[ "$*" == 'list --all --filter ^dpc-publication$ --output json --namespace products' ]] || exit 99
+printf '[]\n'
+EOF
+cat >"$work/bin/kubectl" <<'EOF'
+#!/usr/bin/env bash
+set -eu
+[[ "$*" == "--kubeconfig $KUBECONFIG --context owned-fixture --request-timeout=15s --namespace products get dataproduct harbour-observations ksail-releases --ignore-not-found -o "* ]] || exit 99
+case "$PUBLICATION_READ_MODE" in
+absent) ;;
+harbour) printf 'dataproduct.data.devantler.tech/harbour-observations\n' ;;
+ksail) printf 'dataproduct.data.devantler.tech/ksail-releases\n' ;;
+both) printf 'dataproduct.data.devantler.tech/harbour-observations\ndataproduct.data.devantler.tech/ksail-releases\n' ;;
+unavailable) echo 'synthetic transport failure' >&2; exit 8 ;;
+partial) printf 'dataproduct.data.devantler.tech/harbour-observations\n'; exit 8 ;;
+*) exit 99 ;;
+esac
+EOF
+chmod +x "$work/bin/helm" "$work/bin/kubectl"
+if ! command -v timeout >/dev/null; then ln -s "$(command -v gtimeout)" "$work/bin/timeout"; fi
+export PUBLICATION_TEST_ROOT=$root PUBLICATION_TEST_WORK=$work
+cat >"$work/publication-check.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root=$PUBLICATION_TEST_ROOT
+test_dir=$PUBLICATION_TEST_WORK
+cluster_context=owned-fixture
+integration_deadline=$((SECONDS + 60))
+candidate_chart=$test_dir/candidate.tgz
+source "$repo_root/tests/source/chart-publication.sh"
+# Reaching signature verification proves the empty-state preflight did not abort or suppress a failed API read.
+bash() {
+ [[ $1 == "$repo_root/scripts/verify-release-artifacts.sh" ]] || return 99
+ touch "$test_dir/verification-reached"
+ return 77
+}
+if [[ $1 == preflight ]]; then chart_publication_lifecycle; else publication_products_absent; fi
+EOF
+for stage in preflight cleanup; do
+	for mode in absent harbour ksail both unavailable partial; do
+		rm -f "$work/verification-reached"
+		result=0
+		PUBLICATION_READ_MODE=$mode "$BASH" "$work/publication-check.sh" "$stage" >"$work/publication.log" 2>&1 || result=$?
+		if [[ $mode == absent ]]; then
+			wanted=0
+			if [[ $stage == preflight ]]; then wanted=77; fi
+			[[ $result == "$wanted" ]] || {
+				echo "$stage rejected successful absence (exit $result, expected $wanted)" >&2
+				cat "$work/publication.log" >&2
+				exit 1
+			}
+			if [[ $stage == preflight ]]; then [[ -f "$work/verification-reached" ]]; fi
+		else
+			[[ $result != 0 && $result != 77 && ! -f "$work/verification-reached" ]] || {
+				echo "$stage accepted existing or unreadable products: $mode" >&2
+				exit 1
+			}
+		fi
+	done
+done
+echo 'publication preflight and cleanup accept successful absence and reject present or incompletely read products'
