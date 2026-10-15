@@ -14,7 +14,8 @@ Choose a published version from
 The chart and controller image use the `data-product-controller` package name.
 
 The commands below contain placeholders. Replace `<version>` with the chart version
-and `<verified-image-digest>` with the controller digest verified for that release.
+and `<verified-image-digest>` with the complete controller digest verified for that
+release, including its `sha256:` prefix.
 
 ```bash
 helm show chart oci://ghcr.io/devantler-tech/charts/data-product-controller \
@@ -32,7 +33,7 @@ helm upgrade --install data-product-controller \
   oci://ghcr.io/devantler-tech/charts/data-product-controller \
   --version '<version>' \
   --namespace data-product-system --create-namespace \
-  --set-string image.digest='sha256:<verified-image-digest>' \
+  --set-string image.digest='<verified-image-digest>' \
   --wait --timeout 5m
 ```
 
