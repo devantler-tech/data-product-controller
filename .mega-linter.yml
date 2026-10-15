@@ -16,9 +16,8 @@ EXCLUDED_DIRECTORIES:
 PRE_COMMANDS:
   # Check canonical documentation URLs against the files this revision builds.
   # Public DNS/HTTPS availability is verified separately after deployment.
-  - command: export SPELL_LYCHEE_ARGUMENTS="$(bash scripts/documentation-links.sh --arguments)"
+  - command: bash scripts/documentation-links.sh --prepare-config
     cwd: workspace
-    output_variables: [SPELL_LYCHEE_ARGUMENTS]
     run_before_linters: true
     continue_if_failed: false
   # Resolve documentation routes and anchors against the same site users receive.
@@ -49,6 +48,9 @@ DISABLE_LINTERS:
   - GO_GOLANGCI_LINT
   - GO_REVIVE
   - SPELL_CSPELL
+
+# PRE_COMMANDS creates this workspace-specific copy before the checker runs.
+SPELL_LYCHEE_ARGUMENTS: --config .lychee-docs.toml
 
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: .github/prompts
 
