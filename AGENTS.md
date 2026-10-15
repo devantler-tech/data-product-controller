@@ -2,7 +2,11 @@
 
 ## Project overview
 
-KHoist (`devantler-tech/data-product-controller`) is the cloud-native control plane for portable, composable data products. Its API describes ownership, standard query interfaces and dependencies between products. Consumers own their UIs. The controller observes metadata; it never stores product data or credentials. API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`; retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration.
+KHoist (`devantler-tech/data-product-controller`) is the cloud-native control plane for portable, composable data
+products. Its API describes ownership, standard query interfaces and dependencies between products. Consumers own their
+UIs. The controller observes metadata; it never stores product data or credentials. API-only integration is the accepted
+direction in `docs/adr/0023-api-only-product-integration.md`; retained legacy UI metadata/runtime is deprecated
+compatibility pending versioned migration.
 
 The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/data-product-controller/issues/1).
 
@@ -77,7 +81,12 @@ Do not copy instructions into them.
   redirect rejection, local-only filters, refresh/navigation cancellation and public-source CSP.
   The controller and workload never read release data, and only presentation hints reach the host.
   Workload readiness does not establish GitHub availability. See `docs/ksail-releases.md`.
-- Legacy UI metadata remains bounded and validated until its versioned retirement. The registry's presentation configuration keys are always false, regardless of legacy flags. The deprecated independent kit retains v1/v2 status, resize and appearance controls: preserve its opaque origins, exact source/session/shape checks, publisher host approval, grant intersection, revocation, message bounds and timeout cleanup while that runtime exists. Preserve the separate useful publisher-review application. See `docs/ui-contract.md` and `docs/adr/0023-api-only-product-integration.md`.
+- Legacy UI metadata remains bounded and validated until its versioned retirement. The registry's presentation
+  configuration keys are always false, regardless of legacy flags. The deprecated independent kit retains v1/v2 status,
+  resize and appearance controls: preserve its opaque origins, exact source/session/shape checks, publisher host
+  approval, grant intersection, revocation, message bounds and timeout cleanup while that runtime exists. Preserve the
+  separate useful publisher-review application. See `docs/ui-contract.md` and
+  `docs/adr/0023-api-only-product-integration.md`.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - Discovery browser clients validate the closed public descriptor before display or export.
   Keep bounded streamed UTF-8 parsing and navigation cancellation; metadata inspection must allow
