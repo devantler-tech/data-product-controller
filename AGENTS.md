@@ -17,7 +17,10 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
 - `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
 - `internal/preflight/` and `cmd/product-check/` — default-off local publisher validation using the embedded delivered CRD and bounded public descriptor preview.
-- `web/` and `cmd/ui-kit/` — shared bounded metadata validators, independent publisher-review workspace and deprecated, default-off UI compatibility host.
+- `web/` — shared bounded metadata validators and offline publisher-review assets.
+- `cmd/publisher-review/` — independent default-off publisher report host; presentation and discovery flags have no effect.
+- `cmd/ui-kit/` — deprecated default-off UI compatibility host; its publisher route remains available during migration.
+- `internal/portablehost/` — shared TLS/gateway listener, bounded health and graceful shutdown for both static hosts.
 - `internal/demoproduct/` and `cmd/demo-product/` — independent harbour reference and standard live KSail release interfaces, with default-off optional catalogue publication.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.

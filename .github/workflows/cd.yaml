@@ -73,4 +73,5 @@ jobs:
           [[ "$(docker image inspect "$digest" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" == "$EXPECTED_SHA" ]]
           bash tests/source/dsp-catalog.sh "$digest"
           bash tests/source/ui-kit.sh "$digest"
+          bash tests/source/publisher-review.sh "$digest"
           bash tests/source/product-check.sh "$digest"

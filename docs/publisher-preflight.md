@@ -2,15 +2,31 @@
 
 ## Review a saved report in the browser
 
-The independent `ui-kit` host provides `/publisher-review`. Set
-`PUBLISHER_PREFLIGHT_ENABLED=true` on that host to opt in; unset and `false`
-states return 404. `UI_CONTRACT_ENABLED` can remain false. Use the host's documented
-TLS listener or explicit internal HTTP gateway transport.
+The independent `publisher-review` command provides `/publisher-review` without
+the deprecated compatibility host. Set `PUBLISHER_PREFLIGHT_ENABLED=true` to opt in;
+unset and `false` states return 404 for the page and assets. Its root redirects to
+the report workspace. Presentation and discovery settings have no effect, including
+when they contain invalid values.
 
-With publisher review enabled and product UIs disabled, the host root opens the
-report workspace. When both workspaces are enabled, navigation links let you move
-between them. Only enabled workspaces appear; the publisher gate does not grant
-product UI permissions or enable product-kit assets.
+Use a certificate trusted by your browser:
+
+```bash
+PUBLISHER_PREFLIGHT_ENABLED=true go run ./cmd/publisher-review \
+  --listen-address 127.0.0.1:8443 \
+  --tls-cert /path/to/local-cert.pem --tls-key /path/to/local-key.pem
+```
+
+The same signed application image includes `/publisher-review`; override the image
+entrypoint with that binary and pin a verified digest. TLS is the default. An
+internal HTTP backend requires both `--http-behind-gateway` and an explicit
+`--listen-address`, with no TLS arguments. Keep that backend private behind a
+verified HTTPS gateway. See the [portable host guide](portable-ui-host.md) for
+listener, health, resource and shutdown limits shared by both commands.
+
+The new host exposes only report inspection and its required static assets.
+`/ui-contract.js`, `/kit.js`, `/kit.css` and unrelated routes return 404.
+The existing `ui-kit` publisher route and navigation remain available during
+deployment migration; enabling its publisher gate still grants no presentation permission.
 
 Choose one local v2 JSON report file or paste one report, up to 2 MiB. Files decode
 as strict UTF-8. Nothing is uploaded, fetched from a declared link, or mounted as a
@@ -212,6 +228,12 @@ duplicate identities, cycles and imported status, then reads v2 artifacts with t
 independent example. The normal release workflow repeats it after verifying the
 published image's signature, source revision and digest. Those checks prove the
 released command works; production adoption remains separate.
+
+The packaged publisher host also runs in both TLS and explicit gateway mode, with
+the publisher gate unset, false and true. Acceptance checks its restricted routes,
+offline content policy, health, nonroot read-only execution and graceful termination.
+Release publication repeats that smoke after signature and revision verification.
+This does not prove that a consuming deployment has switched its entrypoint.
 
 Independent publisher evaluation and retirement of the temporary gate are
 tracked in [#205](https://github.com/devantler-tech/data-product-controller/issues/205).

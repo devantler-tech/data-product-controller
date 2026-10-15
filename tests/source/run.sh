@@ -214,6 +214,7 @@ docker build --tag localhost:5055/data-product-controller:e2e "$repo_root"
 if source_suite_includes lifecycle; then
 	bash "$repo_root/tests/source/dsp-catalog.sh" localhost:5055/data-product-controller:e2e
 	bash "$repo_root/tests/source/ui-kit.sh" localhost:5055/data-product-controller:e2e
+	bash "$repo_root/tests/source/publisher-review.sh" localhost:5055/data-product-controller:e2e
 	bash "$repo_root/tests/source/product-check.sh" localhost:5055/data-product-controller:e2e
 fi
 docker push localhost:5055/data-product-controller:e2e

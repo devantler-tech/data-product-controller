@@ -10,9 +10,14 @@ describe declarations and carry no observed readiness.
 
 ## Decision
 
-The independent UI host serves an offline workspace at /publisher-review behind the
-existing default-off publisher-preflight gate. It requires no product UI permission,
-Kubernetes client, network connection, or application framework.
+The dedicated publisher-review executable serves an offline workspace at
+/publisher-review behind the existing default-off publisher-preflight gate.
+It ships in the existing signed application image and binds no presentation or
+discovery flags. It requires no product UI permission, Kubernetes client,
+network connection, or application framework. Shared transport code preserves
+TLS by default, explicit private gateway HTTP, bounded health and graceful shutdown.
+The deprecated ui-kit publisher route remains compatible until consuming
+deployment migration has been observed.
 
 The browser accepts only bounded v2 reports. It checks duplicate decoded keys, integral
 numbers, closed shapes, source positions, retained diagnostic counts, feature-set unions,
