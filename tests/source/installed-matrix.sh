@@ -25,7 +25,11 @@ matrix_observation() {
 # installed_lifecycle_matrix runs candidate faults, a stored released rollback and candidate restoration before testing product deletion.
 installed_lifecycle_matrix() {
 	local baseline_image baseline_runtime baseline_revision candidate_image candidate_version
-	baseline_image="ghcr.io/devantler-tech/data-product-controller@$(jq -er '.imageDigest' "$test_dir/baseline/release.json")"
+	jq -se 'length == 1 and (.[0] | .complete == true and .tag == "v1.12.0" and
+    .releaseProfile == "data-product-controller" and
+    .imageReference == ("ghcr.io/devantler-tech/data-product-controller@" + .imageDigest) and
+    .chartReference == ("ghcr.io/devantler-tech/charts/data-product-controller@" + .chartDigest))' "$test_dir/baseline/release.json" >/dev/null
+	baseline_image=$(jq -er '.imageReference' "$test_dir/baseline/release.json")
 	baseline_runtime=$(jq -er '.runtimeDigest' "$test_dir/baseline/release.json")
 	candidate_image="localhost:5055/data-product-controller@$product_digest"
 	candidate_version=$(helm show chart "$candidate_chart" | yq -r '.version')

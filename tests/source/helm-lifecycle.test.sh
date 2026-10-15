@@ -124,7 +124,8 @@ candidate_chart=$test_dir/candidate.tgz
 source "$repo_root/tests/source/chart-publication.sh"
 # Reaching signature verification proves the empty-state preflight did not abort or suppress a failed API read.
 bash() {
- [[ $1 == "$repo_root/scripts/verify-release-artifacts.sh" ]] || return 99
+ [[ $1 == "$repo_root/scripts/verify-release-artifacts.sh" &&
+    " $* " == *' --profile data-product-controller '* ]] || return 99
  touch "$test_dir/verification-reached"
  return 77
 }
@@ -156,13 +157,19 @@ echo 'publication preflight and cleanup accept successful absence and reject pre
 
 source "$root/tests/source/ui-free-rollback.sh"
 jq -n '{complete:true,tag:"v5.0.0",platform:"linux/amd64",
+  releaseProfile:"data-product-controller",
+  imageReference:"ghcr.io/devantler-tech/data-product-controller@sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c",
+  chartReference:"ghcr.io/devantler-tech/charts/data-product-controller@sha256:0707d9669f46cde154e4d9f38ef4d47bc4312e663f0e21d12a8afedb6e93e0ea",
   sourceSHA:"29b605885064a3b9f24c799a0d7112d3a6d4333b",
   publisherSHA:"ea4df9004d4ab43b6c9af5b0c5f55712f7211328",
   imageDigest:"sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c",
   chartDigest:"sha256:0707d9669f46cde154e4d9f38ef4d47bc4312e663f0e21d12a8afedb6e93e0ea",
   runtimeDigest:"sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c"}' >"$work/verified.json"
 ui_free_release_receipt "$work/verified.json"
-for mutation in '.complete=false' '.tag="v4.0.0"' '.platform="linux/arm64"' \
+for mutation in 'del(.releaseProfile)' '.releaseProfile="khoist"' '.releaseProfile=[]' \
+	'del(.imageReference)' '.imageReference="ghcr.io/devantler-tech/khoist@sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c"' \
+	'del(.chartReference)' '.chartReference="ghcr.io/devantler-tech/charts/khoist@sha256:0707d9669f46cde154e4d9f38ef4d47bc4312e663f0e21d12a8afedb6e93e0ea"' \
+	'.complete=false' '.tag="v4.0.0"' '.platform="linux/arm64"' \
 	'.sourceSHA="unknown"' '.publisherSHA="unknown"' '.imageDigest="latest"' \
 	'.chartDigest="latest"' '.runtimeDigest=null' '.runtimeDigest="sha256:short"' '.runtimeDigest=7'; do
 	jq "$mutation" "$work/verified.json" >"$work/rejected.json"
@@ -177,6 +184,92 @@ if ui_free_release_receipt "$work/rejected.json"; then
 	exit 1
 fi
 echo 'UI-free release receipt rejects incomplete, ambiguous and incorrectly bound artifacts'
+
+# Exercise each real historical consumer, rejecting corrupt receipts before installation or image use.
+cat >"$work/historical-check.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root=$PUBLICATION_TEST_ROOT
+test_dir=$PUBLICATION_TEST_WORK/historical-$1
+mkdir -p "$test_dir/baseline" "$test_dir/publication-release"
+printf '{}\n' >"$test_dir/values.yaml"
+cp "$PUBLICATION_TEST_WORK/historical-receipt.json" "$test_dir/baseline/release.json"
+cp "$PUBLICATION_TEST_WORK/historical-receipt.json" "$test_dir/publication-release/release.json"
+cluster_context=owned-fixture
+product_digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+candidate_chart=$test_dir/candidate.tgz
+integration_deadline=$((SECONDS + 60))
+source "$repo_root/tests/source/chart-publication.sh"
+source "$repo_root/tests/source/helm-lifecycle.sh"
+source "$repo_root/tests/source/installed-matrix.sh"
+# The verified receipt is supplied at the external verifier boundary; consumption remains real.
+bash() {
+ [[ $1 == "$repo_root/scripts/verify-release-artifacts.sh" &&
+    " $* " == *' --profile data-product-controller '* ]] || exit 99
+}
+helm_scoped() { touch "$PUBLICATION_TEST_WORK/receipt-used"; exit 77; }
+helm() { touch "$PUBLICATION_TEST_WORK/receipt-used"; exit 77; }
+publication_helm() {
+ if [[ $1 == list ]]; then printf '[]\n'; return; fi
+ touch "$PUBLICATION_TEST_WORK/receipt-used"
+ exit 77
+}
+publication_kube() {
+ if [[ $1 == get && $2 == dataproduct ]]; then return; fi
+ if [[ $1 == get && $2 == crd/dataproducts.data.devantler.tech ]]; then
+  printf '{"metadata":{"uid":"crd-1"},"spec":{}}\n'
+  return
+ fi
+ exit 99
+}
+case "$1" in
+v1) helm_release_lifecycle ;;
+v4) chart_publication_lifecycle ;;
+matrix) installed_lifecycle_matrix ;;
+*) exit 99 ;;
+esac
+EOF
+for consumer in v1 v4 matrix; do
+	if [[ $consumer == v4 ]]; then
+		tag=v4.0.0
+		sha=4fbc7d215b3ce30091e74e9909a3ad822e878a05
+		publisher=ea4df9004d4ab43b6c9af5b0c5f55712f7211328
+		image=sha256:cc5bc6b165426daec27e70bbeb90f41a2e30699f99455f8b0733c247fbe57862
+		chart=sha256:338521dc3e85774d6fff817a1af073ed1a462ee67e61459bf37f15e9a370ec89
+	else
+		tag=v1.12.0
+		sha=ff7ddcf264f8ce4813ccdb6675a45b4d1e6d1b78
+		publisher=df7fd4f83edade31c121a9de563d9a7b9b1f900d
+		image=sha256:62350d68a853708357f463b74ea9ff847d94100d042125b4f2d0c6f25da54886
+		chart=sha256:9d57e4c7b26664a560a2b72cb8f89dfee4c1466223081a039579cc9ffa3d8575
+	fi
+	jq -n --arg tag "$tag" --arg sha "$sha" --arg publisher "$publisher" --arg image "$image" --arg chart "$chart" \
+		'{complete:true,tag:$tag,platform:"linux/amd64",releaseProfile:"data-product-controller",
+      sourceSHA:$sha,publisherSHA:$publisher,imageDigest:$image,chartDigest:$chart,runtimeDigest:$image,
+      imageReference:("ghcr.io/devantler-tech/data-product-controller@"+$image),
+      chartReference:("ghcr.io/devantler-tech/charts/data-product-controller@"+$chart)}' >"$work/historical-good.json"
+	for mutation in '.' 'del(.releaseProfile)' '.releaseProfile="khoist"' \
+		'del(.imageReference)' '.imageReference="ghcr.io/devantler-tech/khoist@"+.imageDigest' \
+		'del(.chartReference)' '.chartReference="ghcr.io/devantler-tech/charts/khoist@"+.chartDigest' '.complete=false'; do
+		jq "$mutation" "$work/historical-good.json" >"$work/historical-receipt.json"
+		rm -f "$work/receipt-used"
+		result=0
+		"$BASH" "$work/historical-check.sh" "$consumer" >"$work/historical.log" 2>&1 || result=$?
+		if [[ $mutation == . ]]; then
+			[[ $result == 77 && -f $work/receipt-used ]] || {
+				echo "$consumer rejected a complete historical receipt (exit $result)" >&2
+				cat "$work/historical.log" >&2
+				exit 1
+			}
+		else
+			[[ $result != 0 && $result != 77 && $result != 99 && ! -e $work/receipt-used ]] || {
+				echo "$consumer used a corrupt historical receipt: $mutation" >&2
+				exit 1
+			}
+		fi
+	done
+done
+echo 'historical lifecycle consumers reject missing or mixed profiles before installation or image use'
 
 # Render real chart products; fault-inject only Helm/Kubernetes reads around the actual snapshot guard.
 "$real_helm" template dpc-publication "$root/charts/data-product-controller" --namespace products \
