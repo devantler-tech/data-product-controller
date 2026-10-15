@@ -124,6 +124,7 @@ YAML
 		--values "$test_dir/publication-values.yaml" --post-renderer "$repo_root/tests/source/publication-products.sh" \
 		--wait --timeout 180s >/dev/null
 	publication_snapshot restored false
+	ui_free_rollback_lifecycle
 	publication_helm uninstall dpc-publication --wait --timeout 60s >/dev/null
 	publication_products_absent
 	installed_query_check

@@ -3,24 +3,29 @@
 : "${repo_root:?run through tests/source/run.sh}" "${test_dir:?run through tests/source/run.sh}"
 # helm_scoped confines Helm operations to the owned fixture context and products namespace.
 helm_scoped() {
-	: "${cluster_context:?owned fixture context required}"
-	helm --kubeconfig "$KUBECONFIG" --kube-context "$cluster_context" "$@" --namespace products
+	publication_helm "$@"
 }
 
-# helm_installed_identity binds stable deployed metadata and revision values to the requested chart and image.
-helm_installed_identity() {
-	local version=$1 image=$2 metadata revision final
-	metadata=$(helm_scoped get metadata dpc --output json) || return 1
+# helm_installed_revision returns one stable deployed revision bound to the requested release, chart and image.
+helm_installed_revision() {
+	local release=$1 version=$2 image=$3 metadata revision final
+	metadata=$(helm_scoped get metadata "$release" --output json) || return 1
 	revision=$(jq -ser --arg version "$version" '
     if length == 1 then .[0] else error("ambiguous metadata") end |
     select(.status == "deployed" and .chart == "data-product-controller" and
       .version == $version and .appVersion == $version and
       (.revision | type == "number" and . > 0 and . == floor)) | .revision' <<<"$metadata") || return 1
 	[[ $revision =~ ^[1-9][0-9]*$ ]] || return 1
-	helm_scoped get values dpc --revision "$revision" --output json | jq -se --arg image "$image" '
+	helm_scoped get values "$release" --revision "$revision" --output json | jq -se --arg image "$image" '
     length == 1 and (.[0] | (.image.repository + "@" + .image.digest) == $image)' >/dev/null || return 1
-	final=$(helm_scoped get metadata dpc --output json) || return 1
-	jq -ne --argjson before "$metadata" --argjson after "$final" '$before == $after' >/dev/null
+	final=$(helm_scoped get metadata "$release" --output json) || return 1
+	jq -ne --argjson before "$metadata" --argjson after "$final" '$before == $after' >/dev/null || return 1
+	printf '%s\n' "$revision"
+}
+
+# helm_installed_identity checks the main workload release without emitting a revision.
+helm_installed_identity() {
+	helm_installed_revision dpc "$1" "$2" >/dev/null
 }
 
 # install_chart installs the packaged candidate with the fixture's declared values and test CA.
@@ -33,12 +38,15 @@ install_chart() {
 
 # installed_observation verifies exact workloads, current readiness and each replica's phase-specific page.
 installed_observation() {
-	local phase=$1 image=$2 runtime=$3 expected_title=$4
+	: "${cluster_context:?owned fixture context required}"
+	local phase=$1 image=$2 runtime=$3 expected_title=$4 allowance
+	allowance=$(publication_budget) || return 1
+	((allowance <= 180)) || allowance=180
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
 		--context "$cluster_context" --namespace products --product existing-export \
 		--deployment dpc:controller --deployment dpc-http-source:http-source \
 		--condition Ready --condition ConnectorReady --image "$image" \
-		--runtime-digest "$runtime" --timeout 180 --evidence-dir "$test_dir/observed-$phase"
+		--runtime-digest "$runtime" --timeout "$allowance" --evidence-dir "$test_dir/observed-$phase"
 	registry_ready true
 	registry_replicas_ready "$expected_title"
 }
