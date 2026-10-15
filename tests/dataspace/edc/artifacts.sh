@@ -5,9 +5,14 @@
 edc_verify_libraries() (
 	set -euo pipefail
 	shopt -s nullglob dotglob
-	local directory=$1 lock=$2 artifact_scratch path name
+	local directory=$1 lock=$2 artifact_scratch path name record
 	local -a files
 	[[ -d $directory && ! -L $directory && -f $lock && ! -L $lock && $lock == /* ]] || exit 1
+	# BusyBox -c ignores malformed lines; enforce the authored lock grammar first
+	# rather than depending on GNU-only --strict in the Alpine scanner image.
+	while IFS= read -r record || [[ -n $record ]]; do
+		[[ $record =~ ^[a-f0-9]{64}\ \ [A-Za-z0-9][A-Za-z0-9_.-]*\.jar$ ]] || exit 1
+	done <"$lock"
 	files=("$directory"/*)
 	((${#files[@]} > 0 && ${#files[@]} <= 128)) || exit 1
 	artifact_scratch=$(mktemp -d) || exit 1
@@ -20,7 +25,7 @@ edc_verify_libraries() (
 	LC_ALL=C sort "$artifact_scratch/actual" >"$artifact_scratch/sorted" || exit 1
 	awk '{print $2}' "$lock" | LC_ALL=C sort >"$artifact_scratch/expected" || exit 1
 	cmp "$artifact_scratch/sorted" "$artifact_scratch/expected" >/dev/null || exit 1
-	(cd "$directory" && sha256sum --strict --check "$lock") >"$artifact_scratch/checked" || exit 1
+	(cd "$directory" && sha256sum -c "$lock") >"$artifact_scratch/checked" || exit 1
 )
 
 # edc_class_manifest emits a complete canonical manifest only after every expected class was read.

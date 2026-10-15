@@ -50,6 +50,30 @@ rejected edc_verify_libraries "$scratch/libraries" "$scratch/lock"
 PATH=$original_path
 edc_verify_libraries "$scratch/libraries" "$scratch/lock"
 
+# Alpine's checksum utility has -c, without GNU --strict. It must still validate
+# a complete lock, and malformed lines must never be silently ignored.
+real_sha256=$(command -v sha256sum)
+cat >"$scratch/bin/sha256sum" <<'EOF'
+#!/usr/bin/env bash
+for argument in "$@"; do [[ $argument != --strict ]] || exit 2; done
+exec "$EDC_TEST_SHA256" "$@"
+EOF
+EDC_TEST_SHA256=$real_sha256 PATH="$scratch/bin:$PATH" \
+	bash "$fixture/artifacts.sh" libraries "$scratch/libraries" "$scratch/lock" || {
+	echo 'valid locked artifacts must work with the scanner image checksum utility' >&2
+	exit 1
+}
+cp "$scratch/lock" "$scratch/malformed-lock"
+printf 'malformed trailing checksum record\n' >>"$scratch/malformed-lock"
+rejected edc_verify_libraries "$scratch/libraries" "$scratch/malformed-lock"
+
+# Restore the incomplete-read fault used by class-manifest controls below.
+cat >"$scratch/bin/sha256sum" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' 'EdcImport.class: OK'
+exit 1
+EOF
+
 printf '%s' 'compiled fixture class' >"$scratch/classes/EdcImport.class"
 edc_class_manifest "$scratch/classes" >"$scratch/manifest"
 [[ -s $scratch/manifest ]]
