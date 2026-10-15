@@ -135,6 +135,7 @@ source_secret() {
 }
 source "$repo_root/tests/source/helm-lifecycle.sh"
 source "$repo_root/tests/source/chart-publication.sh"
+source "$repo_root/tests/source/ui-free-rollback.sh"
 source "$repo_root/tests/source/source-lifecycle.sh"
 source "$repo_root/tests/source/contract-matrix.sh"
 source "$repo_root/tests/source/connector-matrix.sh"
