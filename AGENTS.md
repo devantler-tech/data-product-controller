@@ -2,7 +2,7 @@
 
 ## Project overview
 
-`devantler-tech/data-product-controller` is the cloud-native control plane for portable, composable data products. Its API describes ownership, standard query interfaces, independently deployed interaction surfaces, and dependencies between products. The controller observes that metadata; it never stores product data or credentials.
+KHoist (`devantler-tech/data-product-controller`) is the cloud-native control plane for portable, composable data products. Its API describes ownership, standard query interfaces and dependencies between products. Consumers own their UIs. The controller observes metadata; it never stores product data or credentials. API-only integration is the accepted direction in `docs/adr/0023-api-only-product-integration.md`; retained legacy UI metadata/runtime is deprecated compatibility pending versioned migration.
 
 The minimum Go version is declared only in `go.mod`. The public roadmap is GitHub issue [#1](https://github.com/devantler-tech/data-product-controller/issues/1).
 
@@ -17,7 +17,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/catalog/` — default-off DCAT 3 JSON-LD projection of publisher-declared datasets.
 - `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
 - `internal/preflight/` and `cmd/product-check/` — default-off local publisher validation using the embedded delivered CRD and bounded public descriptor preview.
-- `web/` and `cmd/ui-kit/` — portable UI protocol library and independent, default-off compatibility host.
+- `web/` and `cmd/ui-kit/` — shared bounded metadata validators, independent publisher-review workspace and deprecated, default-off UI compatibility host.
 - `internal/demoproduct/` and `cmd/demo-product/` — independent harbour reference and standard live KSail release interfaces, with default-off optional catalogue publication.
 - `internal/httpsource/` and `cmd/http-source/` — default-off, Secret-configured read-only HTTPS JSON export connector with separate query and management listeners.
 - `internal/contractprobe/` and `cmd/contract-probe/` — independent credential-free HTTPS contract reachability with bounded requests and management-only endpoints.
@@ -67,7 +67,7 @@ Do not copy instructions into them.
 - The HTTP source connector is a separate data-plane workload. It reads its own projected Secret, exposes only a fixed GET export, and never gives the controller source credentials or data. Preserve TLS verification, redirect/proxy rejection, bounded reads, and the explicit consumer/egress policy. It does not register products or report Kubernetes conditions; see `docs/http-source.md`.
 - Connector observation supports only named same-namespace `apps/v1` Deployments through `deployment/v1`. Preserve exact-name read-only RBAC, full current-generation replica readiness, independent `ConnectorReady` refresh, and bounded polling. Never add workload ownership, Secret reads, or data-plane URL probes; see `docs/connector-readiness.md`.
 - Contract checks bind selected outputs to independently owned probe Deployments. Preserve literal URL binding, the shared observation deadline, independent `ContractsReady` refresh, and the separation between controller reads and probe network traffic; see `docs/contract-readiness.md`.
-- A product UI is independently deployed. The registry may sandbox it, but must not import its JavaScript, pass credentials, or become its runtime owner.
+- The registry is API-only: no product frames, publisher-code imports, presentation sessions or automatic product/contract requests. Preserve `frame-src 'none'`, same-origin connections, inert public metadata and explicit HTTPS API/contract links. Consumer applications own data access, authorisation and rendering; never add a query proxy or credentials to the controller.
 - The independent reference workload serves a live public KSail release surface without a runtime
   release gate. Optional DataProduct publication remains default-off. Its browser alone reads the
   fixed KSail GitHub API without credentials.
@@ -75,11 +75,11 @@ Do not copy instructions into them.
   redirect rejection, local-only filters, refresh/navigation cancellation and public-source CSP.
   The controller and workload never read release data, and only presentation hints reach the host.
   Workload readiness does not establish GitHub availability. See `docs/ksail-releases.md`.
-- The default-off `ui-contract` feature permits bounded status and resize hints under v1. V2 adds only a Light/Dark appearance hint behind the additional default-off `ui-appearance` gate. Preserve opaque iframe origins, exact source/session/shape checks, publisher-owned host approval, grant intersection, navigation revocation, message bounds and timeout cleanup. See `docs/ui-contract.md`.
+- Legacy UI metadata remains bounded and validated until its versioned retirement. The registry's presentation configuration keys are always false, regardless of legacy flags. The deprecated independent kit retains v1/v2 status, resize and appearance controls: preserve its opaque origins, exact source/session/shape checks, publisher host approval, grant intersection, revocation, message bounds and timeout cleanup while that runtime exists. Preserve the separate useful publisher-review application. See `docs/ui-contract.md` and `docs/adr/0023-api-only-product-integration.md`.
 - The JSON registry is a convenience projection of Kubernetes resources, not a second source of truth.
 - Discovery browser clients validate the closed public descriptor before display or export.
   Keep bounded streamed UTF-8 parsing and navigation cancellation; metadata inspection must allow
-  unhealthy and UI-less products without granting permission to mount a published surface.
+  unhealthy and UI-less products without contacting a publisher or granting data access.
 - The default-off `registry-lineage` gate also requires `registry-discovery` and the canonical
   declared-compatibility evaluator. Trace declared same-namespace inputs only, verify returned
   identities, cache failed reads, and keep public health separate from compatibility. Preserve
@@ -131,6 +131,7 @@ sh scripts/scanner-suppressions.test.sh
 sh scripts/toolchain.test.sh
 helm lint charts/data-product-controller
 golangci-lint run
+golangci-lint run --build-tags=browser ./internal/browser/...
 (cd tests/provider/fixture && go test -race -count=1 ./... && go vet ./...)
 ```
 
@@ -179,8 +180,8 @@ cmp config/crd/bases/data.devantler.tech_dataproducts.yaml deploy/data.devantler
 
 - Follow test-driven development for behavior: prove RED, make the smallest implementation GREEN, then refactor.
 - Keep new release behavior behind an OpenFeature flag, default-off, with both states tested. Remove short-lived flags after rollout; long-lived operational gates need an explicit rationale.
-- Treat product descriptors, contract documents, and embedded product UIs as untrusted input.
-- Preserve HTTPS-only public interface validation and the iframe sandbox boundary.
+- Treat product descriptors, contract documents and retained legacy product UIs as untrusted input.
+- Preserve HTTPS-only public interface validation, the registry's no-frame policy and the independent legacy kit's sandbox while it exists.
 - Prefer Kubernetes conditions with actionable reasons and stable messages. Avoid status-only reconciliation loops.
 - Generated files carry generated provenance and are never edited manually.
 - ADRs live in `docs/adr/`. Documentation states present behavior, constraints, and rationale.

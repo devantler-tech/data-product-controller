@@ -22,8 +22,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// TestDemoWorksInTwoHosts covers an independently served product, both release states and query recovery.
-func TestDemoWorksInTwoHosts(t *testing.T) {
+// TestLegacyKitOwnsProductInteraction keeps protocol/query recovery in the independent compatibility host.
+func TestLegacyKitOwnsProductInteraction(t *testing.T) {
 	kit := httptest.NewTLSServer(web.KitHandler(func() bool { return true }))
 	t.Cleanup(kit.Close)
 	var handler atomic.Value
@@ -97,21 +97,15 @@ func TestDemoWorksInTwoHosts(t *testing.T) {
 		MustNavigate(registryServer.URL).
 		MustWaitLoad()
 	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'unavailable'`)
-	if page.MustEval(`() => document.querySelector('iframe').hasAttribute('src')`).Bool() {
-		t.Fatal("disabled host opened contract-bearing UI")
+	page.MustElement("#product-owner").MustWait(`() => this.textContent === 'Marine team'`)
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("API-only registry mounted a legacy product")
 	}
 	enabled.Store(true)
 	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
-	frame := page.MustElement("#product-surface").MustFrame()
-	frame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
-	outage.Store(true)
-	frame.MustElement("button").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'error'`)
-	outage.Store(false)
-	frame.MustElement("button").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'ready'`)
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("legacy flags re-enabled registry execution")
+	}
 	manifest, err := json.Marshal(product.Spec.UI)
 	if err != nil {
 		t.Fatal(err)
@@ -128,6 +122,12 @@ func TestDemoWorksInTwoHosts(t *testing.T) {
 	kitPage.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
 	kitFrame := kitPage.MustElement("#product-surface").MustFrame()
 	kitFrame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
+	outage.Store(true)
+	kitFrame.MustElement("button").MustClick()
+	kitPage.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'error'`)
+	outage.Store(false)
+	kitFrame.MustElement("button").MustClick()
+	kitPage.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'ready'`)
 	if kitPage.MustEval(`() => document.documentElement.scrollWidth > innerWidth`).Bool() {
 		t.Fatal("kit overflows narrow viewport")
 	}
@@ -143,10 +143,9 @@ func TestDemoWorksInTwoHosts(t *testing.T) {
 	}
 	// Removing publisher approval cannot be bypassed by the host's declared manifest.
 	handler.Store(demoproduct.NewHandler())
-	page.MustActivate()
-	page.MustElement(".product-card").MustClick()
-	page.MustElement("#ui-contract-status").MustWait(`() => this.dataset.state === 'timeout'`)
-	if page.MustEval(`() => document.querySelector('iframe').hasAttribute('src')`).Bool() {
+	kitPage.MustElement("#validate").MustClick()
+	kitPage.MustElement("#kit-status").MustWait(`() => this.dataset.state === 'timeout'`)
+	if kitPage.MustEval(`() => document.querySelector('iframe').hasAttribute('src')`).Bool() {
 		t.Fatal("timeout retained an unauthorized frame")
 	}
 }
@@ -181,15 +180,7 @@ func TestUIHostMessageBoundary(t *testing.T) {
 		});</script>`))
 	}))
 	t.Cleanup(child.Close)
-	scheme := runtime.NewScheme()
-	if err := datav1alpha1.AddToScheme(scheme); err != nil {
-		t.Fatal(err)
-	}
-	host := httptest.NewTLSServer(
-		registry.NewHandler(
-			fake.NewClientBuilder().WithScheme(scheme).Build(),
-		),
-	)
+	host := httptest.NewTLSServer(web.KitHandler(func() bool { return true }))
 	t.Cleanup(host.Close)
 	page := contractBrowser(
 		t,
@@ -197,8 +188,7 @@ func TestUIHostMessageBoundary(t *testing.T) {
 		Timeout(25 * time.Second).
 		MustNavigate(host.URL).
 		MustWaitLoad()
-	page.MustEval(`async (url) => {
-		await new Promise((resolve,reject) => {const s=document.createElement('script');s.src='/assets/ui-contract.js';s.onload=resolve;s.onerror=reject;document.head.append(s);});
+	page.MustEval(`(url) => {
 		window.states=[];
 		const frame=document.querySelector('#product-surface');
 		window.disposeUI=DataProductUI.mount({frame,manifest:{url,title:'Fixture',contract:{apiVersion:'data-product-ui/v1',hostOrigins:[location.origin],capabilities:['status','resize']}},grants:['status'],onState:s=>states.push(s)});

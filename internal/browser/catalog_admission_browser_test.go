@@ -43,6 +43,7 @@ func catalogWireFixture(
 	return server
 }
 
+// catalogInspectionDescriptor supplies valid public metadata without a product UI.
 func catalogInspectionDescriptor() map[string]any {
 	p := offlineDescriptor("https://host.example.test", "https://publisher.example.test")
 	delete(p, "ui")
@@ -50,6 +51,7 @@ func catalogInspectionDescriptor() map[string]any {
 	return p
 }
 
+// catalogPage wraps descriptors in one complete discovery page without a continuation.
 func catalogPage(products ...map[string]any) map[string]any {
 	return map[string]any{
 		"apiVersion": "data-product-discovery/v1", "products": products,
@@ -103,7 +105,7 @@ func TestCatalogRejectsMalformedDescriptors(t *testing.T) {
 				MustWait(`() => !this.hidden && !this.textContent.includes("Loading")`)
 			if !page.MustEval(`() => document.querySelector('#product-metadata').hidden &&
 				document.querySelector('#descriptor-actions').hidden &&
-				!document.querySelector('#product-surface').hasAttribute('src')`).Bool() {
+				document.querySelectorAll('iframe').length === 0`).Bool() {
 				t.Fatal("malformed exact response retained descriptor or surface state")
 			}
 		})
@@ -183,7 +185,7 @@ func TestCatalogSearchesCanonicalIdentity(t *testing.T) {
 	page.MustElement(".product-card").MustClick()
 	page.MustElement("#export-descriptor").MustWaitVisible()
 	if page.MustElement("#product-readiness").MustText() != "Not ready" ||
-		page.MustEval(`() => document.querySelector('#product-surface').hasAttribute('src')`).
+		page.MustEval(`() => document.querySelectorAll('iframe').length !== 0`).
 			Bool() {
 		t.Fatal("unready descriptor was not inspectable without a surface")
 	}

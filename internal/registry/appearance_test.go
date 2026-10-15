@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// TestAppearanceConfiguration requires both optional presentation gates in the standard workspace.
+// TestAppearanceConfiguration keeps registry grants withdrawn for every legacy flag combination.
 func TestAppearanceConfiguration(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()
@@ -39,8 +39,8 @@ func TestAppearanceConfiguration(t *testing.T) {
 			if err := json.Unmarshal(response.Body.Bytes(), &config); err != nil {
 				t.Fatal(err)
 			}
-			if len(config) != 4 || config["uiAppearanceEnabled"] != (contract && appearance) ||
-				config["uiContractEnabled"] != contract || config["discoveryEnabled"] || config["lineageEnabled"] {
+			if len(config) != 4 || config["uiAppearanceEnabled"] ||
+				config["uiContractEnabled"] || config["discoveryEnabled"] || config["lineageEnabled"] {
 				t.Fatalf(
 					"incorrect presentation policy for contract=%t appearance=%t: %v",
 					contract,

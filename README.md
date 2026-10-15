@@ -1,4 +1,4 @@
-# data-product-controller
+# KHoist
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
@@ -126,22 +126,26 @@ The custom resource is control-plane metadata. Product data and credentials do n
 
 To check a description before publishing it, see [Check a product description](#check-a-product-description).
 
-## Decentralized UI contract
+## API-only workspace
 
-The `spec.ui.url` page belongs to the data product, not the registry. A compatible catalogue may render it in a sandboxed iframe or link to it directly.
+Products publish named API endpoints and standard contracts. Consuming applications
+own their UIs; the registry does not embed product pages, execute publisher code or
+query published endpoints automatically. See [the architecture decision](docs/adr/0023-api-only-product-integration.md).
 
 Search products by name, description, owner or namespace, and filter by controller-reported
 readiness. Select a product to inspect its owner, version, published data interfaces and input
 lineage. **Open API** and **View contract** open the publisher's HTTPS endpoints in a separate
 tab. A readiness indication describes the controller's observation; it does not grant data access
-or promise that an endpoint is reachable. **Refresh products** reloads the inventory and closes
-the selected view until a product is selected again.
+or promise that an endpoint is reachable. **Refresh products** withdraws the old
+descriptor and reloads the inventory. With discovery enabled, an explicit product
+link is reread before its current metadata is shown.
 
 The Harbour example labels its fixed synthetic records and displays station, observation time in
 UTC, temperature and salinity. Choose a station and use **Load observations** to filter the data.
 The latest requested station owns the result, even if an earlier request finishes later.
-When embedded, use the workspace's **Open API** and **View contract** links. The sample's
-data-access footer appears only on its standalone page.
+Use the workspace's **Open API** and **View contract** links to open the published
+interfaces explicitly. Standalone reference pages remain deprecated examples of
+API consumption; they are not embedded by the registry.
 
 The optional [KSail release product](docs/ksail-releases.md) displays real published versions,
 UTC dates and channels from GitHub. Its filters use the loaded public API page, and **Refresh
@@ -154,35 +158,30 @@ The registry and Harbour pages use content-addressed scripts and styles. Their H
 cached, so upgrades load the matching assets even when a browser or CDN retains an older release.
 
 The sample's `PUBLIC_BASE_URL` declares the HTTPS address under which its endpoints are published.
-It permits credential-free reads of only the observation and UI-configuration paths when embedded,
-including in Safari. The chart derives this address from its shared-host route, or accepts
+The deprecated kit permits credential-free reads of only the observation and
+UI-configuration paths when embedded, including in Safari. The chart derives this address from its shared-host route, or accepts
 `demoProduct.publicBaseURL` for a separate host. Values contain an exact HTTPS origin and an optional
 path prefix of letters, digits, underscores and hyphens, without a trailing slash. Request and
 forwarded host headers never select the allowed address. Without this setting, standalone use
 retains the same-origin policy.
 
-The reference registry preserves these boundaries:
+The registry validates public metadata and exposes only explicit, credential-free
+HTTPS interface links. Its browser policy denies frames and permits connections
+only to its own API. It passes no bearer token, Secret or Kubernetes identity to
+publishers, and never imports their JavaScript.
 
-- loads only absolute HTTPS URLs supplied by the product descriptor;
-- uses `sandbox="allow-forms allow-scripts"` without `allow-same-origin`;
-- passes no bearer token, Secret, or Kubernetes identity;
-- never imports product JavaScript into the catalogue document.
-
-The default-off `ui-contract` feature adds a versioned manifest, publisher-approved
-host origins, per-navigation sessions, and explicit grants for bounded status and
-resize hints. The standalone compatibility kit loads the same demo without a
-registry or Kubernetes. See the [publisher guide](docs/ui-contract.md) for the
-manifest, complete message contract, independent host, and accessibility checks.
-Authentication and credential transfer remain outside this protocol.
+Legacy `spec.ui` and descriptor fields remain bounded compatibility metadata.
+The registry grants no product presentation capabilities, regardless of legacy
+flag settings. The independent compatibility kit remains deprecated and retains
+its restrictive sandbox and protocol controls; [its guide](docs/ui-contract.md)
+describes that existing runtime. Versioned schema/runtime retirement and normal
+Platform adoption are tracked in [#390](https://github.com/devantler-tech/data-product-controller/issues/390).
 
 The workspace offers System, Light and Dark appearance with an orange accent.
 An explicit choice stays in browser storage when available; denied storage does
-not prevent discovery or queries. Legacy product UIs follow their own system
-appearance. Products requesting `data-product-ui/v2` and `appearance` can follow
-workspace changes without reloading or losing their current query. This requires
-both `uiContract.enabled` and the separately default-off `uiAppearance.enabled`
-in the host and sample, plus publisher-approved host origins. The new gate is a
-long-lived operator choice over a cosmetic grant, not permission to query data.
+not prevent discovery or inspection. Workspace appearance does not send product
+messages, contact publishers or change selected metadata. Consumer applications
+own their own appearance and data-access policy.
 
 The sample product and standalone UI kit handle SIGTERM and interrupt by closing
 their listeners and waiting up to ten seconds for active responses to finish.
@@ -211,7 +210,7 @@ The current foundation provides:
 - a default-off DCAT 3 JSON-LD catalog at `/api/v1/catalog`, with explicit publisher opt-in and stable dataset, distribution, and service identities;
 - a default-off [offline DSP catalog exporter](docs/dsp-catalog.md) that combines DCAT snapshots with explicit provider services, transfer formats and offers;
 - a default-off [publisher preflight command](docs/publisher-preflight.md) that validates local manifests and previews public descriptors before GitOps publication;
-- a registry workspace that renders product descriptors and embeds product UIs in a restricted sandbox;
+- an API-only registry workspace that inspects public descriptors and exposes explicit standard interface links;
 - a default-off, versioned UI manifest and capability protocol, with an independent compatibility kit;
 - an independently deployed harbour-observations example with its own OpenAPI contract, query API, and UI;
 - a live [KSail release browser](docs/ksail-releases.md) with optional catalogue publication, its external public query contract and bounded, credential-free reads;

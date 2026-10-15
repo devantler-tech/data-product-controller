@@ -14,7 +14,8 @@ the same choice as `registryDiscovery.enabled`. Invalid settings fail startup.
 When disabled, every new discovery route returns `404` without reading Kubernetes.
 The existing registry workspace and `/api/v1/products` remain available.
 `GET /api/v1/ui-config` advertises `discoveryEnabled` independently of the UI contract
-and appearance grants. Enabling discovery does not enable either presentation grant.
+and appearance compatibility keys, which are always false in the API-only registry.
+Enabling discovery grants no publisher execution or data access.
 
 ## Read a product or page
 
@@ -122,12 +123,12 @@ also be `unobserved`.
 A product with a deletion timestamp remains inspectable but is never aggregate-ready,
 even while its last Ready condition is current and true. Its public message is
 "The product is being deleted." Independent health dimensions retain their observed
-states; pending deletion prevents the browser from opening the product UI.
+states. The API-only registry never opens a product UI, irrespective of readiness.
 
 These are metadata observations at the time of the read. They do not assert current
 endpoint availability, schema compatibility beyond declared metadata, effective data
 permissions, successful data-plane requests or production adoption. An exported file
-is an offline snapshot and cannot authorize a later UI session.
+is an offline snapshot and cannot authorize data access or later execution.
 
 ## Bounds, failures and schema compatibility
 
@@ -167,8 +168,9 @@ page schema with ID `urn:data-product-discovery:v1`. Register both bundled docum
 by these IDs for offline validation; the page references the descriptor URN. Neither
 schema requires a network fetch. JSON Schema counts string characters; consumers must
 also enforce the documented UTF-8 byte bounds and total encoded size before parsing.
-UI URL, origin and capability validation still belongs to the existing UI contract;
-schema validation alone grants no permission to mount a product surface.
+Legacy UI URL, origin and capability fields retain the existing bounded contract
+validation. They do not grant execution in the API-only registry; schema
+validation alone grants no data access or permission to use the deprecated kit.
 Publication retains that contract's 2,048-character UI URL, nonblank title of at most
 200 UTF-16 units, and 16-KiB encoded UI manifest limits. Numeric final host labels must
 be canonical IP addresses so Go and browser consumers interpret the same destinations.
@@ -186,17 +188,19 @@ JSON fields, including escaped aliases, and nonintegral or unsafe numeric tokens
 retaining metadata for rendering or export.
 
 Refresh cancels earlier inventory and selected-product
-reads; selecting another product cancels the previous lookup and UI configuration read.
-Leaving the document also withdraws its product surface, descriptor and trace
+reads; selecting another product cancels the previous lookup and dependency trace.
+Leaving the document also withdraws its selected metadata, descriptor and trace
 downloads, inventory cursor and pending reads. Restoring a persisted browser-history
 entry re-reads host configuration, the catalog and the selected product before
-displaying new observations or opening an interface.
+displaying new observations. It never opens a product interface automatically.
 The browser requests 16 products per page, leaving room for the maximum-size descriptors
 and page envelope inside the response bound. Local descriptor files also use strict UTF-8
 decoding; malformed bytes reject the import and withdraw any earlier UI session.
 Metadata validation permits valid unhealthy products and products without a UI to be
-inspected. Mounting still requires current aggregate readiness and the separate publisher
-host approval and presentation grants. Search includes canonical name, namespace/name,
+inspected. Only the deprecated independent compatibility kit mounts a declared UI;
+importing a descriptor requires its recorded aggregate readiness as well as publisher
+host approval and presentation grants. Offline readiness is an observation, not a
+fresh controller read. Search includes canonical name, namespace/name,
 public product ID, display name, owner, description and namespace among loaded products.
 
 The old `/api/v1/products` retains its response shape and readiness projection for
