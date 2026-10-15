@@ -33,14 +33,14 @@ func TestRegistryHistoryRevocation(t *testing.T) {
 			"persisted history restoration reused a descriptor instead of checking its current availability",
 		)
 	}
-	// A mounted opaque product and a retained trace obey the same document boundary.
-	mounted, _ := themeWorkspace(t, false, true, true, true)
-	mounted.MustElement(".product-card").MustClick()
-	mounted.MustElement("#ui-contract-status").MustWait(`()=>this.dataset.state==='ready'`)
-	mounted.MustEval(`()=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}))`)
-	if mounted.MustEval(`()=>document.querySelector('#product-surface').hasAttribute('src')`).
-		Bool() {
-		t.Error("registry page exit retained a ready product interface")
+	// Selected product metadata and retained traces obey the same document boundary.
+	selected, _ := themeWorkspace(t, false, true, true, true)
+	selected.MustElement(".product-card").MustClick()
+	selected.MustElement("#product-owner").MustWait(`()=>this.textContent==='Harbour team'`)
+	selected.MustEval(`()=>dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}))`)
+	if selected.MustEval(`()=>!document.querySelector('#product-metadata').hidden`).Bool() ||
+		len(selected.MustElements("iframe")) != 0 {
+		t.Error("registry page exit retained selected product metadata or execution")
 	}
 	trace, _, _, _ := lineageFixture(t)
 	tracePage := contractBrowser(

@@ -59,10 +59,8 @@ func TestRegistryWorkspace(t *testing.T) {
 		*got != productServer.URL+"/openapi.json" {
 		t.Fatalf("contract link = %v", got)
 	}
-	frame := page.MustElement("#product-surface").MustFrame()
-	frame.MustElement("#status").MustWait(`() => this.textContent === '2 observations'`)
-	if frame.MustEval(`() => !!document.querySelector('nav[aria-label="Data access"]')`).Bool() {
-		t.Fatal("embedded sample exposes duplicate links its sandbox cannot open")
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("API workspace executed a product UI")
 	}
 	openContract := page.MustWaitOpen()
 	page.MustElement("#product-interfaces a[data-kind=contract]").MustClick()
@@ -79,8 +77,8 @@ func TestRegistryWorkspace(t *testing.T) {
 	page.MustElement("#product-count").MustWait(`() => this.textContent === '1 of 2 products'`)
 	page.MustElement(".product-card").MustFocus()
 	page.Keyboard.MustType(input.Enter)
-	if source := page.MustElement("#product-surface").MustAttribute("src"); source != nil {
-		t.Fatal("unready product opened an iframe")
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("unready product created a frame")
 	}
 	if page.MustEval(`() => !!document.querySelector('a[href^="javascript:"]') || !!document.querySelector('#interaction-description img')`).
 		Bool() {

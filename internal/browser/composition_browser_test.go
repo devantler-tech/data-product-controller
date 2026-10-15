@@ -65,7 +65,7 @@ func TestThreeProductComposition(t *testing.T) {
 	)
 	t.Cleanup(server.Close)
 	// Check the public descriptor handler directly; the browser below exercises
-	// its real HTTP transport and sandbox interaction.
+	// its real HTTP transport and public metadata inspection.
 	request := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/products", nil)
 	recorder := httptest.NewRecorder()
 	server.Config.Handler.ServeHTTP(recorder, request)
@@ -129,7 +129,7 @@ func TestThreeProductComposition(t *testing.T) {
 	if page.MustEval(`() => window.pwned === true`).Bool() {
 		t.Fatal("lineage executed untrusted metadata")
 	}
-	if source := page.MustElement("#product-surface").MustAttribute("src"); source != nil {
-		t.Fatal("unready composed product opened a surface")
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("unready composed product created a frame")
 	}
 }

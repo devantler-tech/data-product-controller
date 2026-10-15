@@ -1,23 +1,13 @@
 const appearance = document.querySelector("#appearance");
 const systemAppearance = matchMedia("(prefers-color-scheme: dark)");
 
-/** Resolve System locally; the embedded product receives only a cosmetic enum. */
-function resolvedAppearance() {
-  return appearance.value === "system"
-    ? systemAppearance.matches
-      ? "dark"
-      : "light"
-    : appearance.value;
-}
-
-/** Keep an explicit browser preference optional; denied storage must not prevent queries. */
+/** Keep appearance local and optional; denied storage must not prevent inspection. */
 function applyAppearance() {
   if (appearance.value === "system") {
     delete document.documentElement.dataset.appearance;
   } else {
     document.documentElement.dataset.appearance = appearance.value;
   }
-  disposeSurface.setAppearance?.(resolvedAppearance());
 }
 
 try {
@@ -30,13 +20,10 @@ try {
 const grid = document.querySelector("#data-product-grid");
 const status = document.querySelector("#registry-status");
 const count = document.querySelector("#product-count");
-const frame = document.querySelector("#product-surface");
-const empty = document.querySelector("#surface-empty");
 const interactionTitle = document.querySelector("#interaction-title");
 const interactionDescription = document.querySelector(
   "#interaction-description",
 );
-const contractStatus = document.querySelector("#ui-contract-status");
 const search = document.querySelector("#product-search");
 const readinessFilter = document.querySelector("#readiness-filter");
 const refresh = document.querySelector("#refresh-products");
@@ -45,7 +32,6 @@ let products = [];
 let inventoryLoaded = false;
 let documentActive = true;
 let selectedKey = "";
-let disposeSurface = () => {};
 let selection = 0;
 let discoveryEnabled = false;
 let lineageEnabled = false;
@@ -190,7 +176,7 @@ function routeKey() {
     validProductName(components[1]) ? value : false;
 }
 
-/** Revoke the current frame and hide descriptors before a new navigation or refresh. */
+/** Cancel outstanding reads and withdraw descriptors before navigation or refresh. */
 function clearSelection() {
   selectedRead?.abort();
   selectedRead = null;
@@ -198,21 +184,15 @@ function clearSelection() {
   ++selection;
   selectedKey = "";
   selectedDescriptor = null;
-  disposeSurface();
-  disposeSurface = () => {};
-  frame.removeAttribute("src");
-  frame.hidden = true;
-  empty.hidden = true;
-  contractStatus.hidden = true;
   selectionStatus.hidden = true;
   for (const id of ["product-metadata", "readiness-detail", "interfaces-detail", "composition-detail", "health-detail", "descriptor-actions"])
     document.getElementById(id).hidden = true;
   document.querySelectorAll(".product-card").forEach(card => card.setAttribute("aria-pressed", "false"));
   interactionTitle.textContent = "Select a product";
-  interactionDescription.textContent = "Choose a product to view its details and data.";
+  interactionDescription.textContent = "Inspect ownership, readiness and published APIs.";
 }
 
-/** Re-read a linked product; cached cards never authorize an iframe navigation. */
+/** Re-read a linked product; cached cards never establish its current observations. */
 async function navigateProduct(key, push = false) {
   if (!documentActive) return;
   clearSelection();
@@ -252,20 +232,6 @@ async function navigateProduct(key, push = false) {
     selectionStatus.hidden = false;
     selectionStatus.textContent = error.message;
   }
-}
-
-/** Map bounded presentation signals to accessible host-owned wording. */
-function surfaceState(state) {
-  contractStatus.hidden = false;
-  contractStatus.dataset.state = state;
-  contractStatus.textContent = {
-    loading: "Opening product interface…",
-    ready: "Product interface connected.",
-    error:
-      "The product interface reported an error. Try its query again or select the product to retry.",
-    timeout:
-      "The product interface did not respond. Select the product to retry.",
-  }[state];
 }
 
 /** Render declared references and current observations as inert text, including untrusted owner metadata. */
@@ -320,19 +286,14 @@ function showLineage(product) {
   }
 }
 
-/** Select a descriptor and open its independent surface only while the product is ready. */
-async function selectProduct(product, button) {
+/** Inspect public metadata; published endpoints are opened only by explicit link actions. */
+function selectProduct(product) {
   if (!documentActive) return;
   selectedRead?.abort();
   selectedRead = new AbortController();
   dependencyTrace.select(product, discoveryEnabled && lineageEnabled);
-  const selected = ++selection;
+  ++selection;
   selectedKey = `${product.namespace}/${product.name}`;
-  disposeSurface();
-  disposeSurface = () => {};
-  frame.removeAttribute("src");
-  frame.hidden = true;
-  contractStatus.hidden = true;
   document.querySelectorAll(".product-card").forEach((card) => {
     card.setAttribute("aria-pressed", String(card.dataset.key === selectedKey));
   });
@@ -344,57 +305,9 @@ async function selectProduct(product, button) {
   interactionTitle.focus({ preventScroll: true });
   if (matchMedia("(max-width: 52rem)").matches)
     interactionTitle.scrollIntoView({ block: "start" });
-
-  if (!product.ready || !publicURL(product.ui?.url)) {
-    frame.hidden = true;
-    frame.removeAttribute("src");
-    empty.hidden = false;
-    empty.querySelector("p").textContent = product.ready
-      ? "No embedded view is available. Use the published data interfaces above."
-      : "The data view is unavailable until this product is ready.";
-    return;
-  }
-
-  empty.hidden = true;
-  if (product.ui.contract) {
-    surfaceState("loading");
-    try {
-      const response = await fetch("/api/v1/ui-config", {
-        cache: "no-store",
-        credentials: "same-origin",
-        signal: AbortSignal.any([selectedRead.signal, AbortSignal.timeout(5000)]),
-      });
-      if (!response.ok)
-        throw new Error(
-          "The host could not read its UI configuration. Select the product to retry.",
-        );
-      const configuration = await boundedJSON(response, 4096);
-      if (selected !== selection) return;
-      if (configuration.uiContractEnabled !== true)
-        throw new Error("Portable UI contracts are disabled on this host.");
-      disposeSurface = DataProductUI.mount({
-        frame,
-        manifest: product.ui,
-        grants:
-          configuration.uiAppearanceEnabled === true
-            ? ["status", "resize", "appearance"]
-            : ["status", "resize"],
-        appearanceEnabled: configuration.uiAppearanceEnabled === true,
-        appearance: resolvedAppearance(),
-        onState: surfaceState,
-      });
-    } catch (error) {
-      if (selected !== selection) return;
-      contractStatus.textContent = error.message;
-      contractStatus.dataset.state = "unavailable";
-    }
-    return;
-  }
-  frame.title = product.ui.title;
-  frame.src = product.ui.url;
-  frame.hidden = false;
 }
 
+/** Build a selectable metadata card; selection grants no publisher execution or data access. */
 function productCard(product) {
   const button = document.createElement("button");
   button.type = "button";
@@ -427,7 +340,7 @@ function productCard(product) {
   button.append(copy, summary);
   button.addEventListener("click", () => discoveryEnabled
     ? navigateProduct(button.dataset.key, true)
-    : selectProduct(product, button));
+    : selectProduct(product));
   return button;
 }
 
@@ -517,7 +430,7 @@ async function boundedJSON(response, maximum) {
   } catch { throw new Error("The registry returned invalid public metadata."); }
 }
 
-/** Refresh invalidates the selected surface before re-reading readiness; failures remain retryable. */
+/** Refresh withdraws selected metadata before re-reading observations; failures remain retryable. */
 async function loadProducts() {
   if (!documentActive) return;
   inventoryRead?.abort();
@@ -652,7 +565,7 @@ document.querySelector("#catalog-scope").addEventListener("submit", event => {
   loadProducts();
 });
 addEventListener("popstate", () => { if (discoveryEnabled) navigateProduct(routeKey()); });
-/** A persisted history entry cannot retain an observed product, trace, cursor or active session. */
+/** A persisted history entry cannot retain an observed product, trace, cursor or pending read. */
 addEventListener("pagehide", () => {
   documentActive = false;
   inventoryRead?.abort();

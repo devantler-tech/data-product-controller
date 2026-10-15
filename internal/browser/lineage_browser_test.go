@@ -186,7 +186,7 @@ func TestLineageWorkspace(t *testing.T) {
 		Bool() {
 		t.Fatal("trace survived product navigation")
 	}
-	if src := page.MustElement("#product-surface").MustAttribute("src"); src != nil {
+	if len(page.MustElements("iframe")) != 0 {
 		t.Fatal("trace navigation opened an unhealthy surface")
 	}
 }

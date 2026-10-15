@@ -209,11 +209,7 @@ func TestDiscoveryRechecksAndRevokesOpenedProduct(t *testing.T) {
 	).MustPage().
 		MustNavigate(server.URL + "?product=products%2Fharbour").
 		MustWaitLoad()
-	page.MustElement("#product-surface").
-		MustWaitVisible().
-		MustFrame().
-		MustElement("#status").
-		MustWait(`() => this.textContent==="2 observations"`)
+	page.MustElement("#product-readiness").MustWait(`() => this.textContent==="Ready"`)
 	product.Status.Conditions[0].Status = metav1.ConditionFalse
 	product.Status.Conditions[0].Reason = "SourceNotReady"
 	if err := reader.Status().Update(t.Context(), product); err != nil {
@@ -221,8 +217,8 @@ func TestDiscoveryRechecksAndRevokesOpenedProduct(t *testing.T) {
 	}
 	page.MustElement(".product-card").MustClick()
 	page.MustElement("#product-readiness").MustWait(`() => this.textContent==="Not ready"`)
-	if src := page.MustElement("#product-surface").MustAttribute("src"); src != nil {
-		t.Fatal("exact lookup retained the previously available frame")
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("exact lookup created a product frame")
 	}
 }
 
@@ -329,7 +325,7 @@ func TestDiscoveryHistoryAndMissingSelection(t *testing.T) {
 	page.MustNavigate(server.URL + "?product=products%2Fharbour").MustWaitLoad()
 	page.MustElement("#selection-status").
 		MustWait(`() => this.textContent.includes("no longer available")`)
-	if src := page.MustElement("#product-surface").MustAttribute("src"); src != nil {
+	if len(page.MustElements("iframe")) != 0 {
 		t.Fatal("missing product retained a frame")
 	}
 }

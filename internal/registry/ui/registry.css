@@ -363,29 +363,6 @@ dd {
   font-size: 0.85rem;
 }
 
-#ui-contract-status {
-  margin: 0.5rem 0;
-  color: var(--muted);
-}
-
-#product-surface {
-  display: block;
-  width: 100%;
-  height: 34rem;
-  min-height: 20rem;
-  margin-top: 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--surface);
-}
-
-.surface-empty {
-  margin-top: 1.25rem;
-  padding: 1rem;
-  border: 1px dashed var(--line);
-  color: var(--muted);
-}
-
 @media (width <= 52rem) {
   .workspace {
     grid-template-columns: 1fr;
@@ -440,13 +417,11 @@ dd {
   }
 }
 
-:root[data-appearance="light"],
-:root[data-appearance="light"] #product-surface {
+:root[data-appearance="light"] {
   color-scheme: light;
 }
 
-:root[data-appearance="dark"],
-:root[data-appearance="dark"] #product-surface {
+:root[data-appearance="dark"] {
   color-scheme: dark;
 }
 

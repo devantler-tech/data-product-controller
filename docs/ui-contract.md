@@ -1,10 +1,14 @@
-# Portable product interfaces
+# Legacy portable product interfaces
 
-The `data-product-ui/v1` contract lets a publisher deploy one interface and use it
-in independently built catalogues. It defines public metadata, a restricted
-iframe, and two optional presentation capabilities. The reference registry and
-the standalone compatibility kit both implement it. Neither imports product code
-into its own document, proxies product requests, or owns the product runtime.
+The deprecated `data-product-ui/v1` and v2 contracts remain in the independent
+compatibility kit. They define public metadata, a restricted iframe and optional
+presentation capabilities. The API-only registry does not mount product UIs,
+send presentation messages or grant those capabilities. Its legacy configuration
+keys are always false, regardless of flag settings. See
+[ADR 0023](adr/0023-api-only-product-integration.md) and
+[#392](https://github.com/devantler-tech/data-product-controller/issues/392) for
+the versioned contract/runtime retirement. This guide describes the retained
+compatibility runtime, whose security controls remain required while it exists.
 
 ## Release gate and rollout
 
@@ -28,17 +32,17 @@ Up to fifteen additional origins are supported. Each must be a distinct canonica
 HTTPS origin; repeating the registry origin is rejected. The existing flag still
 defaults off, and a disabled UI contract publishes no host grants.
 
-A contract-bearing UI is unavailable in the registry while the flag is off.
-It does not fall back to a legacy frame. Existing descriptors without `contract`
-continue to use message-free sandboxed embedding. Rollback disables the flag and
-reloads host pages; already loaded browser sessions are not remotely revoked.
+The registry treats both contract-bearing and legacy UI declarations as bounded
+metadata; it provides no embedding fallback in either flag state. The independent
+kit retains its own default-off gate. Rollback of that runtime disables its flag
+and reloads host pages; already loaded browser sessions are not remotely revoked.
 Apply the updated CRD before upgrading an existing Helm installation, as described
 in the [installation guide](../README.md#install-on-a-cluster).
 
 Platform owns production activation and immutable artifact pins. Release, local
 browser tests, and a successful handshake do not prove a production rollout.
-[Issue #120](https://github.com/devantler-tech/data-product-controller/issues/120)
-tracks rollout acceptance and eventual removal of the temporary flag.
+[Issue #390](https://github.com/devantler-tech/data-product-controller/issues/390)
+tracks API-only migration and coordinated retirement.
 
 ## Publish a manifest
 
@@ -98,8 +102,7 @@ versions, unknown fields, stale sessions, and ungranted hints are ignored.
 | Product → host | `status` | `state: "ready"` or `"error"` | Optional interface status hint; requires `status` grant                        |
 | Product → host | `resize` | `height: integer`             | Optional height in CSS pixels, 240–1200 inclusive; requires `resize` grant     |
 
-The registry grants `status` and `resize` when requested; these are its fixed
-local presentation policy. The kit grants neither until its operator selects
+The registry grants neither presentation capability. The kit grants neither until its operator selects
 the respective checkboxes. Hosts must never interpret a message as controller
 readiness, data freshness, permission to query, or a change to access policy.
 The `ready` handshake is a protocol signal and requires no optional capability.
@@ -175,8 +178,9 @@ Navigation revokes the previous session and reapplies the current theme only
 after the next ready handshake. No frame reload, query, credential, storage command
 or sandbox permission is part of an appearance update.
 
-The registry's selector offers System, Light and Dark, retaining an explicit
-choice where browser storage is available. Storage denial does not block queries.
+The registry's selector offers System, Light and Dark as local appearance only,
+retaining an explicit choice where browser storage is available. Storage denial
+does not block inspection, and no product receives a hint.
 Legacy UIs and products without an appearance grant retain their own theme. The
 gate is a long-lived operator choice controlling optional presentation grants.
 Platform owns its production activation and readback in

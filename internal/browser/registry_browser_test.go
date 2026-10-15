@@ -4,6 +4,7 @@ package browser_test
 
 import (
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
+// TestRegistryOpensPublicAPIOnExplicitAction observes a separate API tab after the user selects its link.
+func TestRegistryOpensPublicAPIOnExplicitAction(t *testing.T) {
 	productServer := httptest.NewTLSServer(demoproduct.NewHandler())
 	t.Cleanup(productServer.Close)
 
@@ -65,26 +67,16 @@ func TestSandboxedProductCanQueryItsPublicAPI(t *testing.T) {
 
 	page := browser.MustPage().Timeout(30 * time.Second).
 		MustNavigate(registryServer.URL).MustWaitLoad()
-	frameElement := page.MustElement("#product-surface")
-	// Observe navigation from the stable parent document. Resolving the child
-	// document before load can race replacement of its initial about:blank node.
-	frameElement.MustEval(`() => {
-		this.dataset.testLoaded = "false";
-		this.addEventListener("load", () => {
-			this.dataset.testLoaded = "true";
-		}, { once: true });
-	}`)
 	page.MustElement(".product-card").MustWaitVisible().MustClick()
-	frameElement.MustWait(`() => this.dataset.testLoaded === "true"`)
-	productFrame := frameElement.MustFrame()
-
-	statusElement := productFrame.MustElement("#status")
-	statusElement.MustWait(`() => this.textContent === '2 observations'`)
-	status := statusElement.MustText()
-	if status != "2 observations" {
-		t.Fatalf("embedded product status = %q, want %q", status, "2 observations")
+	if len(page.MustElements("iframe")) != 0 {
+		t.Fatal("registry inspection embedded a product")
 	}
-	if count := len(productFrame.MustElements(".observation")); count != 2 {
-		t.Fatalf("embedded product observation count = %d, want 2", count)
+	open := page.MustWaitOpen()
+	page.MustElement("#product-interfaces a[data-kind=api]").MustClick()
+	consumer := open().MustWaitLoad()
+	if got := consumer.MustInfo().URL; got != productServer.URL+"/api/observations" ||
+		!strings.Contains(consumer.MustElement("body").MustText(), "temperatureCelsius") {
+		t.Fatalf("independent API consumer did not receive observations: %s", got)
 	}
+	consumer.MustClose()
 }

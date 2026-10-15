@@ -19,21 +19,25 @@ import (
 //go:embed ui/*
 var uiFiles embed.FS
 
-// HandlerOptions controls the optional portable UI presentation grants.
+// HandlerOptions controls registry discovery and declared input compatibility.
 type HandlerOptions struct {
-	ContractEnabled    func(context.Context) bool
+	// ContractEnabled is an ignored legacy callback retained for compatibility testing.
+	// The API-only registry never evaluates it or grants product UI capabilities.
+	ContractEnabled func(context.Context) bool
+	// AppearanceEnabled is an ignored legacy callback retained for compatibility testing.
+	// Workspace appearance is local and grants no product capability.
 	AppearanceEnabled  func(context.Context) bool
 	DiscoveryEnabled   func(context.Context) bool
 	LineageEnabled     func(context.Context) bool
 	InputCompatibility func(datav1alpha1.InputPort, *datav1alpha1.DataProduct) string
 }
 
-// NewHandler builds the registry API and UI with optional presentation grants disabled.
+// NewHandler builds the API-only registry workspace and public metadata API.
 func NewHandler(reader client.Reader) http.Handler {
 	return NewHandlerWithOptions(reader, HandlerOptions{})
 }
 
-// NewHandlerWithOptions builds the registry with independently evaluated presentation gates.
+// NewHandlerWithOptions builds the registry with independently evaluated discovery gates.
 func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Handler {
 	bundle, bundleErr := uibundle.Load(
 		uiFiles,
@@ -70,8 +74,7 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 		},
 	)
 	server := &server{
-		reader: reader, contractEnabled: options.ContractEnabled,
-		appearanceEnabled: options.AppearanceEnabled, bundle: bundle, bundleErr: bundleErr,
+		reader: reader, bundle: bundle, bundleErr: bundleErr,
 		discoveryEnabled: options.DiscoveryEnabled,
 		lineageEnabled:   options.LineageEnabled, inputCompatibility: options.InputCompatibility,
 		lineageSlot: make(chan struct{}, 1),
@@ -94,16 +97,12 @@ func NewHandlerWithOptions(reader client.Reader, options HandlerOptions) http.Ha
 func (s *server) uiConfig(writer http.ResponseWriter, request *http.Request) {
 	writer.Header().Set("Content-Type", "application/json")
 	writer.Header().Set("Cache-Control", "no-store")
-	contractEnabled := s.contractEnabled != nil && s.contractEnabled(request.Context())
 	_ = json.NewEncoder(writer).Encode(struct {
 		UIContractEnabled   bool `json:"uiContractEnabled"`
 		UIAppearanceEnabled bool `json:"uiAppearanceEnabled"`
 		DiscoveryEnabled    bool `json:"discoveryEnabled"`
 		LineageEnabled      bool `json:"lineageEnabled"`
 	}{
-		UIContractEnabled: contractEnabled,
-		UIAppearanceEnabled: contractEnabled &&
-			s.appearanceEnabled != nil && s.appearanceEnabled(request.Context()),
 		DiscoveryEnabled: s.discoveryEnabled != nil && s.discoveryEnabled(request.Context()),
 		LineageEnabled:   s.lineageAvailable(request.Context()),
 	})
@@ -131,10 +130,11 @@ func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request
 	s.bundle.ServeAsset(writer, request, request.PathValue("asset"))
 }
 
+// setUISecurityHeaders denies publisher frames and confines workspace connections to its own origin.
 func setUISecurityHeaders(writer http.ResponseWriter) {
 	writer.Header().Set(
 		"Content-Security-Policy",
-		"default-src 'self'; connect-src 'self'; frame-src https:; frame-ancestors 'none'; object-src 'none'; base-uri 'none'",
+		"default-src 'self'; connect-src 'self'; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; base-uri 'none'",
 	)
 	writer.Header().Set("Permissions-Policy", "camera=(), geolocation=(), microphone=()")
 	writer.Header().Set("Referrer-Policy", "no-referrer")
@@ -145,8 +145,6 @@ type server struct {
 	bundle             *uibundle.Bundle
 	bundleErr          error
 	reader             client.Reader
-	contractEnabled    func(context.Context) bool
-	appearanceEnabled  func(context.Context) bool
 	discoveryEnabled   func(context.Context) bool
 	lineageEnabled     func(context.Context) bool
 	inputCompatibility func(datav1alpha1.InputPort, *datav1alpha1.DataProduct) string
@@ -180,6 +178,7 @@ type readinessDescriptor struct {
 	Message string `json:"message"`
 }
 
+// listProducts publishes a complete bounded inventory or rejects an incomplete read.
 func (s *server) listProducts(writer http.ResponseWriter, request *http.Request) {
 	ctx, cancel := context.WithTimeout(request.Context(), 5*time.Second)
 	defer cancel()

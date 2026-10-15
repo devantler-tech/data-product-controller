@@ -38,7 +38,7 @@ func TestUIContractDefaultsOff(t *testing.T) {
 	}
 }
 
-// TestUIContractHostConfiguration keeps release capability separate from registry availability.
+// TestUIContractHostConfiguration withdraws presentation grants even with legacy flags enabled.
 func TestUIContractHostConfiguration(t *testing.T) {
 	t.Parallel()
 	scheme := runtime.NewScheme()
@@ -67,11 +67,11 @@ func TestUIContractHostConfiguration(t *testing.T) {
 		if err := json.Unmarshal(response.Body.Bytes(), &configuration); err != nil {
 			t.Fatal(err)
 		}
-		if len(configuration) != 4 || configuration["uiContractEnabled"] != contractEnabled ||
+		if len(configuration) != 4 || configuration["uiContractEnabled"] ||
 			configuration["uiAppearanceEnabled"] || configuration["discoveryEnabled"] ||
 			configuration["lineageEnabled"] ||
 			response.Header().Get("Cache-Control") != "no-store" {
-			t.Fatal("configuration does not reflect the current release flag")
+			t.Fatal("API-only registry advertised a retired presentation grant")
 		}
 	}
 }
