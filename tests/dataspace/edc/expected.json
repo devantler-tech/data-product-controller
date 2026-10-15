@@ -148,7 +148,5 @@
     "urn:example:dsp-observations"
   ],
   "compatibility": "incompatible",
-  "losses": [
-    "typed-distribution-id"
-  ]
+  "losses": ["typed-distribution-id"]
 }
