@@ -5,7 +5,11 @@
 
 # matrix_observation joins immutable workload identity, current product conditions and both serving registry replicas for one phase.
 matrix_observation() {
-	local phase=$1 image=$2 runtime=$3
+	local phase=$1 image=$2 runtime=$3 expected_title=KHoist
+	# Rollback restores the signed released workspace, before the candidate rename.
+	if [[ $phase == rollback ]]; then
+		expected_title='Data products'
+	fi
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
 		--context "$cluster_context" --namespace products --product existing-export \
 		--deployment dpc:controller --deployment dpc-http-source:http-source \
@@ -15,7 +19,7 @@ matrix_observation() {
 		--evidence-dir "$test_dir/observed-matrix-$phase"
 	[[ $(kube get dataproduct existing-export -o json | jq -er '.metadata.uid') == "$matrix_product_uid" ]]
 	registry_ready true
-	registry_replicas_ready
+	registry_replicas_ready "$expected_title"
 }
 
 # installed_lifecycle_matrix runs candidate faults, a stored released rollback and candidate restoration before testing product deletion.

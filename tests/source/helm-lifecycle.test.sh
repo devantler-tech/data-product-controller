@@ -51,3 +51,29 @@ if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller
 	exit 1
 fi
 echo 'installed Helm identity behavior tests passed'
+
+# The real observation must request the page shipped by each installed release.
+# Other rollout and registry checks retain their independent behavior controls.
+product_digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+candidate_chart=$work/candidate.tgz
+source "$root/tests/source/installed-matrix.sh"
+bash() { [[ $1 == "$repo_root/scripts/observe-rollout.sh" ]]; }
+kube() {
+	[[ "$*" == 'get dataproduct existing-export -o json' ]] || return 99
+	printf '%s\n' '{"metadata":{"uid":"product-1"}}'
+}
+registry_ready() { [[ $1 == true ]]; }
+registry_replicas_ready() {
+	if [[ ${1:-KHoist} != "$wanted_registry_title" ]]; then
+		printf 'wrong registry page for %s: expected %s, requested %s\n' \
+			"$phase" "$wanted_registry_title" "${1:-KHoist}" >&2
+		return 1
+	fi
+}
+matrix_product_uid=product-1
+for observation in 'candidate:KHoist' 'rollback:Data products' 'restored-candidate:KHoist'; do
+	phase=${observation%%:*}
+	wanted_registry_title=${observation#*:}
+	matrix_observation "$phase" candidate-image "$product_digest"
+done
+echo 'installed matrix observation selects each released registry page'
