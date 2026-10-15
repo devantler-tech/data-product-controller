@@ -128,6 +128,9 @@ Do not copy instructions into them.
   Preserve default v1 output; explicit `--report-version v2` adds numeric provenance, safe known
   paths, bounded witnesses/counts and a static plan only for complete valid bundles. Raw declarations
   never remain in public reports. Keep the report schema offline and the example reader independent.
+  Explicit `--profile api-only` rejects legacy UI declarations before collecting requirements or
+  emitting previews. Preserve the default compatibility profile and both existing report formats;
+  this offline policy does not change Kubernetes admission or retire the compatibility runtime.
 
 ## Validation
 

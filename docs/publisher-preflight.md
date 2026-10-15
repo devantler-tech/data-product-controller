@@ -110,6 +110,32 @@ both generation values are zero, and applicable health dimensions are
 `unobserved`. Submitted status and controller generations cannot become evidence.
 Source, Secret and workload references are omitted from the public projection.
 
+## Check an API-only publication
+
+Select `--profile api-only` to catch legacy UI declarations before deploying a
+bundle. The profile rejects non-null `spec.ui` with `InvalidUI` and a fixed instruction
+to remove the declaration. Consumers own their interfaces and use named data outputs.
+The delivered schema still rejects `spec.ui: null`; omit the field entirely.
+
+```bash
+PUBLISHER_PREFLIGHT_ENABLED=true go run ./cmd/product-check \
+  --file docs/examples/composition.yaml --profile api-only \
+  --report-version v2 --format json > report.json
+go run docs/examples/preflight-client/main.go report.json
+```
+
+The default `--profile compatibility` continues to validate supported legacy UI
+metadata. Both profiles use the same delivered schema, input and graph budgets,
+and report versions. API-only previews use the existing descriptor format without
+UI metadata; current report readers need no migration. An API-only rejection contains no descriptor previews or plan, and never
+copies rejected UI values into diagnostics. Report contents do not attest which
+command options produced them; readers inspect declarations rather than certify
+the original input or a live deployment.
+
+This is an offline migration check behind the existing default-off preflight gate.
+It does not change Kubernetes admission, deployed resources, discovery or the retained
+compatibility runtime, and it establishes no live readiness or data access.
+
 ## Review a selected bundle
 
 Use `--report-version v2` for source positions, indexed findings, per-product

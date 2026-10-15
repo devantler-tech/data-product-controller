@@ -101,8 +101,13 @@ type BundleReport struct {
 
 // CheckBundle checks only caller-supplied readers under one shared validation budget.
 func CheckBundle(ctx context.Context, sources []io.Reader, namespace string) BundleReport {
-	r := checkSelected(ctx, sources, namespace)
+	r := checkSelected(ctx, sources, namespace, false)
 	return bundleReport(r)
+}
+
+// CheckAPIOnlyBundle additionally rejects legacy UI declarations without changing the v2 report contract.
+func CheckAPIOnlyBundle(ctx context.Context, sources []io.Reader, namespace string) BundleReport {
+	return bundleReport(checkSelected(ctx, sources, namespace, true))
 }
 
 // bundleReport adapts evaluation state into bounded public v2 data and drops incomplete previews.
@@ -158,8 +163,15 @@ func bundleReport(r Report) BundleReport {
 
 // CheckFiles preserves the v1 report while checking all explicitly selected readers.
 func CheckFiles(ctx context.Context, sources []io.Reader, namespace string) Report {
-	r := checkSelected(ctx, sources, namespace)
+	r := checkSelected(ctx, sources, namespace, false)
 	// Raw declarations are evaluation state, never a public report or loggable result.
+	r.documents = nil
+	return r
+}
+
+// CheckAPIOnlyFiles additionally rejects legacy UI declarations and preserves the bounded v1 report.
+func CheckAPIOnlyFiles(ctx context.Context, sources []io.Reader, namespace string) Report {
+	r := checkSelected(ctx, sources, namespace, true)
 	r.documents = nil
 	return r
 }
@@ -209,7 +221,7 @@ func (r *Report) addDetail(
 			Severity:         severity,
 			Code:             code,
 			Path:             path,
-			Message:          diagnosticMessage(code),
+			Message:          r.message(code),
 			Witness:          witness,
 			WitnessTruncated: truncated,
 		},
@@ -232,7 +244,7 @@ func (r *Report) appendLegacy(document int, severity, code, path string) {
 				Severity: severity,
 				Code:     code,
 				Path:     path,
-				Message:  diagnosticMessage(code),
+				Message:  r.message(code),
 			},
 		)
 	}
