@@ -111,7 +111,7 @@
   /** URL parsing validates metadata only; no declared URL is fetched here. */
   function url(value) {
     text(value, true);
-    DataProductUI.validateURL(value);
+    DataProductMetadata.validateURL(value);
   }
 
   function owner(value) {
@@ -262,7 +262,7 @@
       )
         throw new Error("Use a bounded public UI URL and title.");
       if (Object.hasOwn(value.ui, "contract"))
-        DataProductUI.validateMetadata(value.ui);
+        DataProductMetadata.validateMetadata(value.ui);
     }
     integer(value.generation);
     integer(value.observedGeneration);
@@ -370,7 +370,7 @@
     if (!Object.hasOwn(value, "ui"))
       throw new Error("This descriptor does not publish a portable UI.");
     url(value.ui?.url);
-    return DataProductUI.validate(value.ui, hostOrigin);
+    return DataProductMetadata.validate(value.ui, hostOrigin);
   }
 
   window.DataProductDescriptor = Object.freeze({

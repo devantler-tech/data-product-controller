@@ -27,6 +27,17 @@ import (
 // publisherReport uses the actual publisher evaluator, including dependency/source reordering.
 func publisherReport(t *testing.T, cycle bool, uiURL string) preflight.BundleReport {
 	t.Helper()
+	return publisherContractReport(t, cycle, uiURL, nil)
+}
+
+// publisherContractReport evaluates real products with optional legacy presentation metadata.
+func publisherContractReport(
+	t *testing.T,
+	cycle bool,
+	uiURL string,
+	contract *data.UIContract,
+) preflight.BundleReport {
+	t.Helper()
 	product := func(name string) data.DataProduct {
 		return data.DataProduct{
 			TypeMeta: metav1.TypeMeta{
@@ -69,7 +80,11 @@ func publisherReport(t *testing.T, cycle bool, uiURL string) preflight.BundleRep
 		}
 	}
 	if uiURL != "" {
-		consumer.Spec.UI = &data.ProductUI{URL: uiURL, Title: "External product"}
+		consumer.Spec.UI = &data.ProductUI{
+			URL:      uiURL,
+			Title:    "External product",
+			Contract: contract,
+		}
 	}
 	readers := []io.Reader{}
 	for _, p := range []data.DataProduct{consumer, producer} {
@@ -93,6 +108,89 @@ func publisherHost(t *testing.T) *httptest.Server {
 	)
 	t.Cleanup(host.Close)
 	return host
+}
+
+// TestPublisherInspectionWithoutPresentationRuntime keeps saved-report review independent of frame execution.
+func TestPublisherInspectionWithoutPresentationRuntime(t *testing.T) {
+	var requests atomic.Int64
+	product := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer product.Close()
+	for _, version := range []string{"none", "legacy", "data-product-ui/v1", "data-product-ui/v2"} {
+		t.Run(version, func(t *testing.T) {
+			uiURL := product.URL
+			var contract *data.UIContract
+			if version == "none" {
+				uiURL = ""
+			} else if version != "legacy" {
+				contract = &data.UIContract{
+					APIVersion:   version,
+					HostOrigins:  []data.UIHostOrigin{"https://host.example.test"},
+					Capabilities: []data.UICapability{"status", "resize"},
+				}
+			}
+			report := publisherContractReport(t, false, uiURL, contract)
+			encoded, err := json.Marshal(report)
+			if err != nil {
+				t.Fatal(err)
+			}
+			host := publisherHost(t)
+			page := contractBrowser(
+				t,
+			).MustPage().
+				Timeout(20 * time.Second).
+				MustNavigate(host.URL + "/publisher-review").
+				MustWaitLoad()
+			defer page.MustClose()
+			page.MustEval(
+				`()=>{window.presentationMessages=0;window.addEventListener('message',()=>window.presentationMessages++);URL.createObjectURL=blob=>{window.downloaded=blob;return 'blob:'+location.origin+'/test';};HTMLAnchorElement.prototype.click=function(){};}`,
+			)
+			page.MustElement(".import-fields details summary").MustClick()
+			page.MustElement("#report-text").MustInput(string(encoded))
+			page.MustElement("#read-report").MustClick()
+			page.MustElement("#report-status").MustWait(`()=>this.dataset.state==='accepted'`)
+			page.MustElement("#product-list button[data-key='products/a-consumer']").MustClick()
+			page.MustElement("#export-preview").MustClick()
+			var expected any
+			for _, descriptor := range report.Descriptors {
+				var candidate map[string]any
+				if err := json.Unmarshal(descriptor, &candidate); err != nil {
+					t.Fatal(err)
+				}
+				if candidate["name"] == "a-consumer" {
+					expected = candidate
+				}
+			}
+			// Compare JSON values through the same decoder rather than browser number wrappers.
+			actualJSON := page.MustEval(`async()=>await window.downloaded.text()`).Str()
+			var actual any
+			if err := json.Unmarshal([]byte(actualJSON), &actual); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(actual, expected) {
+				t.Fatal("preview changed during offline inspection")
+			}
+			page.MustElement("#report-text").MustInput(" ")
+			if !page.MustEval(`()=>document.querySelector('#export-preview').disabled`).Bool() {
+				t.Fatal("editing retained export approval")
+			}
+			page.MustElement("#clear-report").MustClick()
+			if !page.MustEval(`()=>document.querySelector('#review').hidden && document.querySelector('#export-preview').disabled`).
+				Bool() {
+				t.Fatal("clear retained active inspection")
+			}
+			if requests.Load() != 0 || len(page.MustElements("iframe")) != 0 ||
+				page.MustEval(`()=>window.presentationMessages`).Int() != 0 {
+				t.Fatal("inspection executed or contacted a presentation")
+			}
+			if page.MustEval(`()=>typeof window.DataProductUI!=='undefined'||performance.getEntriesByType('resource').some(entry=>new URL(entry.name).pathname==='/ui-contract.js')`).
+				Bool() {
+				t.Fatal("metadata inspection loaded the presentation runtime")
+			}
+		})
+	}
 }
 
 // TestPublisherWorkspaceNavigation starts at the host, reviews a saved report and leaves it safely.

@@ -16,6 +16,66 @@ import (
 	"github.com/devantler-tech/data-product-controller/web"
 )
 
+// TestDescriptorInspectionWithoutPresentationRuntime preserves strict admission in an inert publisher host.
+func TestDescriptorInspectionWithoutPresentationRuntime(t *testing.T) {
+	host := publisherHost(t)
+	page := contractBrowser(
+		t,
+	).MustPage().
+		Timeout(20 * time.Second).
+		MustNavigate(host.URL + "/publisher-review").
+		MustWaitLoad()
+	defer page.MustClose()
+	const approved = "https://host.example.test"
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+		raw    string
+		mount  bool
+		valid  bool
+	}{
+		{name: "ready approved host", mount: true, valid: true},
+		{name: "UI-less", valid: true, mutate: func(d map[string]any) { delete(d, "ui") }},
+		{name: "unhealthy inspection", valid: true, mutate: func(d map[string]any) {
+			d["ready"] = false
+			descriptorObject(t, d, "readiness")["reason"] = "not-ready"
+		}},
+		{name: "wrong host", mount: true, mutate: func(d map[string]any) {
+			descriptorObject(t, d, "ui", "contract")["hostOrigins"] = []string{"https://other.example.test"}
+		}},
+		{name: "bad capability", mutate: func(d map[string]any) {
+			descriptorObject(t, d, "ui", "contract")["capabilities"] = []string{"credentials"}
+		}},
+		{name: "credential URL", mutate: func(d map[string]any) {
+			descriptorEntry(t, d["outputs"])["url"] = "https://private:secret@example.test/query"
+		}},
+		{name: "malformed URL", mutate: func(d map[string]any) { descriptorObject(t, d, "owner")["url"] = "https:///example.test/owner" }},
+		{name: "stale health", mutate: func(d map[string]any) { descriptorObject(t, d, "health", "source")["observedGeneration"] = 6 }},
+		{name: "duplicate JSON", raw: `{"generation":7,"generation":8}`},
+		{name: "unsafe number", raw: `{"generation":9007199254740992}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			descriptor := offlineDescriptor(approved, "https://publisher.example.test")
+			if tc.mutate != nil {
+				tc.mutate(descriptor)
+			}
+			wire := descriptorJSON(t, descriptor)
+			if tc.raw != "" {
+				wire = tc.raw
+			}
+			got := page.MustEval(`(wire,host,mount)=>{try{DataProductDescriptor.validate(DataProductDescriptor.parseJSON(wire));if(mount)DataProductDescriptor.parse(wire,host);return true;}catch{return false;}}`, wire, approved, tc.mount).
+				Bool()
+			if got != tc.valid {
+				t.Fatalf("metadata admission=%t want=%t", got, tc.valid)
+			}
+		})
+	}
+	if !page.MustEval(`()=>Object.isFrozen(DataProductMetadata)&&typeof DataProductUI==='undefined'&&document.querySelectorAll('iframe').length===0`).
+		Bool() {
+		t.Fatal("inert inspection loaded a presentation runtime")
+	}
+}
+
 // TestOfflineDescriptorHandoff catches replacing the descriptor handoff with a URL fetch or bypassing UI grants.
 func TestOfflineDescriptorHandoff(t *testing.T) {
 	var navigations, otherRequests atomic.Int32

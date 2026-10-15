@@ -144,6 +144,7 @@ for mode in tls gateway; do
 			request /preflight-report.js 200
 			request /publisher.css 200
 			request /descriptor.js 200
+			request /metadata.js 200
 		else
 			request / 404
 			request /index.html 404
@@ -152,6 +153,7 @@ for mode in tls gateway; do
 		fi
 		request /kit.js 404
 		request /kit.css 404
+		request /ui-contract.js 404
 		docker rm --force "$container_id" >/dev/null
 		container_id=''
 		echo "PASS: packaged publisher review ($mode, publisher preflight $publisher)"

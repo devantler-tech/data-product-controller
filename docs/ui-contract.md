@@ -229,13 +229,13 @@ a file clears pasted JSON; typing JSON clears the selected file. Protocol closur
 **Retry descriptor** or **Retry manifest** for the last input format; retry validates the
 current input and grants and establishes a new session only after that explicit action.
 
-Alternatively, serve `web/index.html`, `kit.css`, `kit.js`, `descriptor.js`, and `ui-contract.js`
+Alternatively, serve `web/index.html`, `kit.css`, `kit.js`, `metadata.js`, `descriptor.js`, and `ui-contract.js`
 from any HTTPS static host. Apply the policy in `web.KitHandler`: same-origin
 scripts/styles, no host connections, HTTPS frames, no ancestors, objects or base
 URI, no referrers, and no camera, microphone or geolocation permissions. That
 static deployment is an explicit opt-in; it has no Go/OpenFeature process gate.
 
-To build another host, load `web/ui-contract.js` in your own document and call:
+To build another host, load `web/metadata.js` followed by `web/ui-contract.js` in your own document and call:
 
 ```javascript
 const dispose = DataProductUI.mount({
@@ -252,12 +252,19 @@ dispose();
 
 `DataProductUI.validate(manifest, location.origin)` validates without navigating.
 `DataProductUI.validateMetadata(manifest)` validates the public presentation shape
-without granting host permission. Descriptor inspection uses that limited operation;
+without granting host permission. These compatibility exports delegate to `DataProductMetadata`;
 both `validate` and `mount` still require exact publisher approval for the actual host.
 `DataProductUI.validateURL(value)` checks the literal public HTTPS metadata profile
 without fetching it. UI declarations, descriptor links and trace references use
 the same profile. Canonical local HTTPS and IP destinations are supported; URL
 normalization cannot repair an invalid declaration into an accepted destination.
+For offline inspection, load only `web/metadata.js` and `web/descriptor.js` in that order.
+The Go kit and registry still serve a self-contained `ui-contract.js` for existing
+single-script hosts, composed from these same sources. A custom static host can
+concatenate `metadata.js` then `ui-contract.js` to produce that compatibility asset.
+`DataProductMetadata.validateMetadata`, `validate` and `validateURL` expose the same
+validation without loading frame, session or messaging code. The publisher review
+uses this inert path, and publisher-only hosting does not serve `ui-contract.js`.
 `mount` validates again, throws on refusal, and returns an idempotent disposer.
 Catch refusal and render it as inert text. Do not run multiple mounts on the same
 frame; dispose the current one first. The library is framework-independent.
