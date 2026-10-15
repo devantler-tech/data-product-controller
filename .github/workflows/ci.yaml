@@ -90,12 +90,18 @@ jobs:
           trap 'rm -rf "$assets"' EXIT
           for version in 1.34.0 1.37.0; do
             case "$version" in
-              1.34.0) checksum=9c45e40aa56971b105e596ebb3e84af6742e8709cc0523733baf8d9bb725e69c ;;
-              1.37.0) checksum=f03faedfc68d2a78cee5cb02618bb44e7f67044f4c5fc957f72d3307fda61a9c ;;
+              1.34.0)
+                checksum=9c45e40aa56971b105e596ebb3e84af6742e8709cc0523733baf8d9bb725e69c
+                archive_url=https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.34.0/envtest-v1.34.0-linux-amd64.tar.gz
+                ;;
+              1.37.0)
+                checksum=f03faedfc68d2a78cee5cb02618bb44e7f67044f4c5fc957f72d3307fda61a9c
+                archive_url=https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.37.0/envtest-v1.37.0-linux-amd64.tar.gz
+                ;;
             esac
             curl --fail --location --proto '=https' --proto-redir '=https' --max-time 120 \
               --output "$assets/server.tar.gz" \
-              "https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v$version/envtest-v$version-linux-amd64.tar.gz"
+              "$archive_url"
             printf '%s  %s\n' "$checksum" "$assets/server.tar.gz" | sha256sum --check -
             mkdir "$assets/$version"
             tar -xzf "$assets/server.tar.gz" -C "$assets/$version"
