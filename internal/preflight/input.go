@@ -26,6 +26,9 @@ type document struct {
 	fields  map[string]Position
 }
 
+// uiDeclarationVisitor observes only the safe location of a canonical non-null UI field.
+type uiDeclarationVisitor func(number int, position Position)
+
 // readDocuments rejects ambiguous input before decoding values or evaluating the schema.
 func readDocuments(in io.Reader) ([]document, string, int) {
 	documents, _, code, number, _ := readSelected(context.Background(), []io.Reader{in})
@@ -49,6 +52,7 @@ func (r cancelReader) Read(b []byte) (int, error) {
 func readSelected(
 	ctx context.Context,
 	sources []io.Reader,
+	uiDeclarations ...uiDeclarationVisitor,
 ) ([]document, []SourceSummary, string, int, Position) {
 	if len(sources) > 32 {
 		return nil, nil, "SourceLimit", 0, Position{}
@@ -88,6 +92,7 @@ func readSelected(
 			index+1,
 			len(documents),
 			&physical,
+			uiDeclarations...,
 		)
 		summaries[index] = summary
 		if code != "" {
@@ -107,6 +112,7 @@ func parseSource(
 	input []byte,
 	source, prior int,
 	physical *int,
+	uiDeclarations ...uiDeclarationVisitor,
 ) ([]document, SourceSummary, string, int, Position) {
 	summary := SourceSummary{Source: source}
 	origin := Position{Source: source}
@@ -173,6 +179,17 @@ func parseSource(
 		validator, admissionErr := loadAdmission()
 		if admissionErr == nil && len(node.Content) > 0 {
 			collectPositions(node.Content[0], validator.schema, "", origin, fields)
+		}
+		if len(uiDeclarations) != 0 {
+			if spec, ok := object["spec"].(map[string]any); ok && spec["ui"] != nil {
+				position := origin
+				if at, found := fields["/spec/ui"]; found {
+					position = at
+				}
+				for _, visit := range uiDeclarations {
+					visit(number, position)
+				}
+			}
 		}
 		var product data.DataProduct
 		// Kubernetes treats JSON field names as case-sensitive, including metadata.

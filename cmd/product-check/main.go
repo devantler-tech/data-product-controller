@@ -51,14 +51,16 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 	var files selectedFiles
 	flags.Var(&files, "file", "Selected local YAML or JSON file; repeat for a bundle")
 	version := flags.String("report-version", "v1", "v1 or v2 report")
+	profile := flags.String("profile", "compatibility", "compatibility or api-only publication")
 	namespace := flags.String("namespace", "", "Namespace for documents that omit it")
 	format := flags.String("format", "text", "text or json")
 	if err := flags.Parse(
 		args,
 	); err != nil || len(files) == 0 || len(files) > 32 || flags.NArg() != 0 ||
-		(*format != "text" && *format != "json") || (*version != "v1" && *version != "v2") {
+		(*format != "text" && *format != "json") || (*version != "v1" && *version != "v2") ||
+		(*profile != "compatibility" && *profile != "api-only") {
 		return 1, errors.New(
-			"usage: product-check --file FILE [--file FILE ...] [--namespace NAMESPACE] [--report-version v1|v2] [--format text|json]",
+			"usage: product-check --file FILE [--file FILE ...] [--namespace NAMESPACE] [--report-version v1|v2] [--profile compatibility|api-only] [--format text|json]",
 		)
 	}
 	inputs := make([]io.Reader, 0, len(files))
@@ -76,8 +78,12 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 	var report preflight.Report
 	var encodedReport any
 	var rich *preflight.BundleReport
+	checkFiles, checkBundle := preflight.CheckFiles, preflight.CheckBundle
+	if *profile == "api-only" {
+		checkFiles, checkBundle = preflight.CheckAPIOnlyFiles, preflight.CheckAPIOnlyBundle
+	}
 	if *version == "v2" {
-		bundle := preflight.CheckBundle(ctx, inputs, *namespace)
+		bundle := checkBundle(ctx, inputs, *namespace)
 		rich = &bundle
 		encodedReport = bundle
 		report.Valid = bundle.Valid
@@ -85,7 +91,7 @@ func run(ctx context.Context, args []string, setting string, out io.Writer) (int
 		report.Products = bundle.Products
 		report.RequiredFeatures = bundle.RequiredFeatures
 	} else {
-		report = preflight.CheckFiles(ctx, inputs, *namespace)
+		report = checkFiles(ctx, inputs, *namespace)
 		encodedReport = report
 	}
 	for _, input := range selected {

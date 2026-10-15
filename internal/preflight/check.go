@@ -44,6 +44,7 @@ type Report struct {
 	failure          Position
 	productFeatures  []ProductFeatures
 	plan             *ReviewPlan
+	apiOnly          bool
 }
 
 // Check is the offline publisher boundary.
@@ -52,10 +53,16 @@ func Check(ctx context.Context, in io.Reader, namespace string) Report {
 }
 
 // checkSelected shares admission, projection and dependency budgets across the entire selection.
-func checkSelected(ctx context.Context, sources []io.Reader, namespace string) Report {
+func checkSelected(
+	ctx context.Context,
+	sources []io.Reader,
+	namespace string,
+	apiOnly bool,
+) Report {
 	report := Report{
 		APIVersion: "data-product-preflight/v1", Valid: true, Complete: true,
 		RequiredFeatures: []string{}, Diagnostics: []Diagnostic{},
+		apiOnly: apiOnly,
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -67,7 +74,16 @@ func checkSelected(ctx context.Context, sources []io.Reader, namespace string) R
 		report.add(0, "InvalidNamespace", "metadata.namespace")
 		return report
 	}
-	documents, summaries, code, number, failure := readSelected(ctx, sources)
+	var uiDeclarations []uiDeclarationVisitor
+	if apiOnly {
+		uiDeclarations = append(uiDeclarations, func(number int, position Position) {
+			// Record the fixed remedy before typed decoding can reject a malformed UI field.
+			// Only numeric provenance escapes the input boundary; submitted values stay private.
+			report.failure = position
+			report.add(number, "InvalidUI", "spec.ui")
+		})
+	}
+	documents, summaries, code, number, failure := readSelected(ctx, sources, uiDeclarations...)
 	report.sources = summaries
 	report.failure = failure
 	if code != "" {
@@ -91,6 +107,7 @@ func checkSelected(ctx context.Context, sources []io.Reader, namespace string) R
 		}
 		doc := &documents[index]
 		product := &doc.product
+		apiOnlyUI := apiOnly && product.Spec.UI != nil
 		if product.Namespace == "" {
 			product.Namespace = namespace
 		}
@@ -131,6 +148,9 @@ func checkSelected(ctx context.Context, sources []io.Reader, namespace string) R
 		budget = remaining
 		if len(findings) > 0 {
 			report.addAdmission(index+1, "spec", findings)
+			continue
+		}
+		if apiOnlyUI {
 			continue
 		}
 		key := product.Namespace + "/" + product.Name
@@ -260,6 +280,14 @@ func declaredFeatures(product *data.DataProduct) []string {
 	}
 	sort.Strings(result)
 	return result
+}
+
+// message keeps the legacy diagnostic code and gives an actionable API-only rejection.
+func (r *Report) message(code string) string {
+	if r.apiOnly && code == "InvalidUI" {
+		return "Remove spec.ui for the API-only publication profile; consumers own their UIs."
+	}
+	return diagnosticMessage(code)
 }
 
 // diagnosticMessage maps internal finding codes to fixed text that contains no submitted values.
