@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Sourced by run.sh inside its owned ephemeral cluster and cleanup boundary.
 : "${repo_root:?run through tests/source/run.sh}"
+: "${test_dir:?}" "${cluster_context:?}" "${integration_deadline:?}"
 
 probe --url http://dpc/api/v1/catalog --want-status 404
 kube apply -f "$repo_root/docs/examples/dcat-product.yaml"
@@ -10,6 +11,21 @@ kube --request-timeout=0 rollout status deployment/dpc --timeout=180s
 wait_for 'enabled chart publishes a DCAT catalog' 60 probe --url http://dpc/api/v1/catalog --contains '"@id":"urn:example:integration-catalog"'
 probe --url http://dpc/api/v1/catalog --contains '"dcat:servesDataset":{"@id":"urn:example:catalog-harbour"}'
 probe --url http://dpc/api/v1/catalog --contains '"dcat:endpointDescription":{"@id":"https://example.com/harbour/openapi.json"}'
+
+# Capture the actual controller response; the independent consumer never reads Kubernetes itself.
+assert_dataproduct_absent edc-harbour
+assert_dataproduct_absent edc-buoy
+kube apply -f "$repo_root/tests/dataspace/edc/products.yaml"
+wait_for 'EDC fixture reaches the enabled controller catalog' 30 \
+	probe --url http://dpc/api/v1/catalog --contains '"@id":"urn:example:edc-buoy"'
+kubectl --kubeconfig "$KUBECONFIG" --context "$cluster_context" --request-timeout=15s \
+	get --raw /api/v1/namespaces/products/services/dpc:http/proxy/api/v1/catalog \
+	>"$test_dir/edc-controller-catalog.json"
+bash "$repo_root/tests/source/edc-import.sh" "$test_dir/edc-controller-catalog.json" \
+	"$((integration_deadline - SECONDS))"
+kube delete -f "$repo_root/tests/dataspace/edc/products.yaml" --wait=true --timeout=20s
+assert_dataproduct_absent edc-harbour
+assert_dataproduct_absent edc-buoy
 
 # Publication is a publisher assertion, independent of product readiness.
 kube annotate dataproduct catalog-harbour data.devantler.tech/dcat-type-

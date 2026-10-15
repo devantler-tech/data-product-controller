@@ -1,0 +1,87 @@
+{
+  "version": "dsp-catalog/v1",
+  "catalogId": "urn:example:dsp-catalog",
+  "participantId": "urn:example:provider",
+  "service": {
+    "id": "urn:example:dsp-service",
+    "endpointURL": "https://connector.example/dsp"
+  },
+  "datasets": [
+    {
+      "id": "urn:example:edc-harbour",
+      "distributions": [
+        {
+          "sourceId": "https://devantler.tech/.well-known/data-product/distribution/1955770fe86f3222f24567c108ec5874bc712dfbb516b14b2c4f67b7b48feec9",
+          "id": "urn:example:dsp-observations",
+          "format": "https://example.com/transfer/harbour-pull"
+        },
+        {
+          "sourceId": "https://devantler.tech/.well-known/data-product/distribution/424cc4f0efaaca889f3d9744abeb9e9195c9af10ebb6a924ae981fe2915f021b",
+          "id": "urn:example:dsp-archive",
+          "format": "https://example.com/transfer/harbour-pull"
+        }
+      ],
+      "offers": [
+        {
+          "@id": "urn:example:harbour-offer",
+          "@type": "Offer",
+          "assigner": "urn:example:provider",
+          "permission": [
+            {
+              "action": "use",
+              "constraint": [
+                {
+                  "leftOperand": "http://www.w3.org/ns/odrl/2/purpose",
+                  "operator": "eq",
+                  "rightOperand": "research"
+                },
+                {
+                  "leftOperand": "urn:example:flag",
+                  "operator": "eq",
+                  "rightOperand": "true"
+                },
+                {
+                  "leftOperand": "urn:example:serial",
+                  "operator": "eq",
+                  "rightOperand": "007"
+                }
+              ]
+            }
+          ],
+          "prohibition": [
+            {
+              "action": "http://www.w3.org/ns/odrl/2/sell"
+            }
+          ],
+          "obligation": [
+            {
+              "action": "http://www.w3.org/ns/odrl/2/delete"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "urn:example:edc-buoy",
+      "distributions": [
+        {
+          "sourceId": "https://devantler.tech/.well-known/data-product/distribution/b940b3b7c7035fe4f29da8e0be485af31cfc380353eec7d4e3130745d06b9a53",
+          "id": "urn:example:dsp-buoy",
+          "format": "https://example.com/transfer/buoy-pull"
+        }
+      ],
+      "offers": [
+        {
+          "@id": "urn:example:buoy-offer",
+          "@type": "Offer",
+          "assigner": "urn:example:provider",
+          "permission": [
+            {
+              "action": "use"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

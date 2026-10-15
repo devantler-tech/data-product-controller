@@ -1,0 +1,154 @@
+{
+  "catalog": "urn:example:dsp-catalog",
+  "participant": "urn:example:provider",
+  "services": [
+    {
+      "id": "urn:example:dsp-service",
+      "endpoint": "https://connector.example/dsp"
+    }
+  ],
+  "datasets": [
+    {
+      "id": "urn:example:edc-buoy",
+      "properties": {
+        "http://www.w3.org/ns/dcat#version": "v2.0.0",
+        "http://purl.org/dc/terms/title": "Buoy observations",
+        "http://purl.org/dc/terms/description": "Public buoy observations."
+      },
+      "offers": [
+        {
+          "type": "OFFER",
+          "assigner": "urn:example:provider",
+          "assignee": null,
+          "target": null,
+          "profiles": [],
+          "inheritsFrom": null,
+          "extensions": {},
+          "permission": [
+            {
+              "action": "http://www.w3.org/ns/odrl/2/use",
+              "includedIn": null,
+              "actionConstraint": null,
+              "nested": [],
+              "constraints": []
+            }
+          ],
+          "prohibition": [],
+          "obligation": [],
+          "id": "urn:example:buoy-offer"
+        }
+      ],
+      "distributions": [
+        {
+          "format": "https://example.com/transfer/buoy-pull",
+          "service": "urn:example:dsp-service"
+        }
+      ]
+    },
+    {
+      "id": "urn:example:edc-harbour",
+      "properties": {
+        "http://www.w3.org/ns/dcat#version": "v1.0.0",
+        "http://purl.org/dc/terms/title": "Harbour observations",
+        "http://purl.org/dc/terms/description": "Public temperature observations."
+      },
+      "offers": [
+        {
+          "type": "OFFER",
+          "assigner": "urn:example:provider",
+          "assignee": null,
+          "target": null,
+          "profiles": [],
+          "inheritsFrom": null,
+          "extensions": {},
+          "permission": [
+            {
+              "action": "http://www.w3.org/ns/odrl/2/use",
+              "includedIn": null,
+              "actionConstraint": null,
+              "nested": [],
+              "constraints": [
+                {
+                  "left": "http://www.w3.org/ns/odrl/2/purpose",
+                  "operator": "http://www.w3.org/ns/odrl/2/eq",
+                  "right": "research"
+                },
+                {
+                  "left": "urn:example:flag",
+                  "operator": "http://www.w3.org/ns/odrl/2/eq",
+                  "right": "true"
+                },
+                {
+                  "left": "urn:example:serial",
+                  "operator": "http://www.w3.org/ns/odrl/2/eq",
+                  "right": "007"
+                }
+              ]
+            }
+          ],
+          "prohibition": [
+            {
+              "action": "http://www.w3.org/ns/odrl/2/sell",
+              "includedIn": null,
+              "actionConstraint": null,
+              "nested": [],
+              "constraints": []
+            }
+          ],
+          "obligation": [
+            {
+              "action": "http://www.w3.org/ns/odrl/2/delete",
+              "includedIn": null,
+              "actionConstraint": null,
+              "nested": [],
+              "constraints": []
+            }
+          ],
+          "id": "urn:example:harbour-offer"
+        }
+      ],
+      "distributions": [
+        {
+          "format": "https://example.com/transfer/harbour-pull",
+          "service": "urn:example:dsp-service"
+        },
+        {
+          "format": "https://example.com/transfer/harbour-pull",
+          "service": "urn:example:dsp-service"
+        }
+      ]
+    }
+  ],
+  "expandedDistributions": [
+    {
+      "dataset": "urn:example:edc-buoy",
+      "id": "urn:example:dsp-buoy",
+      "format": "https://example.com/transfer/buoy-pull",
+      "service": "urn:example:dsp-service",
+      "endpoint": "https://connector.example/dsp"
+    },
+    {
+      "dataset": "urn:example:edc-harbour",
+      "id": "urn:example:dsp-archive",
+      "format": "https://example.com/transfer/harbour-pull",
+      "service": "urn:example:dsp-service",
+      "endpoint": "https://connector.example/dsp"
+    },
+    {
+      "dataset": "urn:example:edc-harbour",
+      "id": "urn:example:dsp-observations",
+      "format": "https://example.com/transfer/harbour-pull",
+      "service": "urn:example:dsp-service",
+      "endpoint": "https://connector.example/dsp"
+    }
+  ],
+  "expandedDistributionIds": [
+    "urn:example:dsp-archive",
+    "urn:example:dsp-buoy",
+    "urn:example:dsp-observations"
+  ],
+  "compatibility": "incompatible",
+  "losses": [
+    "typed-distribution-id"
+  ]
+}
