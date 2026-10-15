@@ -42,6 +42,9 @@ source, POM, settings, dependency lock and complete compiled-class manifest.
 Artifact fault tests reject missing, changed, extra and special files and
 incomplete hash reads before accepting that evidence. The classes and JARs
 are checked again after import controls.
+Hash verification and receipt generation share the same absolute deadline as
+the container phases. Offline delayed-reader controls must time out without
+emitting a receipt, and an expired allowance refuses final publication.
 
 The import runs as UID 65532 without networking, capabilities or ambient
 credentials, with bounded memory, CPU, processes and one shared deadline.

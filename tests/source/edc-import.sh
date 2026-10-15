@@ -35,14 +35,11 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
-# bounded shares one absolute allowance across resolution, compilation, export and all controls.
-bounded() {
-	local remaining=$((deadline - SECONDS))
-	((remaining > 0)) || return 124
-	timeout --signal=TERM --kill-after=5 "${remaining}s" "$@"
-}
+# shellcheck source=tests/dataspace/edc/deadline.sh
+source "$edc_fixture/deadline.sh"
 
 bounded bash "$edc_fixture/artifacts.test.sh"
+bounded bash "$edc_fixture/deadline.test.sh"
 bounded bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v4.0.0 \
 	--source-sha 4fbc7d215b3ce30091e74e9909a3ad822e878a05 \
 	--image-digest sha256:cc5bc6b165426daec27e70bbeb90f41a2e30699f99455f8b0733c247fbe57862 \
@@ -75,9 +72,7 @@ bounded docker run --platform linux/amd64 --pull never --rm --name "$container" 
 	--settings /fixture/settings.xml -f /fixture/pom.xml \
 	org.apache.maven.plugins:maven-dependency-plugin:3.9.0:copy-dependencies \
 	-DincludeScope=runtime -DoutputDirectory=/libraries
-# shellcheck source=tests/dataspace/edc/artifacts.sh
-source "$edc_fixture/artifacts.sh"
-edc_verify_libraries "$edc_work/libraries" "$edc_fixture/dependencies.sha256"
+bounded bash "$edc_fixture/artifacts.sh" libraries "$edc_work/libraries" "$edc_fixture/dependencies.sha256"
 
 # Compilation is offline, with locked dependencies read-only and only its output directory writable.
 bounded docker run --platform linux/amd64 --pull never --rm --name "$container" --network none \
@@ -88,7 +83,7 @@ bounded docker run --platform linux/amd64 --pull never --rm --name "$container" 
 	--mount "type=bind,src=$edc_work/classes,dst=/classes" --entrypoint javac "$toolchain" \
 	--release 17 -Xlint:all -Werror -J-Xmx256m -J-XX:ActiveProcessorCount=1 -J-XX:-UsePerfData \
 	-cp '/libraries/*' -d /classes /fixture/EdcImport.java
-edc_class_manifest "$edc_work/classes" >"$edc_work/classes.sha256"
+bounded bash "$edc_fixture/artifacts.sh" classes "$edc_work/classes" >"$edc_work/classes.sha256"
 
 bounded docker run --platform linux/amd64 --rm --name "$container" --network none --read-only \
 	--cap-drop ALL --security-opt no-new-privileges:true --user 65532:65532 --memory 64m --cpus 1 \
@@ -118,28 +113,10 @@ jq -e '.compatibility=="incompatible" and .losses==["typed-distribution-id"] and
 source "$edc_fixture/controls.sh"
 
 # Recheck complete artifact evidence before emitting the one bounded public receipt.
-edc_verify_libraries "$edc_work/libraries" "$edc_fixture/dependencies.sha256"
-edc_class_manifest "$edc_work/classes" >"$edc_work/classes-after.sha256"
-cmp "$edc_work/classes.sha256" "$edc_work/classes-after.sha256"
-snapshot_hash=$(sha256sum "$edc_work/catalog.json" | cut -d ' ' -f 1)
-bindings_hash=$(sha256sum "$edc_work/bindings.json" | cut -d ' ' -f 1)
-source_hash=$(sha256sum "$edc_fixture/EdcImport.java" | cut -d ' ' -f 1)
-pom_hash=$(sha256sum "$edc_fixture/pom.xml" | cut -d ' ' -f 1)
-settings_hash=$(sha256sum "$edc_fixture/settings.xml" | cut -d ' ' -f 1)
-lock_hash=$(sha256sum "$edc_fixture/dependencies.sha256" | cut -d ' ' -f 1)
-classes_hash=$(sha256sum "$edc_work/classes.sha256" | cut -d ' ' -f 1)
-jq -n --slurpfile observed "$edc_work/receipt.json" --slurpfile release "$edc_work/release/release.json" \
-	--arg snapshot "$snapshot_hash" --arg bindings "$bindings_hash" \
-	--arg toolchain "$toolchain" --arg image "$toolchain_id" --arg source "$source_hash" \
-	--arg pom "$pom_hash" --arg settings "$settings_hash" --arg lock "$lock_hash" --arg classes "$classes_hash" '
-  {version:"edc-import/v1",result:"observed-incompatibility",
-   suppliedSnapshotSha256:$snapshot,publicBindingsSha256:$bindings,
-   releasedExporter:$release[0],
-   importer:{version:"0.18.1",source:"3a22ff4aa90213a564309b5a05851e6d7f27f9ff",
-     toolchainRef:$toolchain,toolchainImageId:$image,javaSourceSha256:$source,
-     pomSha256:$pom,settingsSha256:$settings,dependencyLockSha256:$lock,
-     compiledClassManifestSha256:$classes},
-   observed:$observed[0]}' >"$edc_work/final-receipt.json"
-[[ $(wc -c <"$edc_work/final-receipt.json") -le 65536 ]]
-cat "$edc_work/final-receipt.json"
+bounded bash "$edc_fixture/artifacts.sh" libraries "$edc_work/libraries" "$edc_fixture/dependencies.sha256"
+bounded bash "$edc_fixture/artifacts.sh" classes "$edc_work/classes" >"$edc_work/classes-after.sha256"
+bounded cmp "$edc_work/classes.sha256" "$edc_work/classes-after.sha256"
+bounded bash "$edc_fixture/receipt.sh" "$edc_work" "$edc_fixture" "$toolchain" "$toolchain_id" \
+	>"$edc_work/final-receipt.json"
+bounded cat "$edc_work/final-receipt.json"
 echo 'PASS: unchanged signed-release export reaches real pinned offline EDC import; identity loss and artifact/input hashes are retained above'

@@ -42,3 +42,17 @@ edc_class_manifest() (
 	LC_ALL=C sort -k 2 "$artifact_scratch/hashes" >"$artifact_scratch/manifest" || exit 1
 	cat "$artifact_scratch/manifest"
 )
+
+if [[ ${BASH_SOURCE[0]} == "$0" ]]; then
+	case ${1:-} in
+	libraries)
+		[[ $# == 3 ]] || exit 2
+		edc_verify_libraries "$2" "$3"
+		;;
+	classes)
+		[[ $# == 2 ]] || exit 2
+		edc_class_manifest "$2"
+		;;
+	*) exit 2 ;;
+	esac
+fi
