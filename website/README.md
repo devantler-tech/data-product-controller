@@ -29,7 +29,14 @@ PUBLISHER_PREFLIGHT_ENABLED=true go run ./cmd/product-check \
   --file website/public/examples/harbour-product.yaml
 ```
 
-Run the repository's link checker after building: its root is `website/dist`.
+Run the repository's link checker after building:
+
+```bash
+bash scripts/documentation-links.sh website/src/content/docs website/public/robots.txt
+```
+
+Its root is `website/dist`; canonical site URLs resolve against that generated
+content, including the sitemap. Other domains retain normal network checks.
 CI builds the site for pull requests. The documentation workflow publishes only
 from `main`; GitHub Pages, DNS and HTTPS must be configured before the public
 address can serve the site. For Actions publishing, GitHub ignores the checked-in

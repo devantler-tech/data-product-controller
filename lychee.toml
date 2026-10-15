@@ -32,4 +32,9 @@ exclude = [
 
 # The central registry's root-relative assets are runtime routes served by its Go handler, not files
 # beside the embedded HTML. Handler and browser tests cover those routes directly.
-exclude_path = ["internal/registry/ui/index\\.html"]
+exclude_path = [
+  "internal/registry/ui/index\\.html",
+  # Package-manager-owned download/funding metadata is not authored documentation.
+  # Locked dependencies are checked by npm ci, audit and Dependency Review.
+  "(^|/)website/package-lock[.]json$",
+]
