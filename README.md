@@ -107,9 +107,6 @@ spec:
       url: https://data-products.example.com/products/harbour/api/observations
       contractUrl: https://data-products.example.com/products/harbour/openapi.json
       mediaType: application/json
-  ui:
-    title: Explore harbour observations
-    url: https://data-products.example.com/products/harbour/ui
 ```
 
 Another product composes this output without copying its data:
@@ -126,6 +123,7 @@ spec:
 The custom resource is control-plane metadata. Product data and credentials do not belong in the Kubernetes API. Credentials remain in Secrets consumed directly by provisioner or connector workloads.
 
 To check a description before publishing it, see [Check a product description](#check-a-product-description).
+When checking this example, choose its target namespace explicitly with `--namespace products`.
 
 ## API-only workspace
 
@@ -171,7 +169,11 @@ HTTPS interface links. Its browser policy denies frames and permits connections
 only to its own API. It passes no bearer token, Secret or Kubernetes identity to
 publishers, and never imports their JavaScript.
 
-Legacy `spec.ui` and descriptor fields remain bounded compatibility metadata.
+The chart and declaration above publish API interfaces without `spec.ui`. This is
+a breaking change for consumers that used chart-authored UI metadata: select a
+named output and its standard contract instead. Direct reference pages remain
+available. Existing hand-authored legacy `spec.ui` and descriptor fields remain
+bounded compatibility metadata.
 The registry grants no product presentation capabilities, regardless of legacy
 flag settings. The independent compatibility kit remains deprecated and retains
 its restrictive sandbox and protocol controls; [its guide](docs/ui-contract.md)

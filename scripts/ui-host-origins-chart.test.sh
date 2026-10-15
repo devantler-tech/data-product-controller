@@ -9,21 +9,18 @@ fail() {
 	exit 1
 }
 
-# Catch a renderer that approves the kit in only one side of the publisher contract.
+# Retained publisher grants remain bounded independently of API-only declarations.
 for contract in false true; do
 	for appearance in false true; do
 		rendered=$(helm template controller "$chart" --namespace data-product-system \
 			--set route.enabled=true --set route.host=catalog.example \
 			--set uiContract.enabled="$contract" --set uiAppearance.enabled="$appearance" \
 			--set-string 'uiContract.additionalHostOrigins[0]=https://kit.example:8443')
-		manifest=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.hostOrigins[]' -)
 		publisher=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "product") | .env[] | select(.name == "UI_HOST_ORIGINS") | .value' -)
 		if [ "$contract" = true ]; then
-			[ "$manifest" = "$(printf 'https://catalog.example\nhttps://kit.example:8443')" ] || fail 'descriptor is missing a configured host'
-			[ "$publisher" = 'https://catalog.example,https://kit.example:8443' ] || fail 'publisher approval differs from descriptor'
+			[ "$publisher" = 'https://catalog.example,https://kit.example:8443' ] || fail 'publisher approval differs from configured hosts'
 		else
 			[ -z "$publisher" ] || fail 'disabled publisher received host grants'
-			[ -z "$manifest" ] || fail 'disabled descriptor received host grants'
 		fi
 	done
 done
@@ -52,7 +49,7 @@ for n in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
 	printf '    - "https://kit%s.example"\n' "$n" >>"$work/origins.yaml"
 done
 rendered=$(helm template controller "$chart" --set route.enabled=true --set route.host=catalog.example --set uiContract.enabled=true -f "$work/origins.yaml")
-count=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.hostOrigins | length' -)
+count=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "product") | .env[] | select(.name == "UI_HOST_ORIGINS") | .value' - | tr , '\n' | wc -l | tr -d ' ')
 [ "$count" = 16 ] || fail 'maximum configured list must include the registry'
 printf '    - "https://kit16.example"\n' >>"$work/origins.yaml"
 reject 'more than sixteen approved hosts'

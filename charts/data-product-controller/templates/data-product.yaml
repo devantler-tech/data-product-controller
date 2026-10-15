@@ -25,13 +25,4 @@ spec:
       url: https://{{ .Values.route.host }}/products/harbour/api/observations
       contractUrl: https://{{ .Values.route.host }}/products/harbour/openapi.json
       mediaType: application/json
-  ui:
-    title: Explore harbour observations
-    url: https://{{ .Values.route.host }}/products/harbour/ui
-    {{- if .Values.uiContract.enabled }}
-    contract:
-      apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
-      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
-      capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
-    {{- end }}
 {{- end }}

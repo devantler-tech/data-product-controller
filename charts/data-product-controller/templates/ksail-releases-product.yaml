@@ -22,13 +22,4 @@ spec:
       url: https://api.github.com/repos/devantler-tech/ksail/releases
       contractUrl: {{ printf "%s/ksail-releases/openapi.json" $baseURL | quote }}
       mediaType: application/json
-  ui:
-    title: Browse KSail releases
-    url: {{ printf "%s/ksail-releases/ui" $baseURL | quote }}
-    {{- if .Values.uiContract.enabled }}
-    contract:
-      apiVersion: {{ ternary "data-product-ui/v2" "data-product-ui/v1" .Values.uiAppearance.enabled }}
-      hostOrigins: {{ include "data-product-controller.uiHostOrigins" . }}
-      capabilities: [status, resize{{ if .Values.uiAppearance.enabled }}, appearance{{ end }}]
-    {{- end }}
 {{- end }}

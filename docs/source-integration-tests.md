@@ -48,6 +48,20 @@ packaged candidate. A real Helm rollback restores the released baseline; query,
 current rollout and independent source/credential UIDs must recover before the
 candidate is restored. Helm rollback retains the newer CRD intentionally.
 
+A separate metadata-only Helm release verifies the actual signed v4.0.0 chart and
+image, retaining exactly its two original published DataProducts through a bounded
+post-renderer. Explicit `--skip-crds` prevents the separate release from installing
+a CRD. Upgrading to the packaged candidate must remove `spec.ui` from both stored
+Helm manifests and live objects while preserving UIDs, Helm ownership and every
+non-UI spec field. A real stored-revision rollback restores UI metadata, and a
+second candidate upgrade removes it again. The CRD UID/schema must remain unchanged;
+uninstall removes only these fixture products, and the independent source query
+still succeeds. No workload is rendered by this separate release, so this proves
+metadata migration, not execution of the v4.0.0 image or endpoint reachability.
+The older general lifecycle and its query checks remain independent. Actual
+UI-free signed publication and installed rollback acceptance remain tracked in
+[#409](https://github.com/devantler-tech/data-product-controller/issues/409).
+
 Each install/upgrade uses an explicit disposable kubeconfig/context and a test-only
 CA post-renderer. Certificate and hostname verification stay enabled. No production
 Helm command runs. See [release acceptance](release-acceptance.md) and

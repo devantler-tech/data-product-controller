@@ -150,7 +150,7 @@ hosted_render=$(helm template data-product-controller "$chart" \
 assert_not_contains "$hosted_render" 'REGISTRY_UI_ENABLED'
 assert_contains "$hosted_render" 'kind: HTTPRoute'
 assert_contains "$hosted_render" 'name: harbour-observations'
-assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/ui'
+assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/api/observations'
 assert_contains "$hosted_render" 'https://data-products.example.test/products/harbour/openapi.json'
 demo_public_url=$(printf '%s' "$hosted_render" | yq ea 'select(.kind == "Deployment" and .spec.template.spec.containers[0].name == "product") | .spec.template.spec.containers[0].env[] | select(.name == "PUBLIC_BASE_URL") | .value' -)
 [ "$demo_public_url" = 'https://data-products.example.test/products/harbour' ] || fail 'hosted sample must declare its public URL for opaque-origin CSP'
@@ -196,6 +196,8 @@ fi
 
 sh "$repo_root/scripts/http-source-chart.test.sh"
 sh "$repo_root/scripts/ksail-releases-chart.test.sh"
+sh "$repo_root/scripts/api-publication-chart.test.sh"
+bash "$repo_root/scripts/publication-products.test.sh"
 sh "$repo_root/scripts/http-source-config-chart.test.sh"
 sh "$repo_root/scripts/connector-chart.test.sh"
 sh "$repo_root/scripts/contract-chart.test.sh"

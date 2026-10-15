@@ -31,13 +31,16 @@ demoProduct:
 
 An enabled shared chart route can supply the public base URL instead. The chart publishes a
 `ksail-releases` DataProduct with the actual external query endpoint, the independent
-`/ksail-releases/openapi.json` contract and `/ksail-releases/ui` surface. Its identity is
+`/ksail-releases/openapi.json` contract, with no `spec.ui` member. Its identity is
 `https://github.com/devantler-tech/ksail/releases`; its `v1.0.0` describes the product contract,
 not the current KSail tool version.
 
 No source Secret, Kubernetes API token, extra workload or workload source-egress permission is
-required. Public interface metadata grants no additional access. The chart's
-`uiContract` and `uiAppearance` settings control deprecated kit presentation hints;
+required. Public interface metadata grants no additional access. Removing chart-authored
+UI metadata is a breaking publication change; consumers
+select the named API output and contract. The direct reference page remains
+available. The chart's `uiContract` and `uiAppearance` settings still control the
+retained compatibility runtime, independently of catalogue publication;
 light/dark display preserves filters and does not request source data.
 
 The workload always serves `/ksail-releases/ui`, `/ksail-releases/openapi.json`,

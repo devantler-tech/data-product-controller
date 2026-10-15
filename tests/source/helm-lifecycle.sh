@@ -110,6 +110,7 @@ helm_release_lifecycle() {
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
 	installed_observation restored-candidate "localhost:5055/data-product-controller@$product_digest" "$product_digest" KHoist
 	installed_query_check
+	chart_publication_lifecycle
 	kube delete dataproduct existing-export --wait=true --timeout=20s >/dev/null
 	[[ $(independent_resource_uids "$lifecycle_product_uid") == "$lifecycle_resource_uids" ]]
 	kube delete -f "$test_dir/observer-rbac.yaml" --wait=true --timeout=20s >/dev/null
