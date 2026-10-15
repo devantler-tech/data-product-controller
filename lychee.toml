@@ -7,6 +7,9 @@ remap = [
 ]
 
 exclude = [
+  # Controller-minted distribution IRIs identify metadata; they are not HTTP resources.
+  # The EDC acceptance binds them to the actual controller snapshot and rejects changed IDs.
+  "^https://devantler\\.tech/\\.well-known/data-product/distribution/[0-9a-f]{64}$",
   "(^|/)assets/(product|registry)\\.css$",
   "(^|/)openapi\\.json$",
   # This Go API route is exercised by handler and browser tests, not a local file.

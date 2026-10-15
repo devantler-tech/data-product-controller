@@ -120,7 +120,9 @@ jobs:
         run: sh scripts/chart.test.sh
 
       - name: Validate scanner suppression allowlists
-        run: sh scripts/scanner-suppressions.test.sh
+        run: |
+          sh scripts/scanner-suppressions.test.sh
+          bash scripts/prepare-edc-scan.test.sh
 
       - name: Lint Helm chart
         run: helm lint charts/data-product-controller
@@ -176,6 +178,7 @@ jobs:
           bash scripts/observe-rollout.test.sh
           bash tests/source/helm-lifecycle.test.sh
           bash tests/source/suite.test.sh
+          bash tests/source/catalog.test.sh
 
   source-integration:
     needs: plan
