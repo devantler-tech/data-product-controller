@@ -5,6 +5,14 @@ page without a Kubernetes or registry connection. Pin the verified release diges
 override the image entrypoint with `/ui-kit`, and run with the image's nonroot user,
 a read-only filesystem and restricted network access.
 
+For offline publisher reports, use the image's dedicated `/publisher-review`
+entrypoint instead. It shares the transport, health and listener limits below.
+Only `PUBLISHER_PREFLIGHT_ENABLED=true` enables its page and inert assets;
+presentation and discovery flags are ignored. Its root redirects to
+`/publisher-review`, and compatibility-kit routes always return 404. See
+[publisher review](publisher-preflight.md) for import and export behavior.
+The existing `/ui-kit` publisher route remains available during deployment migration.
+
 ## Choose the transport
 
 TLS is the default. Mount a certificate and private key readable by the workload's
@@ -86,6 +94,7 @@ Run the container smoke against a built or verified immutable release image:
 
 ```bash
 bash tests/source/ui-kit.sh ghcr.io/devantler-tech/data-product-controller@sha256:<verified-digest>
+bash tests/source/publisher-review.sh ghcr.io/devantler-tech/data-product-controller@sha256:<verified-digest>
 ```
 
 The smoke exercises TLS with a trusted disposable certificate and the internal HTTP
@@ -96,6 +105,11 @@ and deletes its containers and disposable certificate afterward. The required so
 integration job runs it against the built application image. Release publication
 runs it against the signed image digest after verifying the publisher, tag and source
 revision.
+
+The dedicated publisher smoke also checks that unrelated presentation settings
+cannot enable legacy routes, that malformed publisher opt-in fails before serving,
+and that SIGTERM exits successfully in both transport modes. The shared host allows
+ten seconds for active responses to drain before closing remaining connections.
 
 Packaging checks establish release behavior. Platform adoption and UI flag retirement
 remain tracked in [#120](https://github.com/devantler-tech/data-product-controller/issues/120).

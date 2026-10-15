@@ -4,6 +4,7 @@ package web
 
 import (
 	"embed"
+	"io/fs"
 	"net/http"
 	"strings"
 )
@@ -35,7 +36,18 @@ type KitOptions struct {
 
 // KitHandlerWithOptions enables offline descriptor handoff without introducing registry or network access.
 func KitHandlerWithOptions(options KitOptions) http.Handler {
-	files := http.FileServerFS(CompatibilityAssets)
+	return portableHandler(options, CompatibilityAssets)
+}
+
+// PublisherHandler serves only offline report inspection under its existing release gate.
+// Presentation and discovery callbacks cannot be supplied to this handler.
+func PublisherHandler(enabled func() bool) http.Handler {
+	return portableHandler(KitOptions{PublisherEnabled: enabled}, Assets)
+}
+
+// portableHandler shares bounded assets and policy while keeping presentation opt-in explicit.
+func portableHandler(options KitOptions, assets fs.FS) http.Handler {
+	files := http.FileServerFS(assets)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		publisher := options.PublisherEnabled != nil && options.PublisherEnabled()
 		contract := options.ContractEnabled != nil && options.ContractEnabled()

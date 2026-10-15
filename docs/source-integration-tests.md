@@ -33,6 +33,12 @@ and run exactly one synthetic family; they share function definitions without
 executing another family first. Invalid suite values fail before setup. Omitting
 the variable runs all four suites sequentially for local use.
 
+Packaged command checks include the dedicated publisher-review binary in both TLS
+and private gateway HTTP mode. They exercise its existing release gate in all
+three configured states, disabled compatibility routes, process health and graceful
+termination as the image's nonroot user with a read-only root filesystem. The
+legacy ui-kit smoke remains separate while deployments migrate.
+
 The harness does not use KSail's `--ttl`: that mode keeps the create command in the
 foreground until automatic destruction, which would prevent the assertions from
 running. Hosted-runner disposal is the backstop for uncatchable termination in CI;

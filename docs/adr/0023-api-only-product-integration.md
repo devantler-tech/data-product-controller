@@ -51,8 +51,10 @@ literal public HTTPS and closed declaration profile.
 The independent embedding compatibility kit and standalone reference pages are
 deprecated compatibility surfaces. Their existing isolation and protocol
 controls remain enforced while they exist. The independent publisher-review
-application remains useful and must be preserved when the compatibility
-runtime is separated or retired.
+application has its own publisher-review executable in the existing signed image.
+Its report handler accepts only the publisher-preflight gate and inert assets.
+The old ui-kit publisher route remains available; observing consuming deployments
+switch to the new entrypoint is required before removing that executable.
 
 Removing those public fields, protocols, flags and workloads requires a
 versioned migration, generated schemas, signed release artifacts and coordinated
