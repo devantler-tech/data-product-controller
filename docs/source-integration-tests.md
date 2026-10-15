@@ -12,7 +12,7 @@ host port. This exercises the chart's external-source CIDR rule: Cilium's defaul
 does not match Cilium-managed Pod identities. The suite keeps that default intact.
 
 Run it on a machine with Docker (including Buildx), KSail 7.182.6, kubectl,
-Helm 3.12 or newer within major version 3, Cosign, GNU timeout, jq, yq, and OpenSSL:
+Helm 3.13 or newer within major version 3, Cosign, GNU timeout, jq, yq, and OpenSSL:
 
 ```bash
 bash tests/source/run.sh
@@ -73,8 +73,20 @@ second candidate upgrade removes it again. The CRD UID/schema must remain unchan
 uninstall removes only these fixture products, and the independent source query
 still succeeds. No workload is rendered by this separate release, so this proves
 metadata migration, not execution of the v4.0.0 image or endpoint reachability.
-The older general lifecycle and its query checks remain independent. Actual
-UI-free signed publication and installed rollback acceptance remain tracked in
+The older general lifecycle and its query checks remain independent.
+
+The same lifecycle verifies the real signed v5.0.0 image/chart tuple and installs
+it into both existing releases as a UI-free rollback baseline. The workload release
+runs its actual controller and connector; the separate release owns only the two
+product declarations. Each release's stable deployed chart, image and revision
+are recorded before candidate upgrade. Actual Helm rollback restores both saved
+revisions, requiring byte-identical stored manifests, UI-free live and stored
+declarations, stable controller/product/source/Secret UIDs and unchanged CRD state.
+Every phase verifies current rollout, both registry replicas, source data and its
+OpenAPI contract before restoring the candidate. These commands retain the suite's
+absolute deadline. The public receipt identifies the verified release and both
+saved revisions; it explicitly excludes production adoption. Coordinated Platform
+adoption and its recovery plan remain in
 [#409](https://github.com/devantler-tech/data-product-controller/issues/409).
 
 Each install/upgrade uses an explicit disposable kubeconfig/context and a test-only
