@@ -12,6 +12,7 @@ The controller handles descriptions only. Product data and credentials stay with
 owns the product.
 
 - **Try it:** [run the example product locally](#try-it-locally), with no cluster and no credentials.
+- **Documentation:** [KHoist user guides](website/README.md) cover first use, publishing and consuming APIs, installation and troubleshooting.
 - **Use it:** [install the controller on a cluster](#install-on-a-cluster).
 - **Integrate it:** [run an independent API consumer](docs/api-consumer.md).
 - **Change it:** read the [contribution guide](CONTRIBUTING.md).

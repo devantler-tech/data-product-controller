@@ -14,6 +14,11 @@ EXCLUDED_DIRECTORIES:
 # older compiler bundled in MegaLinter. Otherwise it cannot load either module
 # and reports module-wide findings without examining the compiled packages.
 PRE_COMMANDS:
+  # Resolve documentation routes and anchors against the same site users receive.
+  - command: npm ci --prefix website --no-audit --no-fund && npm run build --prefix website
+    cwd: workspace
+    run_before_linters: true
+    continue_if_failed: false
   - command: export GOTOOLCHAIN=$(awk '/^go / {print "go" $2; exit}' go.mod)
     cwd: workspace
     output_variables: [GOTOOLCHAIN]

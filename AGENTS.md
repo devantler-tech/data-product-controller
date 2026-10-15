@@ -22,6 +22,7 @@ The minimum Go version is declared only in `go.mod`. The public roadmap is GitHu
 - `internal/dataspace/` and `cmd/dsp-catalog/` — default-off offline DSP catalog export from explicit public provider bindings; no network or Kubernetes access.
 - `internal/preflight/` and `cmd/product-check/` — default-off local publisher validation using the embedded delivered CRD and bounded public descriptor preview.
 - `web/` — shared bounded metadata validators and offline publisher-review assets.
+- `website/` — Astro/Starlight user documentation for `khoist.devantler.tech`; `docs/` retains engineering contracts and ADRs.
 - `cmd/publisher-review/` — independent default-off publisher report host; presentation and discovery flags have no effect.
 - `cmd/ui-kit/` — deprecated default-off UI compatibility host; its publisher route remains available during migration.
 - `internal/portablehost/` — shared TLS/gateway listener, bounded health and graceful shutdown for both static hosts.
@@ -153,6 +154,12 @@ golangci-lint run --build-tags=browser ./internal/browser/...
 ```
 
 Workflow changes also require `actionlint` and `zizmor`.
+
+Documentation-site changes additionally require `npm ci && npm run build` in `website/`
+and `PUBLISHER_PREFLIGHT_ENABLED=true go run ./cmd/product-check --file website/public/examples/harbour-product.yaml`
+from the repository root. Check navigation, search, keyboard focus and both themes in the built site.
+Keep user guidance accurate about default-off features and adoption limits. Existing `docs/` files
+remain the detailed engineering reference; link to them rather than copying their contracts.
 
 The required AGE image job builds `images/postgresql-age`, starts PostgreSQL 17.11 with AGE
 preloaded, and runs `tests/provider/age-image-bootstrap.sh` as UID 26 against a read-only

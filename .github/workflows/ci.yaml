@@ -80,6 +80,22 @@ jobs:
           go-version-file: go.mod
           cache: false
 
+      - name: Set up documentation Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6.4.0
+        with:
+          node-version: "24"
+
+      - name: Build documentation and validate links
+        working-directory: website
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate the downloadable product declaration
+        env:
+          PUBLISHER_PREFLIGHT_ENABLED: "true"
+        run: go run ./cmd/product-check --file website/public/examples/harbour-product.yaml
+
       - name: Run Go tests
         run: go test -race -count=1 ./...
 
