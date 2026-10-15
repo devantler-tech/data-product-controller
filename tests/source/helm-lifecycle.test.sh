@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+real_helm=$(command -v helm)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 export HELM_TEST_RELEASE="$work/release.json"
@@ -10,8 +11,8 @@ cat >"$work/bin/helm" <<'EOF'
 set -eu
 while [[ $1 == --* ]]; do shift 2; done
 case "$1 $2 $3" in
-'get metadata dpc') jq '.metadata' "$HELM_TEST_RELEASE" ;;
-'get values dpc')
+'get metadata dpc'|'get metadata dpc-publication') jq '.metadata' "$HELM_TEST_RELEASE" ;;
+'get values dpc'|'get values dpc-publication')
  [[ " $* " == *' --revision 7 '* ]] || exit 98
  jq '.values' "$HELM_TEST_RELEASE"
  if [[ ${CHANGE_REVISION:-false} == true ]]; then jq '.metadata.revision=8' "$HELM_TEST_RELEASE" >"$HELM_TEST_RELEASE.next"; mv "$HELM_TEST_RELEASE.next" "$HELM_TEST_RELEASE"; fi ;;
@@ -26,17 +27,25 @@ export KUBECONFIG="$work/config"
 cluster_context=owned-fixture
 repo_root=$root
 test_dir=$work
+integration_deadline=$((SECONDS + 120))
+source "$root/tests/source/chart-publication.sh"
 source "$root/tests/source/helm-lifecycle.sh"
 digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 jq -n --arg digest "$digest" '{metadata:{status:"deployed",revision:7,chart:"data-product-controller",version:"1.2.3",appVersion:"1.2.3"},values:{image:{repository:"ghcr.io/devantler-tech/data-product-controller",digest:$digest}}}' >"$work/good.json"
 cp "$work/good.json" "$HELM_TEST_RELEASE"
 helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"
+[[ $(helm_installed_revision dpc-publication 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest") == 7 ]]
 for mutation in '.metadata.status="pending-upgrade"' '.metadata.version="1.2.4"' '.metadata.appVersion="1.2.4"' '.values.image.digest="latest"' '.values.image.repository="unapproved.example/controller"' '.metadata.chart="other"' '.metadata.revision=0'; do
 	jq "$mutation" "$work/good.json" >"$HELM_TEST_RELEASE"
 	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
 		echo 'installed release identity accepted drift' >&2
 		exit 1
 	fi
+	if helm_installed_revision dpc-publication 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" >"$work/rejected-revision"; then
+		echo 'publication revision accepted drift' >&2
+		exit 1
+	fi
+	[[ ! -s "$work/rejected-revision" ]]
 done
 cp "$work/good.json" "$HELM_TEST_RELEASE"
 export CHANGE_REVISION=true
@@ -144,3 +153,88 @@ for stage in preflight cleanup; do
 	done
 done
 echo 'publication preflight and cleanup accept successful absence and reject present or incompletely read products'
+
+source "$root/tests/source/ui-free-rollback.sh"
+jq -n '{complete:true,tag:"v5.0.0",platform:"linux/amd64",
+  sourceSHA:"29b605885064a3b9f24c799a0d7112d3a6d4333b",
+  publisherSHA:"ea4df9004d4ab43b6c9af5b0c5f55712f7211328",
+  imageDigest:"sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c",
+  chartDigest:"sha256:0707d9669f46cde154e4d9f38ef4d47bc4312e663f0e21d12a8afedb6e93e0ea",
+  runtimeDigest:"sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c"}' >"$work/verified.json"
+ui_free_release_receipt "$work/verified.json"
+for mutation in '.complete=false' '.tag="v4.0.0"' '.platform="linux/arm64"' \
+	'.sourceSHA="unknown"' '.publisherSHA="unknown"' '.imageDigest="latest"' \
+	'.chartDigest="latest"' '.runtimeDigest=null' '.runtimeDigest="sha256:short"' '.runtimeDigest=7'; do
+	jq "$mutation" "$work/verified.json" >"$work/rejected.json"
+	if ui_free_release_receipt "$work/rejected.json"; then
+		echo 'UI-free release accepted incomplete or incorrectly bound verification' >&2
+		exit 1
+	fi
+done
+cat "$work/verified.json" "$work/verified.json" >"$work/rejected.json"
+if ui_free_release_receipt "$work/rejected.json"; then
+	echo 'UI-free release accepted ambiguous receipts' >&2
+	exit 1
+fi
+echo 'UI-free release receipt rejects incomplete, ambiguous and incorrectly bound artifacts'
+
+# Render real chart products; fault-inject only Helm/Kubernetes reads around the actual snapshot guard.
+"$real_helm" template dpc-publication "$root/charts/data-product-controller" --namespace products \
+	--set route.enabled=true --set route.host=products.example.test --set demoProduct.ksailReleases.enabled=true \
+	--set uiContract.enabled=true --set uiAppearance.enabled=true |
+	"$BASH" "$root/tests/source/publication-products.sh" >"$work/snapshot-original.yaml"
+yq ea -o=json -I=0 '.' "$work/snapshot-original.yaml" | jq -s '{items:map(
+  .metadata.uid=("fixture-"+.metadata.name) |
+  .metadata.annotations["meta.helm.sh/release-name"]="dpc-publication" |
+  .metadata.annotations["meta.helm.sh/release-namespace"]="products" |
+  .metadata.labels["app.kubernetes.io/managed-by"]="Helm")}' >"$work/live-original.json"
+printf '%s\n' '{"metadata":{"uid":"crd-1"},"spec":{"group":"data.devantler.tech"}}' >"$work/crd-original.json"
+jq -S '{uid:.metadata.uid,spec:.spec}' "$work/crd-original.json" >"$work/publication-original-crd.json"
+cat >"$work/snapshot-check.sh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+repo_root=$PUBLICATION_TEST_ROOT
+test_dir=$PUBLICATION_TEST_WORK
+source "$repo_root/tests/source/chart-publication.sh"
+publication_helm() {
+ [[ "$*" == 'get manifest dpc-publication' ]] || return 99
+ cat "$test_dir/snapshot.yaml"
+}
+publication_kube() {
+ case "$*" in
+ 'get dataproduct harbour-observations ksail-releases -o json')
+   cat "$test_dir/live.json"
+   [[ ${SNAPSHOT_READ:-complete} != partial ]] ;;
+ 'get crd/dataproducts.data.devantler.tech -o json') cat "$test_dir/crd.json" ;;
+ *) return 99 ;;
+ esac
+}
+publication_snapshot "$1" false
+EOF
+cp "$work/snapshot-original.yaml" "$work/snapshot.yaml"
+cp "$work/live-original.json" "$work/live.json"
+cp "$work/crd-original.json" "$work/crd.json"
+"$BASH" "$work/snapshot-check.sh" baseline
+"$BASH" "$work/snapshot-check.sh" ui-free-rollback
+for fault in stored-ui live-ui changed-output recreated-product changed-owner changed-crd missing-product partial; do
+	cp "$work/snapshot-original.yaml" "$work/snapshot.yaml"
+	cp "$work/live-original.json" "$work/live.json"
+	cp "$work/crd-original.json" "$work/crd.json"
+	case "$fault" in
+	stored-ui) yq '(.spec.ui)={"url":"https://unapproved.example/"}' "$work/snapshot-original.yaml" >"$work/snapshot.yaml" ;;
+	live-ui) jq '.items[0].spec.ui={"url":"https://unapproved.example/"}' "$work/live-original.json" >"$work/live.json" ;;
+	changed-output) jq '.items[0].spec.outputs[0].url="https://changed.example/"' "$work/live-original.json" >"$work/live.json" ;;
+	recreated-product) jq '.items[0].metadata.uid="replacement"' "$work/live-original.json" >"$work/live.json" ;;
+	changed-owner) jq '.items[0].metadata.annotations["meta.helm.sh/release-name"]="other"' "$work/live-original.json" >"$work/live.json" ;;
+	changed-crd) jq '.metadata.uid="replacement"' "$work/crd-original.json" >"$work/crd.json" ;;
+	missing-product) jq '.items|=.[0:1]' "$work/live-original.json" >"$work/live.json" ;;
+	partial) ;;
+	esac
+	result=0
+	SNAPSHOT_READ=$fault "$BASH" "$work/snapshot-check.sh" ui-free-rollback >"$work/snapshot.log" 2>&1 || result=$?
+	[[ $result != 0 ]] || {
+		echo "UI-free stored rollback accepted drift: $fault" >&2
+		exit 1
+	}
+done
+echo 'UI-free stored/live snapshot controls reject legacy UI, changed outputs, replacement UIDs, ownership drift and incomplete reads'

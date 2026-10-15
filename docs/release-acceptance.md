@@ -41,3 +41,12 @@ query recovery and retained independent source/credential identities. Its candid
 is a local digest built from the PR; candidate results do not prove publication or
 Platform deployment. Production rollout and release-flag retirement require their
 separate reviewed deployment and readback evidence.
+
+The API-only rollback profile additionally verifies signed v5.0.0, then installs
+its workload chart and its two UI-free product declarations in the same owned
+cluster. Candidate upgrade, actual rollback to each release's saved revision and
+candidate restoration must retain exact chart/image identities, stored manifests,
+live API access and independent resource identities. Legacy v1.12.0 CRD-upgrade
+and v4.0.0 UI-metadata rollback controls remain separate. This disposable installed
+proof does not establish a production rollback baseline or permit stricter
+admission before coordinated Platform adoption.

@@ -67,6 +67,11 @@ production adoption in
 The registry change alone does not establish complete migration or production
 acceptance.
 
+Disposable acceptance installs the actual signed UI-free v5.0.0 release and
+restores both its running workloads and its product declarations from stored
+Helm revisions. Production adoption and its rollback plan remain separate gates;
+the installed test alone does not authorize rejecting legacy declarations.
+
 ## Consequences
 
 - Consumers can combine APIs and render consistent application interfaces without
