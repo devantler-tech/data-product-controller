@@ -3,6 +3,15 @@
 : "${repo_root:?run through tests/source/run.sh}"
 : "${test_dir:?}" "${cluster_context:?}" "${integration_deadline:?}"
 
+catalog_edc_products_absent() {
+	local products
+	products=$(kube get dataproduct edc-harbour edc-buoy --ignore-not-found -o name) || return 1
+	[[ -z $products ]] || {
+		echo 'EDC catalog fixture products already exist or remain installed' >&2
+		return 1
+	}
+}
+
 probe --url http://dpc/api/v1/catalog --want-status 404
 kube apply -f "$repo_root/docs/examples/dcat-product.yaml"
 install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true \
@@ -13,8 +22,7 @@ probe --url http://dpc/api/v1/catalog --contains '"dcat:servesDataset":{"@id":"u
 probe --url http://dpc/api/v1/catalog --contains '"dcat:endpointDescription":{"@id":"https://example.com/harbour/openapi.json"}'
 
 # Capture the actual controller response; the independent consumer never reads Kubernetes itself.
-assert_dataproduct_absent edc-harbour
-assert_dataproduct_absent edc-buoy
+catalog_edc_products_absent
 kube apply -f "$repo_root/tests/dataspace/edc/products.yaml"
 wait_for 'EDC fixture reaches the enabled controller catalog' 30 \
 	probe --url http://dpc/api/v1/catalog --contains '"@id":"urn:example:edc-buoy"'
@@ -24,8 +32,7 @@ kubectl --kubeconfig "$KUBECONFIG" --context "$cluster_context" --request-timeou
 bash "$repo_root/tests/source/edc-import.sh" "$test_dir/edc-controller-catalog.json" \
 	"$((integration_deadline - SECONDS))"
 kube delete -f "$repo_root/tests/dataspace/edc/products.yaml" --wait=true --timeout=20s
-assert_dataproduct_absent edc-harbour
-assert_dataproduct_absent edc-buoy
+catalog_edc_products_absent
 
 # Publication is a publisher assertion, independent of product readiness.
 kube annotate dataproduct catalog-harbour data.devantler.tech/dcat-type-
