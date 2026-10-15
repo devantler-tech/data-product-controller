@@ -178,6 +178,7 @@ func TestPublisherHelp(t *testing.T) {
 	}
 }
 
+// hostCommand re-enters only this test binary's publisher process under the caller's context and gate setting.
 func hostCommand(t *testing.T, ctx context.Context, args []string, enabled string) *exec.Cmd {
 	t.Helper()
 	executable, err := os.Executable()
@@ -197,6 +198,7 @@ func hostCommand(t *testing.T, ctx context.Context, args []string, enabled strin
 	return command
 }
 
+// startHost registers cancellation and process reaping, reporting subprocess output when tests fail.
 func startHost(t *testing.T, args []string, enabled string) {
 	t.Helper()
 	ctx, cancel := context.WithCancel(t.Context())
@@ -216,6 +218,7 @@ func startHost(t *testing.T, args []string, enabled string) {
 	})
 }
 
+// waitForHost allows three seconds for the configured transport and closes each successful probe response.
 func waitForHost(t *testing.T, client *http.Client, address string) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
@@ -230,6 +233,7 @@ func waitForHost(t *testing.T, client *http.Client, address string) {
 	t.Fatal("host never accepted the configured transport")
 }
 
+// getHost binds a fixture GET to the test context; the caller must close a returned response body.
 func getHost(t *testing.T, client *http.Client, address string) (*http.Response, error) {
 	t.Helper()
 	request, err := http.NewRequestWithContext(t.Context(), http.MethodGet, address, nil)
@@ -240,6 +244,7 @@ func getHost(t *testing.T, client *http.Client, address string) (*http.Response,
 	return client.Do(request)
 }
 
+// hostRequest captures status, headers and at most 64 KiB from a fixture response, then closes its body.
 func hostRequest(
 	t *testing.T,
 	client *http.Client,

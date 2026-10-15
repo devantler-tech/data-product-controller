@@ -17,6 +17,7 @@ import (
 	"time"
 )
 
+// availableAddress releases its temporary loopback listener before returning; it does not reserve the port.
 func availableAddress(t *testing.T) string {
 	t.Helper()
 	var config net.ListenConfig

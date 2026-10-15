@@ -101,6 +101,7 @@ func publisherContractReport(
 	return result
 }
 
+// publisherHost serves the enabled publisher-only handler over fixture TLS and registers server cleanup.
 func publisherHost(t *testing.T) *httptest.Server {
 	t.Helper()
 	host := httptest.NewTLSServer(

@@ -13,6 +13,7 @@ done
 [[ $(docker image inspect "$image" --format '{{.Config.User}}') == '65532:65532' ]]
 test_dir=$(mktemp -d)
 container_id=''
+# cleanup removes only this fixture's container and scratch files while preserving failure status.
 cleanup() {
 	local result=$?
 	trap - EXIT INT TERM
@@ -31,6 +32,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -days 1 \
 chmod 755 "$test_dir/tls"
 chmod 444 "$test_dir/tls/key.pem" "$test_dir/tls/cert.pem"
 
+# request checks the fixture route with bounded, proxy-free curl and the generated test CA for TLS.
 request() {
 	local path=$1 expected=$2 status
 	status=$(curl --silent --show-error --proxy '' --connect-timeout 2 --max-time 5 \
