@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 # Sourced only inside the disposable source acceptance harness.
 : "${repo_root:?run through tests/source/run.sh}" "${test_dir:?run through tests/source/run.sh}"
+# helm_scoped confines Helm operations to the owned fixture context and products namespace.
 helm_scoped() {
 	: "${cluster_context:?owned fixture context required}"
 	helm --kubeconfig "$KUBECONFIG" --kube-context "$cluster_context" "$@" --namespace products
 }
 
+# helm_installed_identity binds stable deployed metadata and revision values to the requested chart and image.
 helm_installed_identity() {
 	local version=$1 image=$2 metadata revision final
 	metadata=$(helm_scoped get metadata dpc --output json) || return 1
@@ -21,6 +23,7 @@ helm_installed_identity() {
 	jq -ne --argjson before "$metadata" --argjson after "$final" '$before == $after' >/dev/null
 }
 
+# install_chart installs the packaged candidate with the fixture's declared values and test CA.
 install_chart() {
 	: "${candidate_chart:?packaged candidate required}"
 	helm_scoped upgrade --install dpc "$candidate_chart" --reset-values \
@@ -28,6 +31,7 @@ install_chart() {
 		--wait --timeout 240s "$@" >/dev/null
 }
 
+# installed_observation verifies exact workloads, current readiness and each replica's phase-specific page.
 installed_observation() {
 	local phase=$1 image=$2 runtime=$3 expected_title=$4
 	bash "$repo_root/scripts/observe-rollout.sh" --kubeconfig "$KUBECONFIG" \
@@ -39,6 +43,7 @@ installed_observation() {
 	registry_replicas_ready "$expected_title"
 }
 
+# installed_query_check exercises source data and contract while preserving product and independent-resource identities.
 installed_query_check() {
 	probe --url http://dpc-http-source/api/data --contains '"fixture":"source"'
 	probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
@@ -46,6 +51,7 @@ installed_query_check() {
 	[[ $(independent_resource_uids "$lifecycle_product_uid") == "$lifecycle_resource_uids" ]]
 }
 
+# helm_release_lifecycle proves signed baseline installation, candidate upgrade, rollback and retained independent sources.
 helm_release_lifecycle() {
 	: "${product_digest:?immutable candidate image required}"
 	local baseline_dir=$test_dir/baseline baseline_image baseline_runtime baseline_revision baseline_crd_uid candidate_version

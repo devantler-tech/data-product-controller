@@ -43,6 +43,7 @@ func catalogWireFixture(
 	return server
 }
 
+// catalogInspectionDescriptor supplies valid public metadata without a product UI.
 func catalogInspectionDescriptor() map[string]any {
 	p := offlineDescriptor("https://host.example.test", "https://publisher.example.test")
 	delete(p, "ui")
@@ -50,6 +51,7 @@ func catalogInspectionDescriptor() map[string]any {
 	return p
 }
 
+// catalogPage wraps descriptors in one complete discovery page without a continuation.
 func catalogPage(products ...map[string]any) map[string]any {
 	return map[string]any{
 		"apiVersion": "data-product-discovery/v1", "products": products,

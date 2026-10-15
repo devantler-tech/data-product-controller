@@ -96,7 +96,7 @@ func TestProductRegistryReturnsPortableDescriptors(t *testing.T) {
 	}
 }
 
-// TestRegistryUIAvailableByDefault preserves security headers and the product sandbox.
+// TestRegistryUIAvailableByDefault preserves workspace availability and the policy denying product frames.
 func TestRegistryUIAvailableByDefault(t *testing.T) {
 	t.Parallel()
 
@@ -177,6 +177,7 @@ func TestRegistryAssetFingerprints(t *testing.T) {
 	}
 }
 
+// TestDescriptorTreatsStaleReadinessAsUnready refuses readiness from an earlier product generation.
 func TestDescriptorTreatsStaleReadinessAsUnready(t *testing.T) {
 	t.Parallel()
 
@@ -194,6 +195,7 @@ func TestDescriptorTreatsStaleReadinessAsUnready(t *testing.T) {
 	}
 }
 
+// registryProduct supplies a public product declaration with current readiness for handler tests.
 func registryProduct() *datav1alpha1.DataProduct {
 	return &datav1alpha1.DataProduct{
 		ObjectMeta: metav1.ObjectMeta{Name: "customer-catalog", Namespace: "products"},

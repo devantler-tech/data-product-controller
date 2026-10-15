@@ -307,6 +307,7 @@ function selectProduct(product) {
     interactionTitle.scrollIntoView({ block: "start" });
 }
 
+/** Build a selectable metadata card; selection grants no publisher execution or data access. */
 function productCard(product) {
   const button = document.createElement("button");
   button.type = "button";

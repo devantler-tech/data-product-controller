@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// TestRegistryOpensPublicAPIOnExplicitAction observes a separate API tab after the user selects its link.
 func TestRegistryOpensPublicAPIOnExplicitAction(t *testing.T) {
 	productServer := httptest.NewTLSServer(demoproduct.NewHandler())
 	t.Cleanup(productServer.Close)

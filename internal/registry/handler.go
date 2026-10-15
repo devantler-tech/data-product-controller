@@ -125,6 +125,7 @@ func (s *server) registryAsset(writer http.ResponseWriter, request *http.Request
 	s.bundle.ServeAsset(writer, request, request.PathValue("asset"))
 }
 
+// setUISecurityHeaders denies publisher frames and confines workspace connections to its own origin.
 func setUISecurityHeaders(writer http.ResponseWriter) {
 	writer.Header().Set(
 		"Content-Security-Policy",
@@ -172,6 +173,7 @@ type readinessDescriptor struct {
 	Message string `json:"message"`
 }
 
+// listProducts publishes a complete bounded inventory or rejects an incomplete read.
 func (s *server) listProducts(writer http.ResponseWriter, request *http.Request) {
 	ctx, cancel := context.WithTimeout(request.Context(), 5*time.Second)
 	defer cancel()

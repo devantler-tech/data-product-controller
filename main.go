@@ -43,8 +43,7 @@ const (
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,namespace=data-product-system,verbs=get;list;watch;create;update;patch;delete
 
 // main validates release flags, registers the controller and registry, and runs the manager until shutdown.
-// main validates release gates before starting the controller manager and read-only registry.
-// main validates release settings before registering the controller and its independently gated registry.
+// main validates release settings before starting the controller manager and read-only registry.
 func main() {
 	var metricsAddress string
 	var probeAddress string
