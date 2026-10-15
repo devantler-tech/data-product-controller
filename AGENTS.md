@@ -154,6 +154,12 @@ golangci-lint run --build-tags=browser ./internal/browser/...
 
 Workflow changes also require `actionlint` and `zizmor`.
 
+The required core job runs the `admission`-tagged migration checkpoint against
+checksum-pinned Kubernetes 1.34.0 and 1.37.0 envtest servers. Its candidate UI-field
+policy is test-only; keep the delivered CRD and runtime defaults unchanged. Local
+runs require explicit owned binary assets and the matching version; see
+`docs/api-only-admission.md`. Never enable existing-cluster mode for this test.
+
 The required AGE image job builds `images/postgresql-age`, starts PostgreSQL 17.11 with AGE
 preloaded, and runs `tests/provider/age-image-bootstrap.sh` as UID 26 against a read-only
 container root. Repeat the same test after changing its base, archive, compiler or extension
