@@ -29,4 +29,5 @@ yq -e '.jobs.smoke.needs == "publish" and (.jobs.smoke | has("if") | not) and (.
 callee=$(yq '.jobs."publish-age".uses' "$cd")
 printf '%s\n' "$callee" | grep -Eq '^devantler-tech/data-product-controller/\.github/workflows/publish-age\.yaml@[a-f0-9]{40}$' || fail 'release must use the immutable owned publisher'
 yq -e '.jobs."publish-age".permissions.contents == "read" and .jobs."publish-age".permissions.packages == "write" and .jobs."publish-age".permissions."id-token" == "write"' "$cd" >/dev/null || fail 'release must grant only the required publisher permissions'
+bash "$repo_root/scripts/age-publisher-identity.test.sh"
 printf '%s\n' 'AGE release contract tests passed'

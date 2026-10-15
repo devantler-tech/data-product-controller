@@ -14,6 +14,15 @@ the release source revision and repeats the authenticated graph query after pull
 Readback first removes the job's registry login, requiring anonymous artifact and signature access.
 Both its initial build and release readback must pass before the artifact is considered delivered.
 
+The checked-in publisher definition requires repository ID `1350892700` and an
+explicit original or KHoist repository name. Issuer-provided caller claims must
+match the trusted GitHub context, and the called workflow must belong to that
+same repository at an immutable commit. The extracted-step acceptance uses
+synthetic issuer responses; it does not verify real token signatures or artifact
+certificates. Release execution uses the immutable callee selected in
+`.github/workflows/cd.yaml`; controls in another source revision are not evidence
+that the selected callee enforces them.
+
 For the first publication, set this image's package visibility to **Public** in its GitHub
 package settings. Container packages have their own visibility; a public source repository
 does not establish anonymous package access. If the verification fails because the package is

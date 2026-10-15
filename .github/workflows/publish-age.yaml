@@ -18,28 +18,46 @@ jobs:
       - name: Require the owned release source
         env:
           REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
           EVENT: ${{ github.event_name }}
           REF_TYPE: ${{ github.ref_type }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          [[ "$REPOSITORY" == devantler-tech/data-product-controller && "$EVENT" == push && "$REF_TYPE" == tag ]]
-          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
+          [[ "$REPOSITORY_ID" == 1350892700 && "$EVENT" == push && "$REF_TYPE" == tag ]] || exit 1
+          case "$REPOSITORY" in
+            devantler-tech/data-product-controller|devantler-tech/khoist) ;;
+            *) exit 1 ;;
+          esac
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || exit 1
 
       - name: Resolve and require immutable signing workflow
         id: identity
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
         run: |
           set -euo pipefail
           token=$(curl --fail --silent --show-error --max-time 10 \
             -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore" | jq -er '.value | select(type == "string" and length > 0)')
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sigstore" | jq -ser '
+              if length == 1 and (.[0] | type == "object") and
+                (.[0].value | type == "string" and length > 0)
+              then .[0].value else error("OIDC response invalid") end')
           payload=$(printf '%s' "$token" | cut -d. -f2)
           case $((${#payload} % 4)) in
             2) payload="${payload}==" ;;
             3) payload="${payload}=" ;;
           esac
-          workflow=$(printf '%s' "$payload" | tr '_-' '/+' | base64 -d | jq -er '.job_workflow_ref')
-          [[ "$workflow" =~ ^devantler-tech/data-product-controller/\.github/workflows/publish-age\.yaml@[a-f0-9]{40}$ ]]
+          claims=$(printf '%s' "$payload" | tr '_-' '/+' | base64 -d)
+          printf '%s' "$claims" | jq -se --arg repository "$REPOSITORY" --arg id "$REPOSITORY_ID" '
+            length == 1 and (.[0] | type == "object" and
+              .repository == $repository and .repository_id == $id)' >/dev/null
+          workflow=$(printf '%s' "$claims" | jq -er '.job_workflow_ref')
+          prefix="$REPOSITORY/.github/workflows/publish-age.yaml@"
+          [[ "$workflow" == "$prefix"* ]] || exit 1
+          workflow_ref=${workflow#"$prefix"}
+          [[ "$workflow_ref" =~ ^[a-f0-9]{40}$ ]] || exit 1
           printf 'workflow=%s\n' "$workflow" >> "$GITHUB_OUTPUT"
 
       - name: Checkout released source
@@ -76,6 +94,7 @@ jobs:
 
       - name: Publish, sign and read back the immutable artifact
         env:
+          REPOSITORY: ${{ github.repository }}
           IMAGE_TAG: ${{ steps.image.outputs.tag }}
           SIGNING_WORKFLOW: ${{ steps.identity.outputs.workflow }}
           RELEASE_TAG: ${{ github.ref_name }}
@@ -91,7 +110,7 @@ jobs:
           docker logout ghcr.io
           cosign verify --certificate-identity "https://github.com/$SIGNING_WORKFLOW" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-github-workflow-repository devantler-tech/data-product-controller \
+            --certificate-github-workflow-repository "$REPOSITORY" \
             --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
             --certificate-github-workflow-sha "$SOURCE_SHA" "$digest"
           docker pull "$digest"
