@@ -37,6 +37,8 @@ func lineageFixture(
 	root.Name = "root"
 	root.Generation = 2
 	root.Spec.Name = "Coastal summary"
+	root.Spec.ID = "https://catalog.example.test/products/root"
+	root.Spec.Owner.URL = "https://catalog.example.test/owners/coastal"
 	root.Spec.UI = nil
 	root.Spec.Outputs[0].MediaType = ""
 	root.Status.Conditions = []metav1.Condition{
@@ -111,6 +113,8 @@ func TestLineageWorkspace(t *testing.T) {
 		MustNavigate(server.URL + "?product=products%2Froot").
 		MustWaitLoad()
 	page.MustElement("#interaction-title").MustWait(`()=>this.textContent==="Coastal summary"`)
+	// Inspection must keep working when the optional presentation runtime is absent.
+	page.MustEval(`()=>{delete window.DataProductUI;}`)
 	t.Log("selected root")
 	if calls.Load() != 0 {
 		t.Fatal("trace was fetched without a user action")

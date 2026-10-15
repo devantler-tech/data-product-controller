@@ -29,7 +29,7 @@ func TestUIUpgrade(t *testing.T) {
 		scripts           []string
 		handler           http.Handler
 	}{
-		{"registry", "/", "registry.css", []string{"registry.js", "ui-contract.js"}, registry.NewHandler(reader)},
+		{"registry", "/", "registry.css", []string{"registry.js", "metadata.js", "descriptor.js", "lineage.js", "ui-contract.js"}, registry.NewHandler(reader)},
 		{"sample", "/ui", "product.css", []string{"product.js"}, demoproduct.NewHandler()},
 	} {
 		t.Run(test.name, func(t *testing.T) {

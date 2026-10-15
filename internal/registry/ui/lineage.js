@@ -23,7 +23,7 @@ window.DataProductLineage = (() => {
   const textValid = value => typeof value === "string" && new TextEncoder().encode(value).length <= 16384;
   /** Public identities and support links share the portable descriptor's offline URL profile. */
   const urlValid = value => {
-    try { DataProductUI.validateURL(value); return true; } catch { return false; }
+    try { DataProductMetadata.validateURL(value); return true; } catch { return false; }
   };
   const identityValid = value => textValid(value) &&
     (/^urn:[A-Za-z0-9][A-Za-z0-9:._-]+$/.test(value) || urlValid(value));

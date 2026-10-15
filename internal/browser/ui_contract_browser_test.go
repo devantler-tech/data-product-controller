@@ -22,6 +22,47 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+// TestStandaloneCompatibilityScript preserves existing hosts that load only the public runtime asset.
+func TestStandaloneCompatibilityScript(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := datav1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	reader := fake.NewClientBuilder().WithScheme(scheme).Build()
+	for _, tc := range []struct {
+		name, script string
+		handler      http.Handler
+	}{
+		{"kit", "/ui-contract.js", web.KitHandler(func() bool { return true })},
+		{"registry", "/assets/ui-contract.js", registry.NewHandler(reader)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			host := httptest.NewTLSServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.URL.Path == "/blank" {
+						w.Header().Set("Content-Type", "text/html")
+						_, _ = w.Write([]byte("<!doctype html><title>Independent host</title>"))
+						return
+					}
+					tc.handler.ServeHTTP(w, r)
+				}),
+			)
+			defer host.Close()
+			page := contractBrowser(
+				t,
+			).MustPage().
+				Timeout(15 * time.Second).
+				MustNavigate(host.URL + "/blank").
+				MustWaitLoad()
+			defer page.MustClose()
+			if !page.MustEval(`async src=>{await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src;script.onload=resolve;script.onerror=reject;document.head.append(script);});if(typeof DataProductUI==='undefined')return false;const manifest={url:'https://publisher.example.test/ui',title:'Surface',contract:{apiVersion:'data-product-ui/v1',hostOrigins:[location.origin],capabilities:['status']}};return Object.isFrozen(DataProductUI)&&['validateMetadata','validate','mount','validateURL'].every(name=>typeof DataProductUI[name]==='function')&&DataProductUI.validate(manifest,location.origin).title==='Surface';}`, tc.script).
+				Bool() {
+				t.Fatal("single-script host lost the public compatibility exports")
+			}
+		})
+	}
+}
+
 // TestLegacyKitOwnsProductInteraction keeps protocol/query recovery in the independent compatibility host.
 func TestLegacyKitOwnsProductInteraction(t *testing.T) {
 	kit := httptest.NewTLSServer(web.KitHandler(func() bool { return true }))

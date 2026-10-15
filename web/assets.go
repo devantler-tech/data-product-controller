@@ -35,7 +35,7 @@ type KitOptions struct {
 
 // KitHandlerWithOptions enables offline descriptor handoff without introducing registry or network access.
 func KitHandlerWithOptions(options KitOptions) http.Handler {
-	files := http.FileServerFS(Assets)
+	files := http.FileServerFS(CompatibilityAssets)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		publisher := options.PublisherEnabled != nil && options.PublisherEnabled()
 		contract := options.ContractEnabled != nil && options.ContractEnabled()
@@ -47,9 +47,9 @@ func KitHandlerWithOptions(options KitOptions) http.Handler {
 			"/publisher.js",
 			"/preflight-report.js":
 			reportAsset = true
-		case "/ui-contract.js", "/descriptor.js":
+		case "/metadata.js", "/descriptor.js":
 			sharedAsset = true
-		case "/", "/index.html", "/kit.css", "/kit.js":
+		case "/", "/index.html", "/kit.css", "/kit.js", "/ui-contract.js":
 			kitAsset = true
 		}
 		publisherRoot := publisher && !contract &&
