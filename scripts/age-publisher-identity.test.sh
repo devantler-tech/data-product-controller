@@ -112,4 +112,68 @@ for step in 0 1; do
   STEP=$step yq -e '.jobs.publish.steps[env(STEP)].env.REPOSITORY == "${{ github.repository }}" and
     .jobs.publish.steps[env(STEP)].env.REPOSITORY_ID == "${{ github.repository_id }}"' "$publisher" >/dev/null
 done
+
+# Run the documented independent command through rejecting signer/registry boundaries.
+awk '/^```bash$/{copy=1; next} copy && /^```$/{exit} copy{print}' \
+  "$repo_root/docs/postgresql-age-image.md" >"$scratch/verify.sh"
+cat >"$scratch/bin/cosign" <<'VERIFIER'
+#!/usr/bin/env bash
+set -euo pipefail
+touch "$FIXTURE_SIGNER"
+printf '%s\n' "$@" | cmp - "$FIXTURE_EXPECTED"
+touch "$FIXTURE_VERIFIED"
+VERIFIER
+cat >"$scratch/bin/docker" <<'REGISTRY'
+#!/usr/bin/env bash
+set -euo pipefail
+touch "$FIXTURE_REGISTRY"
+if [[ $1 == pull && $2 == "$AGE_IMAGE" && $# == 2 ]]; then exit 0; fi
+if [[ $1 == image && $2 == inspect && $3 == "$AGE_IMAGE" && $# == 5 ]]; then
+  printf '%s\n' "$SOURCE_SHA"
+  exit 0
+fi
+exit 1
+REGISTRY
+chmod +x "$scratch/bin/cosign" "$scratch/bin/docker"
+
+# verify_example binds the exact documented filters; mixed identities must stop before a pull.
+verify_example() {
+  local wanted=$1 repository=$2 expected_repository=$3 result=0
+  local image
+  image="ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:$(printf '%064d' 0)"
+  printf '%s\n' verify \
+    --certificate-identity "https://github.com/$expected_repository/.github/workflows/publish-age.yaml@$pin" \
+    --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+    --certificate-github-workflow-repository "$expected_repository" \
+    --certificate-github-workflow-ref refs/tags/v5.0.0 \
+    --certificate-github-workflow-sha "$pin" "$image" >"$scratch/expected"
+  rm -f "$scratch/signer" "$scratch/registry" "$scratch/verified"
+  env -i PATH="$scratch/bin:$PATH" RELEASE_REPOSITORY="$repository" AGE_IMAGE="$image" \
+    RELEASE_TAG=v5.0.0 SOURCE_SHA="$pin" PUBLISHER_SHA="$pin" \
+    FIXTURE_SIGNER="$scratch/signer" FIXTURE_REGISTRY="$scratch/registry" \
+    FIXTURE_VERIFIED="$scratch/verified" \
+    FIXTURE_EXPECTED="$scratch/expected" /bin/bash "$scratch/verify.sh" \
+    >"$scratch/stdout" 2>"$scratch/stderr" || result=$?
+  if [[ $wanted == accept ]]; then
+    [[ $result == 0 && -f $scratch/verified && -f $scratch/registry ]] || {
+      echo "AGE documented verification rejected permitted repository: $repository" >&2
+      exit 1
+    }
+  else
+    [[ $result != 0 && ! -e $scratch/registry ]] || {
+      echo "AGE documented verification continued after identity rejection: $repository" >&2
+      exit 1
+    }
+    if [[ $wanted == source && -e $scratch/signer ]]; then
+      echo "AGE documented verification contacted signer for unsupported repository" >&2
+      exit 1
+    fi
+  fi
+}
+verify_example accept "$original" "$original"
+verify_example accept "$canonical" "$canonical"
+verify_example reject "$original" "$canonical"
+verify_example reject "$canonical" "$original"
+verify_example source example/fork "$original"
+verify_example source '' "$original"
 printf '%s\n' 'PASS: actual AGE publisher steps reject foreign callers and mismatched or incomplete issuer evidence without identity output'
