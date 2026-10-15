@@ -46,7 +46,10 @@ owner's reconciliation separately from content publication.
 Configure the Pages custom domain before DNS. The DNS target is a DNS-only CNAME
 from `khoist.devantler.tech` to `devantler-tech.github.io`. The
 [platform ExternalDNS integration](https://github.com/devantler-tech/platform/issues/4939)
-owns this record through GitOps. Its admission boundary must be deployed and
+reconciles `deploy/documentation/` from this repository's signed manifest artifact
+through a product-scoped tenant identity. The product owns the DNS declaration;
+the platform owns the tenant registration and shared writer. Its admission
+boundary must be deployed and
 verified before CRD discovery is enabled on the existing writer. Keep the current
 TXT ownership, zone filters and routed-service discovery. Do not create a second
 DNS writer or change the shared Gateway's target for this static site.

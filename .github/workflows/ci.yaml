@@ -96,6 +96,9 @@ jobs:
           PUBLISHER_PREFLIGHT_ENABLED: "true"
         run: go run ./cmd/product-check --file website/public/examples/harbour-product.yaml
 
+      - name: Render the tenant-owned documentation DNS declaration
+        run: kubectl kustomize deploy/documentation
+
       - name: Run Go tests
         run: go test -race -count=1 ./...
 
