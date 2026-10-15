@@ -39,6 +39,15 @@ three configured states, disabled compatibility routes, process health and grace
 termination as the image's nonroot user with a read-only root filesystem. The
 legacy ui-kit smoke remains separate while deployments migrate.
 
+The lifecycle catalog phase also installs two synthetic products, captures the
+actual enabled controller catalog through its explicit disposable context, and
+feeds a signed-release export into the independent offline EDC 0.18.1 importer.
+The bounded runner separates networked dependency resolution, offline compilation
+and offline import using one immutable official toolchain. An independent oracle
+and corruption controls measure the typed distribution identity loss without
+claiming full interoperability. See the [consumer fixture](../tests/dataspace/edc/README.md)
+for the artifact hashes, isolation and limits retained in its receipt.
+
 The harness does not use KSail's `--ttl`: that mode keeps the create command in the
 foreground until automatic destruction, which would prevent the assertions from
 running. Hosted-runner disposal is the backstop for uncatchable termination in CI;

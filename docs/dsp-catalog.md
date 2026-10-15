@@ -138,6 +138,15 @@ After publication, the release workflow verifies the image signature against the
 pinned publisher and this repository's exact release tag and commit, checks the
 image's source revision, and runs the same smoke test against its immutable digest.
 
+The lifecycle job additionally captures its enabled controller catalog and feeds
+an unchanged export from signed v4.0.0 into Eclipse EDC Connector 0.18.1's real
+JSON-LD and DSP/ODRL transformers. An independent oracle compares identities,
+policies, metadata, formats and service links. Its receipt explicitly records
+`typed-distribution-id` loss: EDC's typed distribution model cannot retain output
+identities, even though expanded JSON-LD retains them. This checkpoint measures
+that incompatibility; it does not establish negotiation, transfer, enforcement
+or production adoption. See the [independent consumer fixture](../tests/dataspace/edc/README.md).
+
 [ADR 0009](adr/0009-offline-dsp-catalog-export.md) records the design.
 [Adoption and flag retirement #126](https://github.com/devantler-tech/data-product-controller/issues/126)
 has an owner and a review on **2026-10-30**. Enabling or removing the flag requires

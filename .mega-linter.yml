@@ -19,6 +19,13 @@ PRE_COMMANDS:
     output_variables: [GOTOOLCHAIN]
     run_before_linters: true
     continue_if_failed: false
+  # Resolve the locked Java graph once. Parallel cold POM lookups hit Maven
+  # Central's shared-runner IP limit; failed preparation must fail the job.
+  - command: MAVEN_HOME=$(bash scripts/prepare-edc-scan.sh) && export MAVEN_HOME
+    cwd: workspace
+    output_variables: [MAVEN_HOME]
+    run_before_linters: true
+    continue_if_failed: false
 
 DISABLE_LINTERS:
   # MegaLinter's Go flavor pins its own toolchain and runs it with GOTOOLCHAIN=local, so a
