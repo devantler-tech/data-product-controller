@@ -94,7 +94,11 @@ func publisherContractReport(
 		}
 		readers = append(readers, strings.NewReader(string(encoded)))
 	}
-	result := preflight.CheckBundle(t.Context(), readers, "")
+	check := preflight.CheckBundle
+	if uiURL == "" {
+		check = preflight.CheckAPIOnlyBundle
+	}
+	result := check(t.Context(), readers, "")
 	if result.Complete == cycle || (!cycle && !result.Valid) {
 		t.Fatalf("unexpected evaluator fixture: %+v", result)
 	}

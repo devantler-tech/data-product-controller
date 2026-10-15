@@ -3,6 +3,7 @@ package preflight
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -79,7 +80,12 @@ func TestIndependentPublisherReportReader(t *testing.T) {
 	deleting := product("deleting")
 	now := metav1.Now()
 	deleting.DeletionTimestamp = &now
-	for index, report := range []BundleReport{complete, selected(t, bundle(t, c)), selected(t, "apiVersion: ["), selected(t, bundle(t, many)), selected(t, bundle(t, unicodeTitle)), selected(t, bundle(t, deleting))} {
+	for index, report := range []BundleReport{
+		complete, selected(t, bundle(t, c)), selected(t, "apiVersion: ["), selected(t, bundle(t, many)), selected(t, bundle(t, unicodeTitle)), selected(t, bundle(t, deleting)),
+		CheckAPIOnlyBundle(t.Context(), []io.Reader{strings.NewReader(bundle(t, p, c))}, ""),
+		CheckAPIOnlyBundle(t.Context(), []io.Reader{strings.NewReader(bundle(t, c))}, ""),
+		CheckAPIOnlyBundle(t.Context(), []io.Reader{strings.NewReader(bundle(t, unicodeTitle))}, ""),
+	} {
 		t.Run(fmt.Sprintf("emitted-%d", index), func(t *testing.T) {
 			encoded, err := json.Marshal(report)
 			if err != nil {
