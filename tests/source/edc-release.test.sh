@@ -9,6 +9,15 @@ export EDC_RELEASE_TEST_ROOT=$root EDC_RELEASE_TEST_WORK=$work
 
 # Supply only the external verifier receipt and stop at the first subsequent image request.
 # The actual EDC orchestrator must reject a bad receipt before that observable side effect.
+# Host UID is an independent build prerequisite, not part of the receipt contract.
+# Keep these tests meaningful in both root-owned containers and developer shells.
+cat >"$work/bin/id" <<'EOF'
+#!/usr/bin/env bash
+case "${1:-}" in
+-u|-g) printf '1000\n' ;;
+*) exit 99 ;;
+esac
+EOF
 cat >"$work/bin/timeout" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -42,7 +51,7 @@ while (($#)); do
 done
 exit 99
 EOF
-chmod +x "$work/bin/timeout"
+chmod +x "$work/bin/id" "$work/bin/timeout"
 export PATH="$work/bin:$PATH"
 jq -n '{
  complete:true,tag:"v4.0.0",platform:"linux/amd64",releaseProfile:"data-product-controller",
