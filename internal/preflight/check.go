@@ -98,6 +98,10 @@ func checkSelected(
 		}
 		doc := &documents[index]
 		product := &doc.product
+		apiOnlyUI := apiOnly && product.Spec.UI != nil
+		if apiOnlyUI {
+			report.add(index+1, "InvalidUI", "spec.ui")
+		}
 		if product.Namespace == "" {
 			product.Namespace = namespace
 		}
@@ -140,13 +144,16 @@ func checkSelected(
 			report.addAdmission(index+1, "spec", findings)
 			continue
 		}
+		if apiOnlyUI {
+			continue
+		}
 		key := product.Namespace + "/" + product.Name
 		if names[key] || ids[product.Spec.ID] {
 			report.add(index+1, "IdentityConflict", "metadata")
 			continue
 		}
 		names[key], ids[product.Spec.ID] = true, true
-		if product.Spec.UI != nil && (apiOnly || !registry.ValidPublicationUI(*product.Spec.UI)) {
+		if product.Spec.UI != nil && !registry.ValidPublicationUI(*product.Spec.UI) {
 			report.add(index+1, "InvalidUI", "spec.ui")
 			continue
 		}

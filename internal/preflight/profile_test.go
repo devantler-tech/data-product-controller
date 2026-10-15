@@ -94,3 +94,28 @@ func TestAPIOnlyRejectsLegacyUIWithoutLeakingMetadata(t *testing.T) {
 		}
 	}
 }
+
+// TestAPIOnlyRejectsSchemaInvalidUI preserves both admission findings and the profile remedy.
+func TestAPIOnlyRejectsSchemaInvalidUI(t *testing.T) {
+	for _, url := range []string{"", "http://ui.example.test/PRIVATE_PATH", "PRIVATE_INVALID_URL"} {
+		p := product("invalid-ui")
+		p.Spec.UI = &data.ProductUI{URL: url, Title: "PRIVATE_TITLE"}
+		selection := bundle(t, p)
+		legacy := selected(t, selection)
+		richCode(t, legacy, "InvalidField")
+		r := apiBundle(t, selection)
+		d := richCode(t, r, "InvalidUI")
+		richCode(t, r, "InvalidField")
+		if r.Valid || r.Complete || len(r.Descriptors) != 0 || r.Plan != nil ||
+			d.Path != "/spec/ui" || !strings.Contains(d.Message, "Remove spec.ui") {
+			t.Fatalf("schema-invalid UI lost admission or profile rejection: %+v", r)
+		}
+		encoded, err := json.Marshal(r)
+		if err != nil || strings.Contains(string(encoded), "PRIVATE_") {
+			t.Fatal("schema-invalid UI disclosed submitted metadata")
+		}
+		if err := reportSchema(t).Validate(reportValue(t, r)); err != nil {
+			t.Fatalf("schema-invalid UI report left the existing contract: %v", err)
+		}
+	}
+}
