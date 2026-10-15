@@ -168,6 +168,7 @@ jobs:
           bash scripts/verify-release-artifacts.test.sh
           bash scripts/observe-rollout.test.sh
           bash tests/source/helm-lifecycle.test.sh
+          bash tests/source/edc-release.test.sh
           bash tests/source/suite.test.sh
           bash tests/source/catalog.test.sh
 

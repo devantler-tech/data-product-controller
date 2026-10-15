@@ -8,6 +8,9 @@ ui_free_release_receipt() {
 	[[ -f $receipt && ! -L $receipt && $(wc -c <"$receipt") -le 65536 ]] || return 1
 	jq -se 'length == 1 and (.[0] |
     .complete == true and .tag == "v5.0.0" and .platform == "linux/amd64" and
+    .releaseProfile == "data-product-controller" and
+    .imageReference == ("ghcr.io/devantler-tech/data-product-controller@" + .imageDigest) and
+    .chartReference == ("ghcr.io/devantler-tech/charts/data-product-controller@" + .chartDigest) and
     .sourceSHA == "29b605885064a3b9f24c799a0d7112d3a6d4333b" and
     .publisherSHA == "ea4df9004d4ab43b6c9af5b0c5f55712f7211328" and
     .imageDigest == "sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c" and
@@ -24,7 +27,7 @@ ui_free_rollback_lifecycle() {
 	local candidate_version candidate_image="localhost:5055/data-product-controller@$product_digest"
 	allowance=$(publication_budget)
 	((allowance <= 180)) || allowance=180
-	bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v5.0.0 \
+	bash "$repo_root/scripts/verify-release-artifacts.sh" --profile data-product-controller --tag v5.0.0 \
 		--source-sha 29b605885064a3b9f24c799a0d7112d3a6d4333b \
 		--image-digest sha256:b59ad9e0d5b09e9a3eb8f453646f016c0348cd5877c943d12ff71476fec1498c \
 		--chart-digest sha256:0707d9669f46cde154e4d9f38ef4d47bc4312e663f0e21d12a8afedb6e93e0ea \
@@ -39,7 +42,7 @@ ui_free_rollback_lifecycle() {
 		if [[ $phase == baseline || $phase == rollback ]]; then
 			chart=$release_dir/release-chart.tgz
 			version=5.0.0
-			image="ghcr.io/devantler-tech/data-product-controller@$(jq -er '.imageDigest' "$release_dir/release.json")"
+			image=$(jq -er '.imageReference' "$release_dir/release.json")
 			runtime=$(jq -er '.runtimeDigest' "$release_dir/release.json")
 		else
 			chart=$candidate_chart
