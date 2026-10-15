@@ -15,11 +15,12 @@ compatibility runtime, whose security controls remain required while it exists.
 The OpenFeature flag `ui-contract` defaults off in the controller, demo product,
 and kit. Set `UI_CONTRACT_ENABLED=true` explicitly for a development evaluation.
 The chart exposes `uiContract.enabled: true`. The registry workspace is available
-by default. With routing enabled, the chart declares the catalogue
-origin in the demo manifest and in the demo's separate `UI_HOST_ORIGINS` setting.
+by default. With routing enabled, the chart configures the catalogue
+origin in the demo's `UI_HOST_ORIGINS` setting.
 Use `uiContract.additionalHostOrigins` for independently deployed compatibility
-hosts. The chart includes the registry origin automatically and uses the same
-validated list in both declarations:
+hosts. The chart includes the registry origin automatically in this validated
+workload allowlist; it publishes no `spec.ui` declaration. Supply a separate
+legacy manifest explicitly when evaluating the compatibility kit:
 
 ```yaml
 uiContract:
@@ -217,8 +218,9 @@ product's own allowlist, paste the manifest, choose grants, and select **Validat
 and open**. Keep private keys out of the repository. The demo command is HTTP
 behind an independently managed TLS endpoint; the kit does not terminate TLS for
 the product. When testing the chart's demo in a second host, explicitly configure
-that additional origin through `uiContract.additionalHostOrigins`. For products
-published outside the chart, configure both their manifest and their own deployment.
+that additional origin through `uiContract.additionalHostOrigins` and supply a
+matching legacy manifest to the kit. For independently deployed products, configure
+both their manifest and their own deployment's allowlist.
 
 Editing a manifest or descriptor, replacing its selected file, or changing a grant
 closes the active interface and cancels pending imports. Choose **Validate and open**

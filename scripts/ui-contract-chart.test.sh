@@ -15,15 +15,10 @@ for enabled in false true; do
 			exit 1
 		}
 	done
-	version=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.apiVersion' -)
 	publisher_origins=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "product") | .env[] | select(.name == "UI_HOST_ORIGINS") | .value' -)
 	if [ "$enabled" = true ]; then
-		[ "$version" = data-product-ui/v1 ] || exit 1
-		origins=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.hostOrigins[]' -)
-		[ "$origins" = https://catalog.example ] || exit 1
 		[ "$publisher_origins" = https://catalog.example ] || exit 1
 	else
-		[ "$version" = null ] || exit 1
 		[ -z "$publisher_origins" ] || exit 1
 	fi
 done
@@ -34,16 +29,7 @@ for contract in false true; do
 			flag=$(printf '%s' "$rendered" | yq ea 'select(.kind == "Deployment") | .spec.template.spec.containers[] | select(.name == "'"$container"'") | .env[] | select(.name == "UI_APPEARANCE_ENABLED") | .value' -)
 			[ "$flag" = "$appearance" ] || exit 1
 		done
-		version=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.apiVersion' -)
-		if [ "$contract" = false ]; then
-			[ "$version" = null ] || exit 1
-		elif [ "$appearance" = true ]; then
-			[ "$version" = data-product-ui/v2 ] || exit 1
-			grants=$(printf '%s' "$rendered" | yq ea 'select(.kind == "DataProduct") | .spec.ui.contract.capabilities[]' -)
-			[ "$grants" = "$(printf 'status\nresize\nappearance')" ] || exit 1
-		else
-			[ "$version" = data-product-ui/v1 ] || exit 1
-		fi
+		printf '%s' "$rendered" | yq ea -o=json -I=0 'select(.kind == "DataProduct")' - | jq -e ' .spec | has("ui") | not' >/dev/null
 	done
 done
 if helm template controller "$chart" --set-string uiAppearance.enabled=invalid >/dev/null 2>&1; then

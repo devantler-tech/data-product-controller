@@ -134,6 +134,7 @@ source_secret() {
 		--dry-run=client -o yaml | kube apply -f - >/dev/null
 }
 source "$repo_root/tests/source/helm-lifecycle.sh"
+source "$repo_root/tests/source/chart-publication.sh"
 source "$repo_root/tests/source/source-lifecycle.sh"
 source "$repo_root/tests/source/contract-matrix.sh"
 source "$repo_root/tests/source/connector-matrix.sh"
