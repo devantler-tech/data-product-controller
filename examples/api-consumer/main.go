@@ -269,7 +269,7 @@ func boundedJSON(input io.Reader, limit int64) ([]byte, error) {
 	return data, nil
 }
 
-// uniqueValue rejects duplicate object keys within a shared depth and token budget.
+// uniqueValue rejects duplicate object keys and enforces shared depth and node-count limits.
 func uniqueValue(decoder *json.Decoder, depth int, nodes *int) error {
 	*nodes++
 	if depth > 32 || *nodes > 16384 {
