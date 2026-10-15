@@ -293,6 +293,7 @@ func TestRejectsIncompleteAndInvalidResponses(t *testing.T) {
 	}
 }
 
+// TestCancellationAndTLSFailure proves prompt cancellation and trusted TLS are required.
 func TestCancellationAndTLSFailure(t *testing.T) {
 	for _, phase := range []string{"headers", "body"} {
 		t.Run(phase, func(t *testing.T) {
@@ -366,6 +367,7 @@ type bodyReadTransport struct {
 	started chan struct{}
 }
 
+// RoundTrip exposes the first response-body read so cancellation can target that phase.
 func (transport bodyReadTransport) RoundTrip(request *http.Request) (*http.Response, error) {
 	response, err := transport.base.RoundTrip(request)
 	if err == nil {
@@ -380,11 +382,13 @@ type observedBody struct {
 	once    sync.Once
 }
 
+// Read signals once before delegating to the real response body.
 func (body *observedBody) Read(output []byte) (int, error) {
 	body.once.Do(func() { close(body.started) })
 	return body.ReadCloser.Read(output)
 }
 
+// Read returns valid bytes alongside an error to model an incomplete descriptor read.
 func (reader *partialReader) Read(out []byte) (int, error) {
 	n := copy(out, reader.data)
 	reader.data = reader.data[n:]
@@ -394,6 +398,7 @@ func (reader *partialReader) Read(out []byte) (int, error) {
 	return n, nil
 }
 
+// TestPartialDescriptorReadPublishesNothing rejects failed reads and trailing or oversized data.
 func TestPartialDescriptorReadPublishesNothing(t *testing.T) {
 	endpoint := "https://api.example/api/observations"
 	data := exportedDescriptor(t, endpoint)
@@ -434,6 +439,7 @@ func TestRejectsNonPublicFieldNames(t *testing.T) {
 	}
 }
 
+// TestRejectsAmbiguousEndpointAuthorities refuses alternate host and invalid port spellings.
 func TestRejectsAmbiguousEndpointAuthorities(t *testing.T) {
 	valid := "https://api.example/api/observations"
 	data := string(exportedDescriptor(t, valid))

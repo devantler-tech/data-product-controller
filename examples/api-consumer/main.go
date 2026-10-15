@@ -269,6 +269,7 @@ func boundedJSON(input io.Reader, limit int64) ([]byte, error) {
 	return data, nil
 }
 
+// uniqueValue rejects duplicate object keys within a shared depth and token budget.
 func uniqueValue(decoder *json.Decoder, depth int, nodes *int) error {
 	*nodes++
 	if depth > 32 || *nodes > 16384 {
@@ -307,10 +308,12 @@ func uniqueValue(decoder *json.Decoder, depth int, nodes *int) error {
 	return nil
 }
 
+// main returns the command result as the process exit status.
 func main() {
 	os.Exit(command())
 }
 
+// command owns signal cancellation and a proxy-free transport for this invocation.
 func command() int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
