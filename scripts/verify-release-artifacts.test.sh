@@ -13,7 +13,15 @@ version: 1.2.3
 appVersion: 1.2.3
 EOF
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
+yq -i '.name="khoist"' "$work/chart/Chart.yaml"
+"$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
+yq -i '.name="data-product-controller"' "$work/chart/Chart.yaml"
 export TEST_ARCHIVE="$work/data-product-controller-1.2.3.tgz"
+export TEST_CALLER_REPOSITORY=devantler-tech/data-product-controller
+export TEST_IMAGE_REPOSITORY=ghcr.io/devantler-tech/data-product-controller
+export TEST_CHART_REPOSITORY=ghcr.io/devantler-tech/charts/data-product-controller
+export TEST_CHART_SIGNER=https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3
+export TEST_OPERATION_LOG="$work/operations"
 export TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export TEST_IMAGE_DIGEST=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 export TEST_CHART_DIGEST=sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -22,33 +30,36 @@ export TEST_PULL_MARKER="$work/pulled-platform"
 cat >"$work/bin/cosign" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+printf 'cosign %s\n' "$*" >>"$TEST_OPERATION_LOG"
 [[ $1 == verify ]] || exit 90
 args=" $* "
 if [[ ${EMPTY_SIGNATURE:-false} == true ]]; then exit 0; fi
 if [[ ${MULTI_SIGNATURE:-false} == true ]]; then printf '[{"critical":{"image":{"docker-manifest-digest":"sha256:wrong"}}}]\n'; fi
 [[ $args == *' --certificate-oidc-issuer https://token.actions.githubusercontent.com '* &&
-   $args == *' --certificate-github-workflow-repository devantler-tech/data-product-controller '* &&
+   $args == *" --certificate-github-workflow-repository $TEST_CALLER_REPOSITORY "* &&
    $args == *' --certificate-github-workflow-ref refs/tags/v1.2.3 '* &&
    $args == *" --certificate-github-workflow-sha $TEST_SHA "* ]] || exit 91
 last=${!#}
 case "$last" in
-"ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST")
+"$TEST_IMAGE_REPOSITORY@$TEST_IMAGE_DIGEST")
  [[ $args == *' --certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb '* ]] || exit 92
  [[ ${IMAGE_VERIFY_EXIT:-0} == 0 ]] || exit "$IMAGE_VERIFY_EXIT"
  printf '[{"critical":{"image":{"docker-manifest-digest":"%s"}}}]\n' "$TEST_IMAGE_DIGEST" ;;
-"ghcr.io/devantler-tech/charts/data-product-controller@$TEST_CHART_DIGEST")
- [[ $args == *' --certificate-identity https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3 '* ]] || exit 93
+"$TEST_CHART_REPOSITORY@$TEST_CHART_DIGEST")
+ [[ $args == *" --certificate-identity $TEST_CHART_SIGNER "* ]] || exit 93
  [[ ${CHART_VERIFY_EXIT:-0} == 0 ]] || exit "$CHART_VERIFY_EXIT"
  printf '[{"critical":{"image":{"docker-manifest-digest":"%s"}}}]\n' "$TEST_CHART_DIGEST" ;;
 *) exit 94 ;;
 esac
+if [[ ${PARTIAL_SIGNATURE:-false} == true ]]; then exit 42; fi
 EOF
 cat >"$work/bin/helm" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+printf 'helm %s\n' "$*" >>"$TEST_OPERATION_LOG"
 case "$1" in
 pull)
- [[ $2 == "oci://ghcr.io/devantler-tech/charts/data-product-controller@$TEST_CHART_DIGEST" && $3 == --destination ]] || exit 90
+ [[ $2 == "oci://$TEST_CHART_REPOSITORY@$TEST_CHART_DIGEST" && $3 == --destination ]] || exit 90
  [[ ${PULL_EXIT:-0} == 0 ]] || exit "$PULL_EXIT"
  cp "$TEST_ARCHIVE" "$4/data-product-controller-1.2.3.tgz" ;;
 show) exec "$REAL_HELM" "$@" ;;
@@ -58,14 +69,15 @@ EOF
 cat >"$work/bin/docker" <<'EOF'
 #!/usr/bin/env bash
 set -eu
+printf 'docker %s\n' "$*" >>"$TEST_OPERATION_LOG"
 case "$1 $2" in
 'pull --platform')
  [[ $3 == linux/amd64 || $3 == linux/arm64 ]] || exit 93
- [[ $4 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" ]] || exit 94
+ [[ $4 == "$TEST_IMAGE_REPOSITORY@$TEST_IMAGE_DIGEST" ]] || exit 94
  [[ ${IMAGE_PULL_EXIT:-0} == 0 ]] || exit "$IMAGE_PULL_EXIT"
  printf '%s\n' "$3" >"$TEST_PULL_MARKER" ;;
 'image inspect')
- [[ $3 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" && $4 == --format ]] || exit 90
+ [[ $3 == "$TEST_IMAGE_REPOSITORY@$TEST_IMAGE_DIGEST" && $4 == --format ]] || exit 90
  [[ -f $TEST_PULL_MARKER ]] || exit 95
  case "$5" in
  '{{index .Config.Labels "org.opencontainers.image.revision"}}') printf '%s\n' "${REVISION:-$TEST_SHA}" ;;
@@ -75,7 +87,7 @@ case "$1 $2" in
  *) exit 96 ;;
  esac ;;
 'buildx imagetools')
- [[ $3 == inspect && $4 == --raw && $5 == "ghcr.io/devantler-tech/data-product-controller@$TEST_IMAGE_DIGEST" ]] || exit 91
+ [[ $3 == inspect && $4 == --raw && $5 == "$TEST_IMAGE_REPOSITORY@$TEST_IMAGE_DIGEST" ]] || exit 91
  if [[ ${MANIFEST_EMPTY:-false} == true ]]; then printf '{}\n'; exit; fi
  case "${MANIFEST_KIND:-oci-index}" in
  oci-index) media_type=application/vnd.oci.image.index.v1+json ;;
@@ -119,6 +131,7 @@ base=(--tag v1.2.3 --source-sha "$TEST_SHA" --image-digest "$TEST_IMAGE_DIGEST"
 run_verify() {
 	rm -rf "$work/result"
 	rm -f "$TEST_PULL_MARKER"
+	rm -f "$TEST_OPERATION_LOG"
 	bash "$root/scripts/verify-release-artifacts.sh" "${base[@]}" --output-dir "$work/result" "$@" >"$work/output" 2>"$work/error"
 }
 # Report the failed assertion and the verifier's diagnostic output.
@@ -209,6 +222,64 @@ reject --chart-digest latest
 reject --platform linux/arm64
 reject --timeout 0
 reject --unknown unsafe
+# Profiles select complete fixed identity tuples; the verifier must never try the other tuple.
+for profile in data-product-controller khoist; do
+	if [[ $profile == khoist ]]; then
+		export TEST_CALLER_REPOSITORY=devantler-tech/khoist
+		export TEST_IMAGE_REPOSITORY=ghcr.io/devantler-tech/khoist
+		export TEST_CHART_REPOSITORY=ghcr.io/devantler-tech/charts/khoist
+		export TEST_CHART_SIGNER=https://github.com/devantler-tech/khoist/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3
+		other=data-product-controller
+	else
+		other=khoist
+	fi
+	export TEST_ARCHIVE="$work/$profile-1.2.3.tgz"
+	run_verify --profile "$profile" || fail "complete $profile profile rejected"
+	jq -e --arg profile "$profile" --arg image "$TEST_IMAGE_REPOSITORY@$TEST_IMAGE_DIGEST" \
+		--arg chart "$TEST_CHART_REPOSITORY@$TEST_CHART_DIGEST" \
+		'.complete == true and .releaseProfile == $profile and .imageReference == $image and .chartReference == $chart' \
+		"$work/result/release.json" >/dev/null || fail 'receipt omitted the selected artifact profile'
+	for boundary in TEST_CALLER_REPOSITORY TEST_IMAGE_REPOSITORY TEST_CHART_REPOSITORY TEST_CHART_SIGNER; do
+		saved=${!boundary}
+		case "$boundary" in
+		TEST_CALLER_REPOSITORY) export "$boundary=devantler-tech/$other" ;;
+		TEST_IMAGE_REPOSITORY) export "$boundary=ghcr.io/devantler-tech/$other" ;;
+		TEST_CHART_REPOSITORY) export "$boundary=ghcr.io/devantler-tech/charts/$other" ;;
+		TEST_CHART_SIGNER) export "$boundary=https://github.com/devantler-tech/$other/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3" ;;
+		esac
+		reject --profile "$profile"
+		export "$boundary=$saved"
+	done
+	export TEST_ARCHIVE="$work/$other-1.2.3.tgz"
+	reject --profile "$profile"
+	export TEST_ARCHIVE="$work/$profile-1.2.3.tgz"
+	for fault in IMAGE_VERIFY_EXIT CHART_VERIFY_EXIT IMAGE_PULL_EXIT PULL_EXIT TIMEOUT_EXIT; do
+		export "$fault=42"
+		reject --profile "$profile"
+		if [[ -f $TEST_OPERATION_LOG ]] && grep -F "devantler-tech/$other" "$TEST_OPERATION_LOG"; then
+			fail 'failed profile silently tried the other identity'
+		fi
+		unset "$fault"
+	done
+	export PARTIAL_SIGNATURE=true
+	reject --profile "$profile"
+	jq -e '.reason == "image-unverified"' "$work/output" >/dev/null || fail 'partial signer failure was hidden'
+	unset PARTIAL_SIGNATURE
+done
+for profile in foreign '' 'khoist/../data-product-controller'; do
+	reject --profile "$profile"
+	[[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] || fail 'unknown profile reached an external operation'
+done
+reject --profile khoist --profile data-product-controller
+[[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] || fail 'ambiguous profile reached an external operation'
+# An omitted selection must keep the original historical profile.
+export TEST_CALLER_REPOSITORY=devantler-tech/data-product-controller
+export TEST_IMAGE_REPOSITORY=ghcr.io/devantler-tech/data-product-controller
+export TEST_CHART_REPOSITORY=ghcr.io/devantler-tech/charts/data-product-controller
+export TEST_CHART_SIGNER=https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3
+export TEST_ARCHIVE="$work/data-product-controller-1.2.3.tgz"
+run_verify || fail 'default historical identity changed'
+jq -e '.releaseProfile == "data-product-controller"' "$work/result/release.json" >/dev/null || fail 'default profile was not recorded'
 sed 's/1.2.3/1.2.4/g' "$work/chart/Chart.yaml" >"$work/chart/next.yaml"
 mv "$work/chart/next.yaml" "$work/chart/Chart.yaml"
 "$REAL_HELM" package "$work/chart" --destination "$work" >/dev/null
