@@ -2,6 +2,8 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
+<img src="website/src/assets/khoist-harbour.png" width="720" alt="An orange harbour crane hoists connected data-product blocks above the water.">
+
 A data product is a dataset or data service that a team publishes for others to use, together with
 a description of who owns it, how to query it and what it depends on. This project lets teams
 describe their data products as Kubernetes resources. A controller checks that each product's
@@ -12,7 +14,7 @@ The controller handles descriptions only. Product data and credentials stay with
 owns the product.
 
 - **Try it:** [run the example product locally](#try-it-locally), with no cluster and no credentials.
-- **Documentation:** [KHoist user guides](website/README.md) cover first use, publishing and consuming APIs, installation and troubleshooting.
+- **Documentation:** [KHoist user guides](https://khoist.devantler.tech/) cover first use, publishing and consuming APIs, installation and troubleshooting.
 - **Use it:** [install the controller on a cluster](#install-on-a-cluster).
 - **Integrate it:** [run an independent API consumer](docs/api-consumer.md).
 - **Change it:** read the [contribution guide](CONTRIBUTING.md).

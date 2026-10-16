@@ -9,7 +9,11 @@ export default defineConfig({
       title: "KHoist",
       description:
         "Publish, discover and compose data products through standard APIs.",
-      favicon: "/favicon.svg",
+      favicon: "/brand/khoist-mark.svg",
+      logo: {
+        src: "./src/assets/khoist-mark.svg",
+        replacesTitle: false,
+      },
       social: [
         {
           icon: "github",
