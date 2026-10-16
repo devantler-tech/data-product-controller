@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://khoist.devantler.tech/sitemap-index.xml
