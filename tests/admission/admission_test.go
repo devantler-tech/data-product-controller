@@ -46,6 +46,7 @@ type fixture struct {
 	original *extv1.CustomResourceDefinition
 }
 
+// check marks its caller as the failure site when a fixture operation returns an error.
 func check(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
@@ -53,6 +54,7 @@ func check(t *testing.T, err error) {
 	}
 }
 
+// newFixture starts an owned API server from explicit versioned assets and installs the delivered CRD.
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	logf.SetLogger(zap.New())
@@ -150,11 +152,13 @@ func (f *fixture) with(
 	return &child
 }
 
+// set updates one nested fixture field and reports malformed paths through the calling test.
 func set(t *testing.T, p *unstructured.Unstructured, value any, path ...string) {
 	t.Helper()
 	check(t, unstructured.SetNestedField(p.Object, value, path...))
 }
 
+// product builds a disposable declaration with optional legacy UI metadata for admission probes.
 func product(name string, ui bool) *unstructured.Unstructured {
 	p := &unstructured.Unstructured{Object: map[string]any{
 		"apiVersion": "data.devantler.tech/v1alpha1",
@@ -245,6 +249,7 @@ func (f *fixture) seedStatus(name string) {
 	f.assertStored(want)
 }
 
+// rejected requires an Invalid response with the expected field, message fragment and cause type.
 func rejected(err error, field, message string, causeType ...metav1.CauseType) bool {
 	if !apierrors.IsInvalid(err) {
 		return false
@@ -338,6 +343,7 @@ func (f *fixture) uiOwners(name string, wanted ...string) {
 	}
 }
 
+// withoutUI copies a declaration and removes only its legacy UI field.
 func withoutUI(p *unstructured.Unstructured) *unstructured.Unstructured {
 	result := p.DeepCopy()
 	unstructured.RemoveNestedField(result.Object, "spec", "ui")
@@ -364,6 +370,7 @@ func (f *fixture) schema(spec extv1.CustomResourceDefinitionSpec) {
 	}
 }
 
+// candidate copies the delivered schema and attaches the test-only denial rule to its UI field.
 func candidate(original *extv1.CustomResourceDefinition) extv1.CustomResourceDefinitionSpec {
 	copy := original.DeepCopy()
 	spec := copy.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["spec"]
@@ -416,6 +423,7 @@ func (f *fixture) activated(field string) {
 	check(f.t, err)
 }
 
+// TestAPIOnlyAdmissionMigration checks migration operations and retained state on an owned API server.
 func TestAPIOnlyAdmissionMigration(t *testing.T) {
 	f := newFixture(t)
 	legacy := f.create(product("legacy", true))
@@ -702,6 +710,7 @@ func TestAPIOnlyAdmissionMigration(t *testing.T) {
 	})
 }
 
+// TestOfflinePublisherFixtures verifies both report versions accept API-only examples and reject UI previews.
 func TestOfflinePublisherFixtures(t *testing.T) {
 	bundle, err := os.ReadFile("../../docs/examples/composition.yaml")
 	check(t, err)
