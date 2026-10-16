@@ -325,6 +325,8 @@ func TestRequestDeadlineAndConcurrency(t *testing.T) {
 		select {
 		case <-release:
 		case <-r.Context().Done():
+			// A timed-out source must not race cancellation with valid data.
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, `{}`)

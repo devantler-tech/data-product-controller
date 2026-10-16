@@ -14,6 +14,15 @@ the release source revision and repeats the authenticated graph query after pull
 Readback first removes the job's registry login, requiring anonymous artifact and signature access.
 Both its initial build and release readback must pass before the artifact is considered delivered.
 
+The checked-in publisher definition requires repository ID `1350892700` and an
+explicit original or KHoist repository name. Issuer-provided caller claims must
+match the trusted GitHub context, and the called workflow must belong to that
+same repository at an immutable commit. The extracted-step acceptance uses
+synthetic issuer responses; it does not verify real token signatures or artifact
+certificates. Release execution uses the immutable callee selected in
+`.github/workflows/cd.yaml`; controls in another source revision are not evidence
+that the selected callee enforces them.
+
 For the first publication, set this image's package visibility to **Public** in its GitHub
 package settings. Container packages have their own visibility; a public source repository
 does not establish anonymous package access. If the verification fails because the package is
@@ -26,27 +35,35 @@ artifact; controller, manifest and chart publication is skipped. The proof must 
 digest, tagged source and immutable publisher identity before promotion. Normal version tags
 continue to publish the complete release.
 
-For independent verification, obtain the release tag, source commit and publisher commit from
-the tagged repository source. The publisher commit is the full SHA after `@` in
-`.github/workflows/cd.yaml`'s `publish-age` job. Require all three expected values; accepting any
-signer or any repository release is insufficient.
+For independent verification, obtain the caller repository name, release tag, source commit and
+publisher commit from the tagged repository source. Choose the repository name used at that
+release; do not substitute its current name for a historical certificate. The publisher commit
+is the full SHA after `@` in `.github/workflows/cd.yaml`'s `publish-age` job. Require all four
+expected values; accepting any signer or any repository release is insufficient. The AGE image
+family remains unchanged for both allowed caller names.
 
 ```bash
+set -euo pipefail
+: "${RELEASE_REPOSITORY:?Set the exact caller repository at the tagged release}"
 : "${AGE_IMAGE:?Set the published repository@sha256 digest}"
 : "${RELEASE_TAG:?Set the exact v-prefixed release tag}"
 : "${SOURCE_SHA:?Set its full source commit}"
 : "${PUBLISHER_SHA:?Set the full immutable publish-age workflow commit}"
-[[ "$AGE_IMAGE" =~ ^ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:[a-f0-9]{64}$ ]]
-[[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$PUBLISHER_SHA" =~ ^[a-f0-9]{40}$ ]]
-[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]
+case "$RELEASE_REPOSITORY" in
+  devantler-tech/data-product-controller|devantler-tech/khoist) ;;
+  *) exit 1 ;;
+esac
+[[ "$AGE_IMAGE" =~ ^ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:[a-f0-9]{64}$ ]] || exit 1
+[[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$PUBLISHER_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || exit 1
 cosign verify \
-  --certificate-identity "https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@$PUBLISHER_SHA" \
+  --certificate-identity "https://github.com/$RELEASE_REPOSITORY/.github/workflows/publish-age.yaml@$PUBLISHER_SHA" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  --certificate-github-workflow-repository devantler-tech/data-product-controller \
+  --certificate-github-workflow-repository "$RELEASE_REPOSITORY" \
   --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
   --certificate-github-workflow-sha "$SOURCE_SHA" "$AGE_IMAGE"
 docker pull "$AGE_IMAGE"
-[[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]]
+[[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]] || exit 1
 ```
 
 ## CloudNativePG configuration
