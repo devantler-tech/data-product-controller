@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+  <title>KHoist — a crane hoisting connected data products</title>
+  <rect x="2" y="2" width="92" height="92" rx="20" fill="#101c2a"/>
+  <g stroke="#f97316" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 78h24M26 78V34l45-17M26 34v18l23-27"/>
+  </g>
+  <g stroke="#fff8ee" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M71 20v22m0 0v4a5 5 0 0 1-10 0M66 51 55 61m11-10 12 10M55 68l11 14 12-14"/>
+  </g>
+  <rect x="47" y="59" width="17" height="17" rx="3" fill="#fff8ee"/>
+  <rect x="70" y="59" width="17" height="17" rx="3" fill="#f97316"/>
+  <rect x="59" y="77" width="15" height="12" rx="3" fill="#fff8ee"/>
+  <path d="M52 65h7m-7 5h4m19-5h7m-7 5h4m-15 13h5" stroke="#101c2a" stroke-width="2" stroke-linecap="round"/>
+</svg>

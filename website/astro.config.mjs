@@ -11,7 +11,7 @@ export default defineConfig({
         "Publish, discover and compose data products through standard APIs.",
       favicon: "/brand/khoist-mark.svg",
       logo: {
-        src: "./public/brand/khoist-mark.svg",
+        src: "./src/assets/khoist-mark.svg",
         replacesTitle: false,
       },
       social: [

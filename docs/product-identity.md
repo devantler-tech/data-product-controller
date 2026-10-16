@@ -10,9 +10,11 @@ not an architecture diagram: the controller handles metadata, not product data.
 - [Harbour illustration](../website/src/assets/khoist-harbour.png): the original
   landscape artwork for the repository introduction and documentation overview.
   Keep the complete crane, suspended products and connecting ropes visible.
-- [Compact mark](../website/public/brand/khoist-mark.svg): an editable vector for
+- [Compact mark](../website/src/assets/khoist-mark.svg): an editable vector for
   the documentation header, favicon and small product identifiers. Its ink
   background keeps the orange crane and white blocks legible in either theme.
+  Keep the public favicon copy at `website/public/brand/khoist-mark.svg`
+  identical to this source.
 
 Keep the product name as **KHoist** in surrounding text rather than baking it into
 the illustration. Use the compact mark at small sizes; do not reduce the detailed
