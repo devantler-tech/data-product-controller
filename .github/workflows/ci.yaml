@@ -102,6 +102,33 @@ jobs:
       - name: Run Go tests
         run: go test -race -count=1 ./...
 
+      - name: Verify API-only admission on owned API servers
+        run: |
+          set -euo pipefail
+          assets=$(mktemp -d)
+          trap 'rm -rf "$assets"' EXIT
+          for version in 1.34.0 1.37.0; do
+            case "$version" in
+              1.34.0)
+                checksum=9c45e40aa56971b105e596ebb3e84af6742e8709cc0523733baf8d9bb725e69c
+                archive_url=https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.34.0/envtest-v1.34.0-linux-amd64.tar.gz
+                ;;
+              1.37.0)
+                checksum=f03faedfc68d2a78cee5cb02618bb44e7f67044f4c5fc957f72d3307fda61a9c
+                archive_url=https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.37.0/envtest-v1.37.0-linux-amd64.tar.gz
+                ;;
+            esac
+            curl --fail --location --proto '=https' --proto-redir '=https' --max-time 120 \
+              --output "$assets/server.tar.gz" \
+              "$archive_url"
+            printf '%s  %s\n' "$checksum" "$assets/server.tar.gz" | sha256sum --check -
+            mkdir "$assets/$version"
+            tar -xzf "$assets/server.tar.gz" -C "$assets/$version"
+            ADMISSION_TEST_ASSETS="$assets/$version/controller-tools/envtest" \
+              ADMISSION_TEST_VERSION="v$version" \
+              timeout --kill-after=10s 660s go test -tags=admission -count=1 -timeout=600s -v ./tests/admission
+          done
+
       - name: Build all Go packages
         run: go build ./...
 
@@ -123,6 +150,7 @@ jobs:
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
         with:
           version: v2.10.1
+          args: --build-tags=admission
 
   browser:
     name: Validate sandboxed product interaction
