@@ -52,6 +52,29 @@ h3,
   font-weight: 700;
 }
 
+.site-title img {
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+.khoist-intro {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.khoist-intro img {
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+@media (min-width: 50rem) {
+  .khoist-intro {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  }
+}
+
 .header {
   border-top: 3px solid #f97316;
 }

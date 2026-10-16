@@ -1,0 +1,28 @@
+---
+import { Image } from "astro:assets";
+import harbour from "../assets/khoist-harbour.png";
+---
+
+<div class="khoist-intro">
+  <div>
+    <p>
+      KHoist describes data products as Kubernetes resources. It records who owns a
+      product, the APIs it exposes and the products it depends on. A controller
+      reports readiness; a read-only registry makes those descriptions available
+      to people and applications.
+    </p>
+    <p>
+      Your services keep their data, credentials and query APIs. Your applications
+      own their user interfaces and access decisions.
+    </p>
+  </div>
+  <Image
+    src={harbour}
+    alt="An orange harbour crane hoists connected data-product blocks above the water."
+    width={576}
+    widths={[360, 576, 768]}
+    sizes="(min-width: 70rem) 22rem, (min-width: 50rem) 18rem, calc(100vw - 3rem)"
+    loading="eager"
+    format="webp"
+  />
+</div>
