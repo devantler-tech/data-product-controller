@@ -12,9 +12,14 @@ fail() {
 }
 tag='' source_sha='' image_digest='' chart_digest='' publisher_sha='' platform='' output_dir=''
 budget=180
+profile=data-product-controller profile_selected=false
 while [[ $# -gt 0 ]]; do
 	[[ $# -ge 2 ]] || fail configuration
 	case "$1" in
+	--profile)
+		[[ $profile_selected == false && -n $2 ]] || fail configuration
+		profile=$2 profile_selected=true
+		;;
 	--tag) tag=$2 ;;
 	--source-sha) source_sha=$2 ;;
 	--image-digest) image_digest=$2 ;;
@@ -27,6 +32,10 @@ while [[ $# -gt 0 ]]; do
 	esac
 	shift 2
 done
+case "$profile" in
+data-product-controller | khoist) ;;
+*) fail configuration ;;
+esac
 [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && $source_sha =~ ^[a-f0-9]{40}$ &&
 	$publisher_sha =~ ^[a-f0-9]{40}$ && $image_digest =~ ^sha256:[a-f0-9]{64}$ &&
 	$chart_digest =~ ^sha256:[a-f0-9]{64}$ && $platform =~ ^linux/(amd64|arm64)$ &&
@@ -50,11 +59,12 @@ bounded() {
 	((remaining > 0)) || return 124
 	"$timeout_tool" --signal=TERM --kill-after=5 "${remaining}s" "$@"
 }
-image="ghcr.io/devantler-tech/data-product-controller@$image_digest"
-chart="ghcr.io/devantler-tech/charts/data-product-controller@$chart_digest"
+repository="devantler-tech/$profile"
+image="ghcr.io/$repository@$image_digest"
+chart="ghcr.io/devantler-tech/charts/$profile@$chart_digest"
 issuer=https://token.actions.githubusercontent.com
 caller=(--certificate-oidc-issuer "$issuer"
-	--certificate-github-workflow-repository devantler-tech/data-product-controller
+	--certificate-github-workflow-repository "$repository"
 	--certificate-github-workflow-ref "refs/tags/$tag"
 	--certificate-github-workflow-sha "$source_sha")
 # Require one bounded signature result whose entries all bind the expected digest.
@@ -67,7 +77,7 @@ bounded cosign verify --certificate-identity \
 	"${caller[@]}" "$image" >"$output_dir/image-signature.json" 2>"$output_dir/image-verification.log" || fail image-unverified
 signature_bound "$output_dir/image-signature.json" "$image_digest" || fail image-signature-incomplete
 bounded cosign verify --certificate-identity \
-	"https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/$tag" \
+	"https://github.com/$repository/.github/workflows/publish-chart.yaml@refs/tags/$tag" \
 	"${caller[@]}" "$chart" >"$output_dir/chart-signature.json" 2>"$output_dir/chart-verification.log" || fail chart-unverified
 signature_bound "$output_dir/chart-signature.json" "$chart_digest" || fail chart-signature-incomplete
 bounded docker buildx imagetools inspect --raw "$image" >"$output_dir/image-manifest.json" 2>"$output_dir/manifest-read.log" || fail manifest-unverified
@@ -86,12 +96,13 @@ archives=("$work/charts/"*.tgz)
 [[ ${#archives[@]} == 1 && -f ${archives[0]} && $(wc -c <"${archives[0]}") -le 16777216 ]] || fail chart-archive-unverified
 bounded helm show chart "${archives[0]}" >"$output_dir/chart-metadata.yaml" 2>"$output_dir/chart-metadata.log" || fail chart-metadata-unverified
 version=${tag#v}
-export RELEASE_EXPECTED_VERSION="$version"
-bounded yq -e '.name == "data-product-controller" and .version == strenv(RELEASE_EXPECTED_VERSION) and .appVersion == strenv(RELEASE_EXPECTED_VERSION)' "$output_dir/chart-metadata.yaml" >/dev/null 2>&1 || fail chart-version-mismatch
+export RELEASE_EXPECTED_VERSION="$version" RELEASE_EXPECTED_CHART="$profile"
+bounded yq -e '.name == strenv(RELEASE_EXPECTED_CHART) and .version == strenv(RELEASE_EXPECTED_VERSION) and .appVersion == strenv(RELEASE_EXPECTED_VERSION)' "$output_dir/chart-metadata.yaml" >/dev/null 2>&1 || fail chart-version-mismatch
 ((SECONDS < deadline)) || fail deadline
 bounded cp "${archives[0]}" "$output_dir/release-chart.tgz" || fail finalization
 bounded jq -n --arg mode receipt --arg tag "$tag" --arg sha "$source_sha" --arg publisher "$publisher_sha" \
 	--arg image "$image_digest" --arg chart "$chart_digest" --arg platform "$platform" --arg runtime "$runtime_digest" \
+	--arg profile "$profile" --arg imageReference "$image" --arg chartReference "$chart" \
 	-f "$script_dir/verify-release-artifacts.jq" \
 	>"$work/release.json" || fail finalization
 ((SECONDS < deadline)) || fail deadline

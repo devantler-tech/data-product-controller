@@ -14,9 +14,27 @@ EXCLUDED_DIRECTORIES:
 # older compiler bundled in MegaLinter. Otherwise it cannot load either module
 # and reports module-wide findings without examining the compiled packages.
 PRE_COMMANDS:
+  # Check canonical documentation URLs against the files this revision builds.
+  # Public DNS/HTTPS availability is verified separately after deployment.
+  - command: bash scripts/documentation-links.sh --prepare-config
+    cwd: workspace
+    run_before_linters: true
+    continue_if_failed: false
+  # Resolve documentation routes and anchors against the same site users receive.
+  - command: npm ci --prefix website --no-audit --no-fund && npm run build --prefix website
+    cwd: workspace
+    run_before_linters: true
+    continue_if_failed: false
   - command: export GOTOOLCHAIN=$(awk '/^go / {print "go" $2; exit}' go.mod)
     cwd: workspace
     output_variables: [GOTOOLCHAIN]
+    run_before_linters: true
+    continue_if_failed: false
+  # Resolve the locked Java graph once. Parallel cold POM lookups hit Maven
+  # Central's shared-runner IP limit; failed preparation must fail the job.
+  - command: MAVEN_HOME=$(bash scripts/prepare-edc-scan.sh) && export MAVEN_HOME
+    cwd: workspace
+    output_variables: [MAVEN_HOME]
     run_before_linters: true
     continue_if_failed: false
 
@@ -30,6 +48,9 @@ DISABLE_LINTERS:
   - GO_GOLANGCI_LINT
   - GO_REVIVE
   - SPELL_CSPELL
+
+# PRE_COMMANDS creates this workspace-specific copy before the checker runs.
+SPELL_LYCHEE_ARGUMENTS: --config .lychee-docs.toml
 
 MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: .github/prompts
 

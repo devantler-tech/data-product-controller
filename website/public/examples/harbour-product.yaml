@@ -1,0 +1,18 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: harbour-observations
+  namespace: products
+spec:
+  id: https://products.example.com/harbour
+  name: Harbour observations
+  description: Temperature and salinity observations published by the harbour team.
+  version: v1.0.0
+  owner:
+    name: Harbour team
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://api.example.com/observations
+      contractUrl: https://api.example.com/openapi.json
+      mediaType: application/json

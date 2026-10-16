@@ -84,13 +84,16 @@ chart_publication_lifecycle() {
 	publication_products_absent
 	allowance=$(publication_budget)
 	((allowance <= 180)) || allowance=180
-	bash "$repo_root/scripts/verify-release-artifacts.sh" --tag v4.0.0 \
+	bash "$repo_root/scripts/verify-release-artifacts.sh" --profile data-product-controller --tag v4.0.0 \
 		--source-sha 4fbc7d215b3ce30091e74e9909a3ad822e878a05 \
 		--image-digest sha256:cc5bc6b165426daec27e70bbeb90f41a2e30699f99455f8b0733c247fbe57862 \
 		--chart-digest sha256:338521dc3e85774d6fff817a1af073ed1a462ee67e61459bf37f15e9a370ec89 \
 		--publisher-sha ea4df9004d4ab43b6c9af5b0c5f55712f7211328 \
 		--platform linux/amd64 --output-dir "$baseline_dir" --timeout "$allowance"
-	jq -e '.complete == true and .tag == "v4.0.0"' "$baseline_dir/release.json" >/dev/null
+	jq -se 'length == 1 and (.[0] | .complete == true and .tag == "v4.0.0" and
+    .releaseProfile == "data-product-controller" and
+    .imageReference == ("ghcr.io/devantler-tech/data-product-controller@" + .imageDigest) and
+    .chartReference == ("ghcr.io/devantler-tech/charts/data-product-controller@" + .chartDigest))' "$baseline_dir/release.json" >/dev/null
 	cat >"$test_dir/publication-values.yaml" <<'YAML'
 route:
   enabled: true

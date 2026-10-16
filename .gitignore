@@ -1,1 +1,7 @@
 megalinter-reports/
+website/node_modules/
+website/dist/
+website/.astro/
+
+# Generated documentation link-check configuration
+.lychee-docs.toml

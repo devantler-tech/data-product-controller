@@ -1,0 +1,48 @@
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: edc-harbour
+  namespace: products
+  annotations:
+    data.devantler.tech/dcat-type: Dataset
+spec:
+  id: urn:example:edc-harbour
+  name: Harbour observations
+  description: Public temperature observations.
+  version: v1.0.0
+  owner:
+    name: Marine data team
+    url: https://example.com/marine-team
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://example.com/harbour/observations
+      contractUrl: https://example.com/harbour/openapi.json
+      mediaType: application/json
+    - name: archive
+      protocol: OpenAPI
+      url: https://example.com/harbour/archive
+      contractUrl: https://example.com/harbour/openapi.json
+      mediaType: application/json
+---
+apiVersion: data.devantler.tech/v1alpha1
+kind: DataProduct
+metadata:
+  name: edc-buoy
+  namespace: products
+  annotations:
+    data.devantler.tech/dcat-type: Dataset
+spec:
+  id: urn:example:edc-buoy
+  name: Buoy observations
+  description: Public buoy observations.
+  version: v2.0.0
+  owner:
+    name: Marine data team
+    url: https://example.com/marine-team
+  outputs:
+    - name: observations
+      protocol: OpenAPI
+      url: https://example.com/buoy/observations
+      contractUrl: https://example.com/buoy/openapi.json
+      mediaType: application/json

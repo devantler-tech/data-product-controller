@@ -80,6 +80,25 @@ jobs:
           go-version-file: go.mod
           cache: false
 
+      - name: Set up documentation Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+
+      - name: Build documentation and validate links
+        working-directory: website
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate the downloadable product declaration
+        env:
+          PUBLISHER_PREFLIGHT_ENABLED: "true"
+        run: go run ./cmd/product-check --file website/public/examples/harbour-product.yaml
+
+      - name: Render the tenant-owned documentation DNS declaration
+        run: kubectl kustomize deploy/documentation
+
       - name: Run Go tests
         run: go test -race -count=1 ./...
 
@@ -93,7 +112,9 @@ jobs:
         run: sh scripts/chart.test.sh
 
       - name: Validate scanner suppression allowlists
-        run: sh scripts/scanner-suppressions.test.sh
+        run: |
+          sh scripts/scanner-suppressions.test.sh
+          bash scripts/prepare-edc-scan.test.sh
 
       - name: Lint Helm chart
         run: helm lint charts/data-product-controller
@@ -147,7 +168,9 @@ jobs:
           bash scripts/verify-release-artifacts.test.sh
           bash scripts/observe-rollout.test.sh
           bash tests/source/helm-lifecycle.test.sh
+          bash tests/source/edc-release.test.sh
           bash tests/source/suite.test.sh
+          bash tests/source/catalog.test.sh
 
   source-integration:
     needs: plan
