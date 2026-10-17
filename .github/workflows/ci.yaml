@@ -107,11 +107,11 @@ jobs:
           set -euo pipefail
           assets=$(mktemp -d)
           trap 'rm -rf "$assets"' EXIT
-          for version in 1.34.0 1.37.0; do
+          for version in 1.35.0 1.37.0; do
             case "$version" in
-              1.34.0)
-                checksum=9c45e40aa56971b105e596ebb3e84af6742e8709cc0523733baf8d9bb725e69c
-                archive_url=https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.34.0/envtest-v1.34.0-linux-amd64.tar.gz
+              1.35.0)
+                checksum=5716719def14a3fec3ed285e5e8c4280e6268854039b5073a96e8c0adafb1c02
+                archive_url=https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.35.0/envtest-v1.35.0-linux-amd64.tar.gz
                 ;;
               1.37.0)
                 checksum=f03faedfc68d2a78cee5cb02618bb44e7f67044f4c5fc957f72d3307fda61a9c

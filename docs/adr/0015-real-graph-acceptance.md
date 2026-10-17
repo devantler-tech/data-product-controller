@@ -11,7 +11,7 @@ compatible with the observer's supported release profile.
 ## Decision
 
 A required hosted acceptance job installs ArangoDB operator 1.4.5 and the official ArangoDB 3.12.12 image in
-an isolated KSail Kubernetes 1.34 cluster. The chart is checksum-pinned; operator and database
+an isolated KSail Kubernetes 1.35.8 cluster. The chart is checksum-pinned; operator and database
 images use verified immutable digests. The observer accepts the official release index only and
 requires its accepted, desired and member image declarations to agree. Single/count-one is a
 development profile with no high availability.

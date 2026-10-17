@@ -193,7 +193,7 @@ YAML
 	fi
 	export DPC_TEST_AUDIT_DIR="$test_dir/audit"
 	yq -i '.nodes = [.nodes[0]] |
-  .nodes[].image = "kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a" |
+  .nodes[].image = "kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0" |
   .containerdConfigPatches += ["[plugins.\"io.containerd.cri.v1.images\".registry]\n  config_path = \"/etc/containerd/certs.d\""] |
   .nodes[0].extraMounts += [{"hostPath":strenv(DPC_TEST_AUDIT_DIR),"containerPath":"/audit"}] |
   .nodes[0].kubeadmConfigPatches += ["kind: ClusterConfiguration\napiServer:\n  extraArgs:\n    audit-policy-file: /audit/policy.yaml\n    audit-log-path: /audit/log.json\n  extraVolumes:\n    - name: audit\n      hostPath: /audit\n      mountPath: /audit\n      readOnly: false\n      pathType: Directory"]' "$test_dir/cluster/kind.yaml"
@@ -206,9 +206,9 @@ YAML
 		echo 'expected one owned control-plane node' >&2
 		exit 1
 	}
-	[[ $(docker inspect "$control_node" --format '{{.Config.Image}}') == kindest/node:v1.34.0@sha256:7416a61b42b1662ca6ca89f02028ac133a309a2a30ba309614e8ec94d976dc5a ]]
-	kubectl --request-timeout=15s version -o json | jq -e '.serverVersion.gitVersion == "v1.34.0"' >/dev/null
-	echo 'PASS: running node image and Kubernetes API match the pinned 1.34.0 profile'
+	[[ $(docker inspect "$control_node" --format '{{.Config.Image}}') == kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0 ]]
+	kubectl --request-timeout=15s version -o json | jq -e '.serverVersion.gitVersion == "v1.35.8"' >/dev/null
+	echo 'PASS: running node image and Kubernetes API match the pinned 1.35.8 profile'
 	require_audit_server
 	kubectl --request-timeout=15s create namespace products >/dev/null
 	# Only this run's Kind node resolves the disposable registry through its Docker network.

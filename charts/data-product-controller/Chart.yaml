@@ -4,4 +4,4 @@ description: Controller, registry, and example for portable composable data prod
 type: application
 version: 0.1.0
 appVersion: 0.1.0
-kubeVersion: ">=1.34.0-0"
+kubeVersion: ">=1.35.0-0"

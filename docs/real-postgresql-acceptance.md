@@ -1,7 +1,7 @@
 # Real PostgreSQL acceptance
 
 `tests/provider/postgres.sh` exercises native SQL, hybrid JSONB and hybrid AGE in a disposable
-KSail Kubernetes 1.34 cluster with enforced Cilium NetworkPolicy. The job installs the pinned
+KSail Kubernetes 1.35.8 cluster with enforced Cilium NetworkPolicy. The job installs the pinned
 CloudNativePG 1.30.1 operator from a checksum-verified Helm package. PostgreSQL uses the owned
 signed AGE 1.7 image; acceptance verifies its digest, source revision, release tag and immutable
 signing workflow, then checks the operator and database images actually running in the cluster.

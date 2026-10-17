@@ -263,7 +263,8 @@ Engine-specific provisioning, additional source adapters, schema-content compati
 This part is for operators. It changes a Kubernetes cluster, so use one you are allowed to change.
 You need Helm, `kubectl` access to the cluster, and a Gateway API listener if you enable the route.
 Verifying a signature additionally needs Cosign.
-The chart's `kubeVersion` field states the Kubernetes versions it supports.
+The current chart requires Kubernetes **1.35 or newer**. Check the selected release's
+`kubeVersion` field; individual source operators have their own supported versions.
 
 The release workflows are set up to publish, for each release tag, the Helm chart plus a controller
 image and manifest artifact signed by the portfolio's trusted keyless release workflow. That setup

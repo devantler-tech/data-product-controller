@@ -59,7 +59,7 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	logf.SetLogger(zap.New())
 	assets, version := os.Getenv("ADMISSION_TEST_ASSETS"), os.Getenv("ADMISSION_TEST_VERSION")
-	if !filepath.IsAbs(assets) || (version != "v1.34.0" && version != "v1.37.0") {
+	if !filepath.IsAbs(assets) || (version != "v1.35.0" && version != "v1.37.0") {
 		t.Fatal(
 			"explicit absolute ADMISSION_TEST_ASSETS and supported ADMISSION_TEST_VERSION required",
 		)

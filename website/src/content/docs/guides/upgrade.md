@@ -6,6 +6,8 @@ description: Update CRDs and immutable workloads while preserving product resour
 Select and verify the new release before changing the installation. Record the current
 chart version, verified image digest and operator-owned values so you have a recovery path.
 Review release notes for Kubernetes API and retained compatibility changes.
+The current chart requires Kubernetes **1.35 or newer**. Confirm the selected release's
+`kubeVersion` against your cluster before applying its CRD or upgrading workloads.
 
 ## Apply the delivered CRD
 

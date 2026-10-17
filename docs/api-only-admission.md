@@ -8,9 +8,10 @@ metadata can ratchet through unrelated edits; new or changed UI is rejected.
 The delivered CRD, served/storage version, controller and feature defaults are
 unchanged by this checkpoint.
 
-Required CI exercises checksum-pinned Kubernetes **1.34.0** and **1.37.0** envtest
-assets, covering the chart's minimum version and the lifecycle suite's current
-version. It verifies actual persisted objects after create, replacement, JSON
+Required CI exercises checksum-pinned Kubernetes **1.35.0** and **1.37.0** envtest
+assets, covering the chart's minimum version and the current upper admission
+checkpoint. The provider lifecycle profiles use Kubernetes **1.35.8**. The
+checkpoint verifies actual persisted objects after create, replacement, JSON
 and merge patch, server-side apply, metadata and status updates. Rejected
 requests must have the expected validation cause and preserve stored state;
 timeouts, transport failures and apply conflicts do not count as rejection.
@@ -39,7 +40,7 @@ ADMISSION_TEST_ASSETS=/absolute/path/controller-tools/envtest \
   go test -tags=admission -count=1 -timeout=600s -v ./tests/admission
 ```
 
-Supported checkpoint versions are `v1.34.0` and `v1.37.0`. Missing assets or a
+Supported checkpoint versions are `v1.35.0` and `v1.37.0`. Missing assets or a
 different running version fail the invocation. The fixture explicitly disables
 existing-cluster mode, overrides ambient binary selection, and uses only the
 configuration returned by its own API server. It never loads a user's kubeconfig.

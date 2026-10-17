@@ -156,7 +156,7 @@ golangci-lint run --build-tags=browser ./internal/browser/...
 Workflow changes also require `actionlint` and `zizmor`.
 
 The required core job runs the `admission`-tagged migration checkpoint against
-checksum-pinned Kubernetes 1.34.0 and 1.37.0 envtest servers. Its candidate UI-field
+checksum-pinned Kubernetes 1.35.0 and 1.37.0 envtest servers. Its candidate UI-field
 policy is test-only; keep the delivered CRD and runtime defaults unchanged. Local
 runs require explicit owned binary assets and the matching version; see
 `docs/api-only-admission.md`. Never enable existing-cluster mode for this test.
