@@ -53,6 +53,8 @@ command timeout alone does not prove child-process cleanup.
 
 This is admission-migration evidence, not production activation, a versioned
 contract change, compatibility-runtime retirement or independent adoption.
-Those decisions and signed Platform rollout remain in
+[ADR 0024](adr/0024-retire-legacy-ui-declaration-within-v1alpha1.md) records how
+this rule becomes the delivered first stage of the field's removal. That work and
+signed Platform rollout remain in
 [#392](https://github.com/devantler-tech/data-product-controller/issues/392) and
 [platform#4890](https://github.com/devantler-tech/platform/issues/4890).
