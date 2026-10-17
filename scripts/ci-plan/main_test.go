@@ -523,7 +523,7 @@ func TestWorkflowSourceMatrixIsComplete(t *testing.T) {
 	}
 	got := w.Jobs["source-integration"].Strategy.Matrix.Suite
 	sort.Strings(got)
-	if strings.Join(got, ",") != "document,graph,lifecycle,sql" {
+	if strings.Join(got, ",") != "contracts,document,graph,lifecycle,replicas,source,sql" {
 		t.Fatalf("source acceptance matrix changed: %v", got)
 	}
 }

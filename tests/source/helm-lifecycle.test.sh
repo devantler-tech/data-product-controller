@@ -66,7 +66,10 @@ echo 'installed Helm identity behavior tests passed'
 product_digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 candidate_chart=$work/candidate.tgz
 source "$root/tests/source/installed-matrix.sh"
-bash() { [[ $1 == "$repo_root/scripts/observe-rollout.sh" ]]; }
+bash() {
+	[[ $1 == "$repo_root/scripts/observe-rollout.sh" ]] || return 1
+	printf '%s\n' "$*" >"$work/observation-args"
+}
 kube() {
 	[[ "$*" == 'get dataproduct existing-export -o json' ]] || return 99
 	printf '%s\n' '{"metadata":{"uid":"product-1"}}'
@@ -80,12 +83,28 @@ registry_replicas_ready() {
 	fi
 }
 matrix_product_uid=product-1
-for observation in 'candidate:KHoist' 'rollback:Data products' 'restored-candidate:KHoist'; do
-	phase=${observation%%:*}
-	wanted_registry_title=${observation#*:}
-	matrix_observation "$phase" candidate-image "$product_digest"
+# Only a job running the contracts family declares a contract check, so only it requires ContractsReady.
+for matrix_contracts in true false; do
+	for observation in 'candidate:KHoist' 'rollback:Data products' 'restored-candidate:KHoist'; do
+		phase=${observation%%:*}
+		wanted_registry_title=${observation#*:}
+		matrix_observation "$phase" candidate-image "$product_digest"
+		grep -Fq -- '--condition Ready --condition ConnectorReady' "$work/observation-args"
+		grep -Fq -- '--deployment dpc-contract-probe:contract-probe' "$work/observation-args"
+		if [[ $matrix_contracts == true ]]; then
+			grep -Fq -- '--condition ContractsReady' "$work/observation-args"
+		elif grep -Fq ContractsReady "$work/observation-args"; then
+			echo 'a matrix without the contracts family required contract readiness' >&2
+			exit 1
+		fi
+	done
 done
-echo 'installed matrix observation selects each released registry page'
+unset matrix_contracts
+if matrix_observation candidate candidate-image "$product_digest" 2>/dev/null; then
+	echo 'matrix observation ran without a family selection' >&2
+	exit 1
+fi
+echo 'installed matrix observation selects each released registry page and the conditions its families declare'
 
 # Named --ignore-not-found reads succeed without output when both objects are absent.
 # Exercise the real lifecycle preflight and the shared post-uninstall guard; only external I/O is fault-injected.
@@ -225,7 +244,10 @@ publication_kube() {
 case "$1" in
 v1) helm_release_lifecycle ;;
 v4) chart_publication_lifecycle ;;
-matrix) installed_lifecycle_matrix ;;
+matrix) installed_lifecycle_matrix source replicas contracts ;;
+matrix-source | matrix-replicas | matrix-contracts) installed_lifecycle_matrix "${1#matrix-}" ;;
+matrix-none) installed_lifecycle_matrix ;;
+matrix-unknown) installed_lifecycle_matrix source sql ;;
 *) exit 99 ;;
 esac
 EOF
@@ -270,6 +292,32 @@ for consumer in v1 v4 matrix; do
 	done
 done
 echo 'historical lifecycle consumers reject missing or mixed profiles before installation or image use'
+
+# Each CI family consumes the same verified baseline; an empty or unknown selection fails before any release use.
+cp "$work/historical-good.json" "$work/historical-receipt.json"
+for consumer in matrix-source matrix-replicas matrix-contracts matrix-none matrix-unknown; do
+	rm -f "$work/receipt-used"
+	result=0
+	"$BASH" "$work/historical-check.sh" "$consumer" >"$work/historical.log" 2>&1 || result=$?
+	case $consumer in
+	matrix-none | matrix-unknown)
+		[[ $result != 0 && $result != 77 && $result != 99 && ! -e $work/receipt-used ]] &&
+			grep -Eq 'select at least one installed matrix family|unsupported installed matrix family: sql' "$work/historical.log" || {
+			echo "$consumer accepted an invalid family selection (exit $result)" >&2
+			cat "$work/historical.log" >&2
+			exit 1
+		}
+		;;
+	*)
+		[[ $result == 77 && -f $work/receipt-used ]] || {
+			echo "$consumer rejected a complete historical receipt (exit $result)" >&2
+			cat "$work/historical.log" >&2
+			exit 1
+		}
+		;;
+	esac
+done
+echo 'installed matrix families each consume the verified baseline and reject empty or unknown selections'
 
 # Render real chart products; fault-inject only Helm/Kubernetes reads around the actual snapshot guard.
 "$real_helm" template dpc-publication "$root/charts/data-product-controller" --namespace products \

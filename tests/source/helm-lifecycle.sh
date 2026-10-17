@@ -59,10 +59,9 @@ installed_query_check() {
 	[[ $(independent_resource_uids "$lifecycle_product_uid") == "$lifecycle_resource_uids" ]]
 }
 
-# helm_release_lifecycle proves signed baseline installation, candidate upgrade, rollback and retained independent sources.
-helm_release_lifecycle() {
-	: "${product_digest:?immutable candidate image required}"
-	local baseline_dir=$test_dir/baseline baseline_image baseline_runtime baseline_revision baseline_crd_uid candidate_version
+# baseline_release_verify downloads and verifies the signed v1.12.0 release that installed lifecycles start from.
+baseline_release_verify() {
+	local baseline_dir=$test_dir/baseline
 	bash "$repo_root/scripts/verify-release-artifacts.sh" --profile data-product-controller --tag v1.12.0 \
 		--source-sha ff7ddcf264f8ce4813ccdb6675a45b4d1e6d1b78 \
 		--image-digest sha256:62350d68a853708357f463b74ea9ff847d94100d042125b4f2d0c6f25da54886 \
@@ -73,6 +72,13 @@ helm_release_lifecycle() {
     .releaseProfile == "data-product-controller" and
     .imageReference == ("ghcr.io/devantler-tech/data-product-controller@" + .imageDigest) and
     .chartReference == ("ghcr.io/devantler-tech/charts/data-product-controller@" + .chartDigest))' "$baseline_dir/release.json" >/dev/null
+}
+
+# helm_release_lifecycle proves signed baseline installation, candidate upgrade, rollback and retained independent sources.
+helm_release_lifecycle() {
+	: "${product_digest:?immutable candidate image required}"
+	local baseline_dir=$test_dir/baseline baseline_image baseline_runtime baseline_revision baseline_crd_uid candidate_version
+	baseline_release_verify
 	baseline_image=$(jq -er '.imageReference' "$baseline_dir/release.json")
 	baseline_runtime=$(jq -er '.runtimeDigest' "$baseline_dir/release.json")
 	jq --arg digest "${baseline_image##*@}" '.image.repository="ghcr.io/devantler-tech/data-product-controller" |

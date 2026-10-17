@@ -4,14 +4,14 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "$0")/../.." && pwd)
 source "$repo_root/tests/source/suite.sh"
 
-for selected in all lifecycle sql document graph; do
+for selected in all lifecycle source replicas contracts sql document graph; do
 	SOURCE_TEST_SUITE=$selected source_suite_validate
 	observed=()
-	for family in lifecycle sql document graph; do
+	for family in lifecycle source replicas contracts sql document graph; do
 		if source_suite_includes "$family"; then observed+=("$family"); fi
 	done
 	if [[ "$selected" == all ]]; then
-		[[ "${observed[*]}" == 'lifecycle sql document graph' ]]
+		[[ "${observed[*]}" == 'lifecycle source replicas contracts sql document graph' ]]
 	else
 		[[ "${observed[*]}" == "$selected" ]]
 	fi

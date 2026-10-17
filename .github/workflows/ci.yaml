@@ -208,7 +208,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [lifecycle, sql, document, graph]
+        suite: [lifecycle, source, replicas, contracts, sql, document, graph]
     # Each hosted job owns its cluster; families retain their eight-minute bounds.
     timeout-minutes: 50
     permissions:
