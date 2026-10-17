@@ -35,6 +35,9 @@ There is no conversion in either direction: stored objects are untouched, and th
 narrows writes. A rollback to the previous released controller reads the same objects, because
 Helm leaves the newer CRD in place and `spec.ui` is optional in that controller's types.
 Explicitly applying the previous release's CRD is the full rollback and allows UI writes again.
+Helm never upgrades a CRD from `crds/`, so a plain `helm upgrade` leaves the ratcheting rule out of
+the cluster. The Stage 1 release notes therefore name the explicit CRD apply step, and the stage
+takes effect only after it.
 
 **Stage 2 — remove the field.** Once the preconditions below hold, the `ui` property and its types
 leave `v1alpha1`, and every generated copy is regenerated. The API server then drops an unknown
