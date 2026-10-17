@@ -84,8 +84,8 @@ waits rather than discarding a declaration.
 
 - **Serve a new version without `spec.ui`.** `None` conversion can serve both schemas, but it
   can prune `spec.ui` from objects handled through the new version, so keeping the field across
-  round trips needs a conversion webhook. That adds a TLS service to the request path of every
-  product read and write, with its own certificate rotation and availability, a storage migration
+  round trips needs a conversion webhook. That adds a TLS service to the path of every request
+  that needs version conversion, with its own certificate rotation and availability, a storage migration
   that rewrites every object before the old version can be dropped, and an annotation to carry the
   field through lossy round trips. Every GitOps declaration would also change its `apiVersion`.
   That machinery would protect a field that, by the time it is removed, holds no stored data.
