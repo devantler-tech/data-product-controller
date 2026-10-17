@@ -5,7 +5,8 @@ description: Install the signed Helm distribution in an existing Kubernetes clus
 
 Use a cluster you are authorised to change. You need Helm, kubectl, access to the
 container registry and permission to install the DataProduct CRD and controller RBAC.
-The chart's `kubeVersion` declares its supported Kubernetes versions.
+The current chart requires Kubernetes **1.35 or newer**. Check the selected release's
+`kubeVersion` before installing; individual source operators have their own supported versions.
 
 ## Select and verify a release
 

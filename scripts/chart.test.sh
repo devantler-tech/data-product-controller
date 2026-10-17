@@ -13,6 +13,19 @@ fail() {
 
 command -v yq >/dev/null 2>&1 || fail 'yq is required to validate rendered RBAC'
 
+# Exercise Helm's version gate, including the current Platform version.
+for supported_version in 1.35.0 1.36.4 1.37.0; do
+	helm template data-product-controller "$chart" --kube-version "$supported_version" >/dev/null ||
+		fail "Kubernetes $supported_version must be accepted"
+done
+for unsupported_version in 1.34.0 1.34.12; do
+	if unsupported_render=$(helm template data-product-controller "$chart" --kube-version "$unsupported_version" 2>&1); then
+		fail "Kubernetes $unsupported_version must be rejected"
+	fi
+	printf '%s' "$unsupported_render" | grep -F 'requires kubeVersion' >/dev/null ||
+		fail "Kubernetes $unsupported_version must fail the version gate"
+done
+
 assert_contains() {
 	haystack=$1
 	needle=$2

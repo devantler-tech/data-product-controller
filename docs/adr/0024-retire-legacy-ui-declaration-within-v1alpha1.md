@@ -15,7 +15,7 @@ version. `spec.ui` is optional there and in the released controllers' types. The
 schema `descriptor-v1.json` is closed, and its `ui` property is optional. Chart-authored product
 declarations already omit `spec.ui`; hand-authored ones may still carry it.
 
-The [admission checkpoint](../api-only-admission.md) proves, on owned Kubernetes 1.34.0 and 1.37.0
+The [admission checkpoint](../api-only-admission.md) proves, on owned Kubernetes 1.35.0 and 1.37.0
 API servers, a rejecting rule at `spec.ui` that ratchets: new or changed UI is rejected, unchanged
 legacy UI survives unrelated edits, and omission removes it while UIDs, other fields and status are
 preserved. Helm installs a chart's CRD on first install only. It neither upgrades nor rolls back
@@ -72,7 +72,7 @@ after each of these is verified and recorded on its issue:
 4. Disposable acceptance installs the last signed Stage 1 release, upgrades to the candidate,
     performs a real Helm rollback and restores the candidate. Product UIDs, non-UI specifications,
     status and registry readiness are preserved at every step.
-5. The admission checkpoint passes against the new schema on Kubernetes 1.34.0 and 1.37.0. An
+5. The admission checkpoint passes against the new schema on Kubernetes 1.35.0 and 1.37.0. An
     object written before the removal keeps its UID, specification and status, and a write carrying
     `spec.ui` does not persist it.
 6. The release is marked as a major release, and its notes name the explicit CRD apply step.

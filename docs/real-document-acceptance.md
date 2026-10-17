@@ -1,7 +1,7 @@
 # Real Document acceptance
 
 The required native Document job runs the Percona 1.23.0 operator, MongoDB 8.0.26-11 and the
-controller in a disposable KSail Kubernetes 1.34.0 cluster. It is separate from the synthetic
+controller in a disposable KSail Kubernetes 1.35.8 cluster. It is separate from the synthetic
 observer regressions in `tests/source/`: no operator status is fabricated.
 
 Run `bash tests/provider/percona.sh` on an amd64 Linux host with Docker, KSail 7.182.6, kubectl,

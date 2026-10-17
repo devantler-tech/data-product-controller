@@ -1,7 +1,7 @@
 # Real native Graph acceptance
 
 The required `Validate native Graph queries` job runs `bash tests/provider/arango.sh` against
-ArangoDB operator 1.4.5 and the official ArangoDB 3.12.12 image. It uses an ephemeral KSail Kubernetes 1.34
+ArangoDB operator 1.4.5 and the official ArangoDB 3.12.12 image. It uses an ephemeral KSail Kubernetes 1.35.8
 cluster, one persistent Single server, authentication, verified TLS and enforced NetworkPolicy.
 The checksum-pinned Helm package and immutable images are checked against actual running image IDs.
 The server certificate explicitly includes the client's full Service hostname; trust and hostname

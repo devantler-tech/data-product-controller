@@ -11,7 +11,7 @@ database and independently served query interface, with bounded failure and reco
 ## Decision
 
 A dedicated required hosted job installs Percona Operator for MongoDB 1.23.0 and its supported
-8.0.26-11 server in a disposable KSail Kubernetes 1.34 cluster. Packages and images are pinned by
+8.0.26-11 server in a disposable KSail Kubernetes 1.35.8 cluster. Packages and images are pinned by
 checksum or immutable digest, and startup checks the amd64 CPU requirements. One unsharded
 replica-set member is permitted only for this test through the operator's unsafe replica-count
 option. Authentication, TLS certificate verification and persistent storage remain enabled.
