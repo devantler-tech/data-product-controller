@@ -301,12 +301,12 @@ for consumer in matrix-source matrix-replicas matrix-contracts matrix-none matri
 	"$BASH" "$work/historical-check.sh" "$consumer" >"$work/historical.log" 2>&1 || result=$?
 	case $consumer in
 	matrix-none | matrix-unknown)
-		[[ $result != 0 && $result != 77 && $result != 99 && ! -e $work/receipt-used ]] &&
-			grep -Eq 'select at least one installed matrix family|unsupported installed matrix family: sql' "$work/historical.log" || {
+		if [[ $result == 0 || $result == 77 || $result == 99 || -e $work/receipt-used ]] ||
+			! grep -Eq 'select at least one installed matrix family|unsupported installed matrix family: sql' "$work/historical.log"; then
 			echo "$consumer accepted an invalid family selection (exit $result)" >&2
 			cat "$work/historical.log" >&2
 			exit 1
-		}
+		fi
 		;;
 	*)
 		[[ $result == 77 && -f $work/receipt-used ]] || {
