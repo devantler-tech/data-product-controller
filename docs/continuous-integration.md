@@ -8,7 +8,7 @@ renames, production code, assets, fixtures, dependency files, workflow changes a
 use full acceptance. Manual and merge-group runs also use the full profile.
 
 Both profiles run controller/API tests, build, chart checks, core lint, release-contract checks,
-the real browser suite and browser-tagged lint. The full profile additionally runs all four source
+the real browser suite and browser-tagged lint. The full profile additionally runs all seven source
 clusters, native Document and Graph acceptance, PostgreSQL model acceptance and AGE image
 acceptance. Classifier errors or missing output retain these full-suite jobs.
 
@@ -20,5 +20,5 @@ successful suite can pass.
 
 The classifier tests check the entire browser inventory and first-party dependency closure,
 including packages that embed assets. Workflow regressions bind every logical job to the required
-summary and keep the four source matrix members. Updating the reviewed inventory or classifier
+summary and keep the seven source matrix members. Updating the reviewed inventory or classifier
 therefore requires full acceptance.

@@ -24,14 +24,20 @@ deletes the source container, that cluster, and its storage on normal exit or
 handled termination. Allow several gigabytes of free disk space for Kubernetes and image
 builds. CI runs the same command on a disposable hosted runner, verifies the KSail
 download checksum, grants only repository read access, and limits each job to
-50 minutes. Four required matrix jobs select `SOURCE_TEST_SUITE=lifecycle`, `sql`,
-`document` or `graph`. Each owns a fresh cluster, kubeconfig, images, source fixture
-and cleanup. The lifecycle job retains packaged command/UI checks, signed Helm
-upgrade/rollback and the installed source, connector, contract, composition and
-catalog checks. The provider jobs install the candidate into an empty inventory
-and run exactly one synthetic family; they share function definitions without
-executing another family first. Invalid suite values fail before setup. Omitting
-the variable runs all four suites sequentially for local use.
+50 minutes. Seven required matrix jobs select `SOURCE_TEST_SUITE=lifecycle`,
+`source`, `replicas`, `contracts`, `sql`, `document` or `graph`, so their waits run
+in parallel. Each owns a fresh cluster, kubeconfig, images, source fixture and
+cleanup. The lifecycle job runs the packaged command/UI checks and the signed Helm
+release history, then the composition and catalog checks on the empty inventory
+that history leaves behind. The `source`, `replicas` and `contracts` jobs verify the
+same signed baseline, install the HTTP source and connector observation, and run one
+installed family each: source faults and credential rotation, two-replica rotation,
+or the contract and connector matrices. Each takes its family through the released
+rollback, candidate restoration and product deletion. The provider jobs install the
+candidate into an empty inventory and run exactly one synthetic family; they share
+function definitions without executing another family first. Invalid suite values
+fail before setup. Omitting the variable runs every suite sequentially in one cluster
+for local use, with the three installed families sharing one rollback.
 
 Packaged command checks include the dedicated publisher-review binary in both TLS
 and private gateway HTTP mode. They exercise its existing release gate in all
@@ -39,7 +45,7 @@ three configured states, disabled compatibility routes, process health and grace
 termination as the image's nonroot user with a read-only root filesystem. The
 legacy ui-kit smoke remains separate while deployments migrate.
 
-The lifecycle catalog phase also installs two synthetic products, captures the
+The lifecycle job's catalog phase also installs two synthetic products, captures the
 actual enabled controller catalog through its explicit disposable context, and
 feeds a signed-release export into the independent offline EDC 0.18.1 importer.
 The bounded runner separates networked dependency resolution, offline compilation
@@ -125,7 +131,7 @@ Credential rotation must retain the connector Pod UID. A separate candidate phas
 `httpSource.replicas=2`, joins both endpoints to the current Deployment and ReplicaSet, and
 checks queries, OpenAPI, readiness and fresh metrics at each Pod address. It revokes the old
 token, projects the replacement, and restores the original pair while requiring the same
-Pod UIDs and restart counts. The phase restores one replica before the existing fault and
+Pod UIDs and restart counts. The phase restores one replica before the
 released rollback cases. Management metrics must
 remain reachable while the data service is unready.
 
@@ -166,7 +172,7 @@ monitor network isolation, metrics during outages, and reference removal without
 workload deletion. `ContractsReady` and aggregate registry readiness follow the
 contract while `ConnectorReady` stays true.
 
-The same cluster applies the documented three-product composition example. It
+The lifecycle cluster applies the documented three-product composition example. It
 checks both release-flag states, API lineage, breaking and compatible upgrades,
 cycle diagnosis without status-write loops, missing ports, producer deletion and
 recreation, and clearing lineage when disabled. A namespace-scoped reader verifies

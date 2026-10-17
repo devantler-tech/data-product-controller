@@ -3,9 +3,9 @@
 source_suite_validate() {
 	source_test_suite=${SOURCE_TEST_SUITE-all}
 	case "$source_test_suite" in
-	all | lifecycle | sql | document | graph) ;;
+	all | lifecycle | source | replicas | contracts | sql | document | graph) ;;
 	*)
-		printf '%s\n' 'unsupported SOURCE_TEST_SUITE; use all, lifecycle, sql, document or graph' >&2
+		printf '%s\n' 'unsupported SOURCE_TEST_SUITE; use all, lifecycle, source, replicas, contracts, sql, document or graph' >&2
 		return 2
 		;;
 	esac

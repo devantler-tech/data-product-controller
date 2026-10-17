@@ -285,9 +285,21 @@ jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
 mkdir "$test_dir/candidate-chart"
 helm package "$repo_root/charts/data-product-controller" --destination "$test_dir/candidate-chart" >/dev/null
 candidate_chart="$test_dir/candidate-chart/data-product-controller-$(helm show chart "$repo_root/charts/data-product-controller" | yq -r '.version').tgz"
+# The installed source, connector and contract families each run in their own job in CI.
+installed_families=()
+for family in source replicas contracts; do
+	if source_suite_includes "$family"; then installed_families+=("$family"); fi
+done
 if source_suite_includes lifecycle; then
 	helm_release_lifecycle
-
+	# The release history ends with an empty inventory and the default candidate installation.
+	source "$repo_root/tests/source/composition.sh"
+	source "$repo_root/tests/source/catalog.sh"
+elif ((${#installed_families[@]} > 0)); then
+	# Installed families roll back to the same signed baseline without repeating the release history.
+	baseline_release_verify
+fi
+if ((${#installed_families[@]} > 0)); then
 	install_chart
 	kube get deployments -l app.kubernetes.io/component=http-source -o json | jq -e '.items | length == 0' >/dev/null
 	echo 'PASS: HTTP source workload absent by default'
@@ -312,10 +324,8 @@ if source_suite_includes lifecycle; then
 	probe --url http://dpc-http-source/openapi.json --contains '"openapi"'
 
 	source "$repo_root/tests/source/installed-matrix.sh"
-	installed_lifecycle_matrix
-	source "$repo_root/tests/source/composition.sh"
-	source "$repo_root/tests/source/catalog.sh"
-else
+	installed_lifecycle_matrix "${installed_families[@]}"
+elif ! source_suite_includes lifecycle; then
 	# Each provider job starts with the candidate controller and an empty inventory.
 	# Keep the common CA/Secret fixture for the SQL module's HTTP flag assertion.
 	install_chart
