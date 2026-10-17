@@ -58,20 +58,20 @@ Slice D ([#439](https://github.com/devantler-tech/data-product-controller/issues
 after each of these is verified and recorded on its issue:
 
 1. The Stage 1 release is installed in every consuming cluster, shown by reading the live CRD and
-   finding the rejecting rule at `spec.ui`.
+    finding the rejecting rule at `spec.ui`.
 2. No stored declaration remains. A complete read of every `DataProduct` in all namespaces of each
-   consuming cluster finds no object with `spec.ui`, and the deployed GitOps revision declares
-   none. A failed, partial or filtered read is not a zero.
+    consuming cluster finds no object with `spec.ui`, and the deployed GitOps revision declares
+    none. A failed, partial or filtered read is not a zero.
 3. The compatibility kit session runtime
-   ([#437](https://github.com/devantler-tech/data-product-controller/issues/437)) and the
-   registry UI surfaces ([#438](https://github.com/devantler-tech/data-product-controller/issues/438))
-   are removed in a release those clusters run, so nothing reads the field.
+    ([#437](https://github.com/devantler-tech/data-product-controller/issues/437)) and the
+    registry UI surfaces ([#438](https://github.com/devantler-tech/data-product-controller/issues/438))
+    are removed in a release those clusters run, so nothing reads the field.
 4. Disposable acceptance installs the last signed Stage 1 release, upgrades to the candidate,
-   performs a real Helm rollback and restores the candidate. Product UIDs, non-UI specifications,
-   status and registry readiness are preserved at every step.
+    performs a real Helm rollback and restores the candidate. Product UIDs, non-UI specifications,
+    status and registry readiness are preserved at every step.
 5. The admission checkpoint passes against the new schema on Kubernetes 1.34.0 and 1.37.0. An
-   object written before the removal keeps its UID, specification and status, and a write carrying
-   `spec.ui` does not persist it.
+    object written before the removal keeps its UID, specification and status, and a write carrying
+    `spec.ui` does not persist it.
 6. The release is marked as a major release, and its notes name the explicit CRD apply step.
 
 If the second precondition is never met, the field stays as inert ratcheted metadata. Removal
