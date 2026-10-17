@@ -83,9 +83,9 @@ waits rather than discarding a declaration.
   can prune `spec.ui` from objects handled through the new version, so keeping the field across
   round trips needs a conversion webhook. That adds a TLS service to the request path of every
   product read and write, with its own certificate rotation and availability, a storage migration
-  that rewrites every object before the old version can be dropped, and an annotation to carry the field through lossy round trips. Every GitOps
-  declaration would also change its `apiVersion`. That machinery would protect a field that, by the
-  time it is removed, holds no stored data.
+  that rewrites every object before the old version can be dropped, and an annotation to carry the
+  field through lossy round trips. Every GitOps declaration would also change its `apiVersion`.
+  That machinery would protect a field that, by the time it is removed, holds no stored data.
 - **Drop the field in place now.** It would silently discard live declarations that a rollback to a
   UI-capable controller still reads. The same removal is safe only after the second precondition.
 - **Keep the field indefinitely.** It leaves a deprecated surface in the served contract with no
