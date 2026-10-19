@@ -28,8 +28,12 @@ cat >"$scratch/bin/curl" <<'MOCK'
 set -euo pipefail
 [[ $SCAN_CASE != download ]] || exit 7
 while (($#)); do
- if [[ $1 == --output ]]; then destination=$2; shift 2; else shift; fi
+ if [[ $1 == --output ]]; then destination=$2; shift 2
+ elif [[ $1 == https://* ]]; then source_url=$1; shift
+ else shift; fi
 done
+# The distribution comes from Maven Central's CDN; the pinned checksum verifies it.
+[[ ${source_url:-} == https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.tar.gz ]] || exit 9
 cp "$SCAN_FIXTURE/archive.tar.gz" "${destination:?}"
 MOCK
 cat >"$scratch/bin/sha512sum" <<'MOCK'
