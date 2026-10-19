@@ -27,6 +27,8 @@ cat >"$scratch/bin/curl" <<'MOCK'
 #!/usr/bin/env bash
 set -euo pipefail
 [[ $SCAN_CASE != download ]] || exit 7
+[[ ${*: -1} == https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.tar.gz ]] ||
+	exit 9
 while (($#)); do
  if [[ $1 == --output ]]; then destination=$2; shift 2; else shift; fi
 done

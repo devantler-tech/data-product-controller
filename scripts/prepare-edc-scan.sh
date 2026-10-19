@@ -30,9 +30,11 @@ scan_run() {
 	# GNU and Alpine/BusyBox timeout share these short options.
 	timeout -s TERM -k 5 "$remaining" "$@"
 }
+# Maven Central serves the same release bytes from a CDN; archive.apache.org is throttled
+# far below what the 90-second limit needs for this archive.
 scan_run curl --fail --location --proto '=https' --proto-redir '=https' --proxy '' \
 	--max-time 90 --max-filesize 16777216 --output "$scan_work/maven.tar.gz" \
-	https://archive.apache.org/dist/maven/maven-3/3.10.0/binaries/apache-maven-3.10.0-bin.tar.gz >&2
+	https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.10.0/apache-maven-3.10.0-bin.tar.gz >&2
 printf '%s  %s\n' \
 	908b1501bfb420bf7c8affb855534a9c407fd6099367bfb9f2f2dcb8e9799102bffb84518cde74c679bd76870247c6528683abdd620581bffa90f95d92d175aa \
 	"$scan_work/maven.tar.gz" | scan_run sha512sum -c - >&2
