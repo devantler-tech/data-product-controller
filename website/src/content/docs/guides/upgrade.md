@@ -18,7 +18,7 @@ After reviewing the selected release's CRD, replace `<version>` and apply it bef
 upgrading workloads:
 
 ```bash
-helm show crds oci://ghcr.io/devantler-tech/charts/data-product-controller \
+helm show crds oci://ghcr.io/devantler-tech/charts/khoist \
   --version '<version>' | kubectl apply -f -
 ```
 
@@ -30,12 +30,17 @@ as a troubleshooting shortcut. A workload rollback does not roll back the CRD.
 Use the selected new version and verified digest with your reviewed operator values:
 
 ```bash
-helm upgrade '<existing-release>' oci://ghcr.io/devantler-tech/charts/data-product-controller \
+helm upgrade '<existing-release>' oci://ghcr.io/devantler-tech/charts/khoist \
   --namespace '<existing-namespace>' \
   --version '<version>' \
   --values '<reviewed-operator-values.yaml>' \
   --set-string image.digest='<verified-image-digest>'
 ```
+
+An installation of a release up to v6.0.1 was made from the earlier chart address,
+`oci://ghcr.io/devantler-tech/charts/data-product-controller`. It upgrades in place
+from the address above. Workload names come from the release name, so they do not
+change.
 
 Keep the existing release name and namespace. Preserve routing, feature switches,
 resource settings and access policy in the values file. Replace any saved image

@@ -12,6 +12,8 @@ chart signing identity and chart metadata name together. Only these two fixed pr
 are accepted; an unknown or repeated selection fails before registry or signer access.
 A failed verification never retries another profile. Choose the profile of the tagged
 release, rather than inferring it from the repository's current name or a redirect.
+Tags up to v6.0.1 were published with the `data-product-controller` profile; v6.0.2, the first
+release after the rename, and later tags use `khoist`.
 The shared image publisher commit remains independently supplied.
 
 ```bash

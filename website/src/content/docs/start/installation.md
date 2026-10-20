@@ -11,15 +11,16 @@ The current chart requires Kubernetes **1.35 or newer**. Check the selected rele
 ## Select and verify a release
 
 Choose a published version from
-[GitHub releases](https://github.com/devantler-tech/khoist/releases).
-The chart and controller image use the `data-product-controller` package name.
+[release tags](https://github.com/devantler-tech/khoist/tags).
+From v6.0.2 the chart and controller image are published under the `khoist` package name.
+Releases up to v6.0.1 keep the earlier `data-product-controller` name.
 
 The commands below contain placeholders. Replace `<version>` with the chart version
 and `<verified-image-digest>` with the complete controller digest verified for that
 release, including its `sha256:` prefix.
 
 ```bash
-helm show chart oci://ghcr.io/devantler-tech/charts/data-product-controller \
+helm show chart oci://ghcr.io/devantler-tech/charts/khoist \
   --version '<version>'
 ```
 
@@ -31,7 +32,7 @@ identities; verifying one does not verify the other.
 
 ```bash
 helm upgrade --install data-product-controller \
-  oci://ghcr.io/devantler-tech/charts/data-product-controller \
+  oci://ghcr.io/devantler-tech/charts/khoist \
   --version '<version>' \
   --namespace data-product-system --create-namespace \
   --set-string image.digest='<verified-image-digest>' \

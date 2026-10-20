@@ -7,7 +7,7 @@ The [chart values](https://github.com/devantler-tech/khoist/blob/main/charts/dat
 are the complete Helm reference. Inspect the exact version you will install:
 
 ```bash
-helm show values oci://ghcr.io/devantler-tech/charts/data-product-controller \
+helm show values oci://ghcr.io/devantler-tech/charts/khoist \
   --version '<version>'
 ```
 
