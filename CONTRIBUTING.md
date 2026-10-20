@@ -2,12 +2,12 @@
 
 You can help by improving the documentation, fixing an example, or changing the controller, the
 registry or the chart. Open or find an
-[issue](https://github.com/devantler-tech/data-product-controller/issues) before you start, and
+[issue](https://github.com/devantler-tech/khoist/issues) before you start, and
 reference it in the pull request; only a small, obvious fix such as a typo or a broken link may go
 straight to a pull request. The
-[roadmap](https://github.com/devantler-tech/data-product-controller/issues/1) shows what is
+[roadmap](https://github.com/devantler-tech/khoist/issues/1) shows what is
 planned. Report sensitive vulnerabilities through this repository's private
-[Report a vulnerability](https://github.com/devantler-tech/data-product-controller/security/advisories/new)
+[Report a vulnerability](https://github.com/devantler-tech/khoist/security/advisories/new)
 form, not a public issue or pull request.
 
 ## Make a first documentation change
@@ -15,11 +15,11 @@ form, not a public issue or pull request.
 You need Git and a GitHub account that can push to your own fork. This path needs no Go toolchain,
 no cluster and no credentials for any product or cloud service.
 
-Fork `devantler-tech/data-product-controller` on GitHub. Replace `YOUR-LOGIN` with your login:
+Fork `devantler-tech/khoist` on GitHub. Replace `YOUR-LOGIN` with your login:
 
 ```sh
-git clone https://github.com/YOUR-LOGIN/data-product-controller.git
-cd data-product-controller
+git clone https://github.com/YOUR-LOGIN/khoist.git
+cd khoist
 git switch -c docs/first-contribution
 ```
 

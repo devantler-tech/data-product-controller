@@ -148,6 +148,6 @@ that incompatibility; it does not establish negotiation, transfer, enforcement
 or production adoption. See the [independent consumer fixture](../tests/dataspace/edc/README.md).
 
 [ADR 0009](adr/0009-offline-dsp-catalog-export.md) records the design.
-[Adoption and flag retirement #126](https://github.com/devantler-tech/data-product-controller/issues/126)
+[Adoption and flag retirement #126](https://github.com/devantler-tech/khoist/issues/126)
 has an owner and a review on **2026-10-30**. Enabling or removing the flag requires
 that follow-up's provider/consumer evidence; the date itself changes no behavior.

@@ -38,7 +38,7 @@ Add `--format json` for a machine-readable report. A valid report does not estab
 current readiness, credentials, endpoint access or a complete deployment.
 Keep the command's exit status with its output; partial or failed output is not a pass.
 
-The [publisher reference](https://github.com/devantler-tech/data-product-controller/blob/main/docs/publisher-preflight.md)
+The [publisher reference](https://github.com/devantler-tech/khoist/blob/main/docs/publisher-preflight.md)
 documents exit codes, bounds, namespace handling and the independent browser report viewer.
 The released image also contains `/product-check`; use a verified digest and the
 documented read-only container invocation when you do not want to build from source.
