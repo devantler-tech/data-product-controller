@@ -117,7 +117,7 @@ helm_release_lifecycle() {
     (.schema.openAPIV3Schema.properties.spec.properties.source.properties.adapter.enum | index("percona-mongodb/v1") != null))' >/dev/null
 	candidate_version=$(helm show chart "$candidate_chart" | yq -r '.version')
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
-	helm_installed_identity "$candidate_version" "localhost:5055/data-product-controller@$product_digest" "$candidate_chart_name"
+	helm_installed_identity "$candidate_version" "localhost:5055/data-product-controller@$product_digest" "${candidate_chart_name:?packaged candidate chart name required}"
 	wait_for 'installed candidate upgrade restores exact product readiness' 240 readiness True true
 	installed_observation candidate "localhost:5055/data-product-controller@$product_digest" "$product_digest" KHoist
 	installed_query_check

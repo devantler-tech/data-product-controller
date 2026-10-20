@@ -91,7 +91,7 @@ installed_lifecycle_matrix() {
 	wait_for 'operational baseline retains the declared source' 180 readiness True true
 	[[ $(kube get dataproduct existing-export -o json | jq -er '.metadata.uid') == "$matrix_product_uid" ]]
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true --set contractReadiness.enabled=false
-	helm_installed_identity "$candidate_version" "$candidate_image" "$candidate_chart_name"
+	helm_installed_identity "$candidate_version" "$candidate_image" "${candidate_chart_name:?packaged candidate chart name required}"
 	wait_for 'candidate operational source has a full current rollout' 180 lifecycle_rollout dpc-http-source full
 	wait_for 'candidate restores the exact selected product' 180 readiness True true
 	# Every family's rollback and deletion checks compare against these independent identities.
@@ -119,7 +119,7 @@ installed_lifecycle_matrix() {
 		contract_matrix_rollback_check
 	fi
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true --set contractReadiness.enabled=true
-	helm_installed_identity "$candidate_version" "$candidate_image" "$candidate_chart_name"
+	helm_installed_identity "$candidate_version" "$candidate_image" "${candidate_chart_name:?packaged candidate chart name required}"
 	matrix_recovered 'candidate restoration recovers the selected contract' \
 		'candidate restoration recovers the selected product'
 	matrix_observation restored-candidate "$candidate_image" "$product_digest"

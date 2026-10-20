@@ -47,7 +47,7 @@ ui_free_rollback_lifecycle() {
 			runtime=$(jq -er '.runtimeDigest' "$release_dir/release.json")
 		else
 			chart=$candidate_chart
-			chart_name=$candidate_chart_name
+			chart_name=${candidate_chart_name:?packaged candidate chart name required}
 			version=$candidate_version
 			image=$candidate_image
 			runtime=$product_digest
