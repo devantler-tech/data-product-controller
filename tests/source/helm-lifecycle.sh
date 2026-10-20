@@ -128,6 +128,7 @@ helm_release_lifecycle() {
 	installed_query_check
 	[[ $(kubectl --request-timeout=15s get crd/dataproducts.data.devantler.tech -o json | jq -er '.metadata.uid') == "$baseline_crd_uid" ]]
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
+	helm_installed_identity "$candidate_version" "localhost:5055/data-product-controller@$product_digest" "${candidate_chart_name:?packaged candidate chart name required}"
 	installed_observation restored-candidate "localhost:5055/data-product-controller@$product_digest" "$product_digest" KHoist
 	installed_query_check
 	chart_publication_lifecycle
