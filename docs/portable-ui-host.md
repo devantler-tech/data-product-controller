@@ -112,4 +112,4 @@ and that SIGTERM exits successfully in both transport modes. The shared host all
 ten seconds for active responses to drain before closing remaining connections.
 
 Packaging checks establish release behavior. Platform adoption and UI flag retirement
-remain tracked in [#120](https://github.com/devantler-tech/data-product-controller/issues/120).
+remain tracked in [#120](https://github.com/devantler-tech/khoist/issues/120).

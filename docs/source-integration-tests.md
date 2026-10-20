@@ -93,7 +93,7 @@ OpenAPI contract before restoring the candidate. These commands retain the suite
 absolute deadline. The public receipt identifies the verified release and both
 saved revisions; it explicitly excludes production adoption. Coordinated Platform
 adoption and its recovery plan remain in
-[#409](https://github.com/devantler-tech/data-product-controller/issues/409).
+[#409](https://github.com/devantler-tech/khoist/issues/409).
 
 Each install/upgrade uses an explicit disposable kubeconfig/context and a test-only
 CA post-renderer. Certificate and hostname verification stay enabled. No production
@@ -193,7 +193,7 @@ discovers and queries the actual local TLS demo product. See the
 
 The hosted result is a controlled integration proxy. Platform rollout acceptance
 and release-flag retirement remain in issues #46, #49, #101, #113 and
-[#123](https://github.com/devantler-tech/data-product-controller/issues/123).
+[#123](https://github.com/devantler-tech/khoist/issues/123).
 The DCAT activation/retirement review is due 2026-10-30. The contract probe
 uses a real TLS endpoint on the private test network; this does not prove production
 public-route reachability. The controller never fetches its data-plane URLs.
@@ -222,4 +222,4 @@ effective application grants and lifecycle. The PostgreSQL profile covers SQL, J
 and AGE; the Document and Graph profiles cover native Percona and ArangoDB.
 These profiles provide disposable-environment evidence. Production rollout and
 engine-provider gate retirement for all five supported native and hybrid selections
-remain in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).
+remain in [#128](https://github.com/devantler-tech/khoist/issues/128).

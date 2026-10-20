@@ -3,7 +3,7 @@ title: Configuration
 description: Locate Helm settings, process flags and opt-in release capabilities.
 ---
 
-The [chart values](https://github.com/devantler-tech/data-product-controller/blob/main/charts/data-product-controller/values.yaml)
+The [chart values](https://github.com/devantler-tech/khoist/blob/main/charts/data-product-controller/values.yaml)
 are the complete Helm reference. Inspect the exact version you will install:
 
 ```bash

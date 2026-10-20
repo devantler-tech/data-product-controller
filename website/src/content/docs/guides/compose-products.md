@@ -49,5 +49,5 @@ Version checks use publisher declarations: a minimum stable version within major
 accepts compatible later stable major-1 versions. Major-zero versions require an exact
 match. KHoist does not fetch schemas or prove that responses have compatible semantics.
 
-The [composition reference](https://github.com/devantler-tech/data-product-controller/blob/main/docs/composition.md)
+The [composition reference](https://github.com/devantler-tech/khoist/blob/main/docs/composition.md)
 contains the complete example, failure reasons and graph bounds.

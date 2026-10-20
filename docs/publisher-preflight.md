@@ -262,4 +262,4 @@ Release publication repeats that smoke after signature and revision verification
 This does not prove that a consuming deployment has switched its entrypoint.
 
 Independent publisher evaluation and retirement of the temporary gate are
-tracked in [#205](https://github.com/devantler-tech/data-product-controller/issues/205).
+tracked in [#205](https://github.com/devantler-tech/khoist/issues/205).

@@ -57,7 +57,7 @@ Do not delete the CRD to fix a field error.
 
 ## Report a reproducible problem
 
-Open an [issue](https://github.com/devantler-tech/data-product-controller/issues/new)
+Open an [issue](https://github.com/devantler-tech/khoist/issues/new)
 with the operation, expected result, actual result and release/chart identity.
 Include a minimal declaration with public example URLs and redact credentials,
 personal data and private infrastructure details.

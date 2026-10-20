@@ -59,9 +59,9 @@ switch to the new entrypoint is required before removing that executable.
 Removing those public fields, protocols, flags and workloads requires a
 versioned migration, generated schemas, signed release artifacts and coordinated
 Platform GitOps adoption. That work is tracked in
-[#390](https://github.com/devantler-tech/data-product-controller/issues/390),
+[#390](https://github.com/devantler-tech/khoist/issues/390),
 with contract/runtime retirement in
-[#392](https://github.com/devantler-tech/data-product-controller/issues/392) and
+[#392](https://github.com/devantler-tech/khoist/issues/392) and
 production adoption in
 [platform#4890](https://github.com/devantler-tech/platform/issues/4890).
 The registry change alone does not establish complete migration or production
