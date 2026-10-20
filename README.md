@@ -272,24 +272,34 @@ does not prove that a particular version is available. Before you depend on one,
 registry serves it:
 
 ```bash
-helm show chart oci://ghcr.io/devantler-tech/charts/data-product-controller --version '<version>'
+helm show chart oci://ghcr.io/devantler-tech/charts/khoist --version '<version>'
 ```
 
 The command prints the chart's metadata when that version exists and fails when it does not.
 Platform deployments should pin the released chart and an immutable image digest.
 
+The chart, image and signer names in this README's commands apply to v6.0.2 and later. Releases up
+to v6.0.1 were published before the repository was renamed: their chart is
+`oci://ghcr.io/devantler-tech/charts/data-product-controller`, their image is
+`ghcr.io/devantler-tech/data-product-controller`, and their signatures name the
+`devantler-tech/data-product-controller` workflows. For one of those releases, replace
+`charts/khoist` with `charts/data-product-controller` and `devantler-tech/khoist` with
+`devantler-tech/data-product-controller` in those commands. The
+[released artifact acceptance guide](docs/release-acceptance.md) explains how to select the matching
+profile.
+
 ### Verify a released chart
 
 The chart publication job signs the digest returned by Helm and verifies its signature before
 succeeding. Chart signatures use the issuer `https://token.actions.githubusercontent.com` and the
-identity `https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/<tag>`.
+identity `https://github.com/devantler-tech/khoist/.github/workflows/publish-chart.yaml@refs/tags/<tag>`.
 Verify a released chart using its published digest and tag:
 
 ```bash
 cosign verify \
-  --certificate-identity 'https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/<tag>' \
+  --certificate-identity 'https://github.com/devantler-tech/khoist/.github/workflows/publish-chart.yaml@refs/tags/<tag>' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  'ghcr.io/devantler-tech/charts/data-product-controller@sha256:<digest>'
+  'ghcr.io/devantler-tech/charts/khoist@sha256:<digest>'
 ```
 
 Deployment policy must match this chart identity separately from the shared controller-image and
@@ -308,7 +318,7 @@ image digest verified against the trusted publisher:
 
 ```bash
 helm upgrade --install data-product-controller \
-  oci://ghcr.io/devantler-tech/charts/data-product-controller \
+  oci://ghcr.io/devantler-tech/charts/khoist \
   --version '<version>' \
   --namespace data-product-system \
   --create-namespace \
@@ -327,7 +337,7 @@ and never updates or removes it on `helm upgrade`, so a release that changes the
 does not reach clusters that already have the chart. Apply the new CRD before upgrading:
 
 ```bash
-helm show crds oci://ghcr.io/devantler-tech/charts/data-product-controller --version <version> \
+helm show crds oci://ghcr.io/devantler-tech/charts/khoist --version <version> \
   | kubectl apply -f -
 ```
 
