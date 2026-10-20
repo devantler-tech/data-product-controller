@@ -1,4 +1,4 @@
-# Contributing to data-product-controller
+# Contributing to KHoist
 
 You can help by improving the documentation, fixing an example, or changing the controller, the
 registry or the chart. Open or find an
