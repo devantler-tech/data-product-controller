@@ -84,14 +84,14 @@ installed_lifecycle_matrix() {
 	helm_scoped upgrade dpc "$test_dir/baseline/release-chart.tgz" --reset-values \
 		--values "$test_dir/operational-baseline-values.yaml" \
 		--post-renderer "$repo_root/tests/source/trust-test-ca.sh" --wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image"
+	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
 	baseline_revision=$(helm_scoped get metadata dpc --output json | jq -er '.revision | select(type == "number" and . > 0 and . == floor)')
 	[[ $baseline_revision =~ ^[1-9][0-9]*$ ]]
 	wait_for 'operational released baseline has a complete independent probe' 180 lifecycle_rollout dpc-contract-probe full
 	wait_for 'operational baseline retains the declared source' 180 readiness True true
 	[[ $(kube get dataproduct existing-export -o json | jq -er '.metadata.uid') == "$matrix_product_uid" ]]
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true --set contractReadiness.enabled=false
-	helm_installed_identity "$candidate_version" "$candidate_image"
+	helm_installed_identity "$candidate_version" "$candidate_image" "$candidate_chart_name"
 	wait_for 'candidate operational source has a full current rollout' 180 lifecycle_rollout dpc-http-source full
 	wait_for 'candidate restores the exact selected product' 180 readiness True true
 	# Every family's rollback and deletion checks compare against these independent identities.
@@ -109,7 +109,7 @@ installed_lifecycle_matrix() {
 	matrix_observation candidate "$candidate_image" "$product_digest"
 	# Helm's actual stored revision, not a reapplied baseline rendering.
 	helm_scoped rollback dpc "$baseline_revision" --wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image"
+	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
 	matrix_recovered 'operational rollback restores independent contracts' \
 		'operational rollback restores the selected product'
 	matrix_observation rollback "$baseline_image" "$baseline_runtime"
@@ -119,7 +119,7 @@ installed_lifecycle_matrix() {
 		contract_matrix_rollback_check
 	fi
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true --set contractReadiness.enabled=true
-	helm_installed_identity "$candidate_version" "$candidate_image"
+	helm_installed_identity "$candidate_version" "$candidate_image" "$candidate_chart_name"
 	matrix_recovered 'candidate restoration recovers the selected contract' \
 		'candidate restoration recovers the selected product'
 	matrix_observation restored-candidate "$candidate_image" "$product_digest"

@@ -284,7 +284,13 @@ jq -n --arg digest "$product_digest" --arg cidr "$DPC_SOURCE_IP/32" '{
 
 mkdir "$test_dir/candidate-chart"
 helm package "$repo_root/charts/data-product-controller" --destination "$test_dir/candidate-chart" >/dev/null
-candidate_chart="$test_dir/candidate-chart/data-product-controller-$(helm show chart "$repo_root/charts/data-product-controller" | yq -r '.version').tgz"
+candidate_chart_metadata=$(helm show chart "$repo_root/charts/data-product-controller")
+candidate_chart_name=$(printf '%s\n' "$candidate_chart_metadata" | yq -r '.name')
+candidate_chart="$test_dir/candidate-chart/$candidate_chart_name-$(printf '%s\n' "$candidate_chart_metadata" | yq -r '.version').tgz"
+[[ -f $candidate_chart ]] || {
+	echo "packaged candidate chart not found at $candidate_chart" >&2
+	exit 1
+}
 # The installed source, connector and contract families each run in their own job in CI.
 installed_families=()
 for family in source replicas contracts; do

@@ -17,8 +17,8 @@ spec:
   version: v1.0.0
   owner:
     name: devantler-tech
-    url: https://github.com/devantler-tech/data-product-controller
-  documentationUrl: https://github.com/devantler-tech/data-product-controller
+    url: https://github.com/devantler-tech/khoist
+  documentationUrl: https://github.com/devantler-tech/khoist
   outputs:
     - name: observations
       protocol: OpenAPI
