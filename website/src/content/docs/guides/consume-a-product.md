@@ -57,5 +57,5 @@ go test ./examples/api-consumer -run TestConsumesNamedHarbourOutput -count=1 -v
 
 This runs the real registry and Harbour handlers against a temporary local TLS
 fixture and verifies the Nordhavn record. It does not prove production adoption.
-See the [consumer reference](https://github.com/devantler-tech/data-product-controller/blob/main/docs/api-consumer.md)
+See the [consumer reference](https://github.com/devantler-tech/khoist/blob/main/docs/api-consumer.md)
 for its exact profile, limits and transport behaviour.

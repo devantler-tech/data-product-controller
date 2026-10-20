@@ -54,7 +54,7 @@ To withdraw the direct surface, restore a previously verified release with the g
 normal GitOps. Platform must adopt a compatible artifact-bound rollout verifier before upgrading;
 its legacy verifier still expects the removed environment setting. See
 [ADR 0022](adr/0022-standard-ksail-release-interface.md) and acceptance/consumer adoption in
-[#373](https://github.com/devantler-tech/data-product-controller/issues/373).
+[#373](https://github.com/devantler-tech/khoist/issues/373).
 
 ## Request and failure boundaries
 

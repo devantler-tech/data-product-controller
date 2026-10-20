@@ -307,5 +307,5 @@ effective privileges, rotation, outage recovery and retained data. Its current-h
 synthetic observer results cannot replace that evidence. The required
 [real Graph acceptance](real-graph-acceptance.md) applies the same boundary to ArangoDB traversal,
 effective grants and retained source recovery. The remaining real provider matrix is tracked
-in [#38](https://github.com/devantler-tech/data-product-controller/issues/38), and released deployment
-acceptance is required before retiring the gate in [#128](https://github.com/devantler-tech/data-product-controller/issues/128).
+in [#38](https://github.com/devantler-tech/khoist/issues/38), and released deployment
+acceptance is required before retiring the gate in [#128](https://github.com/devantler-tech/khoist/issues/128).

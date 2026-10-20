@@ -29,8 +29,8 @@ cluster, account or credentials.
 You need Git, `curl`, and Go at the version in [`go.mod`](go.mod) or newer.
 
 ```bash
-git clone https://github.com/devantler-tech/data-product-controller.git
-cd data-product-controller
+git clone https://github.com/devantler-tech/khoist.git
+cd khoist
 go run ./cmd/demo-product --listen-address 127.0.0.1:8080
 ```
 
@@ -181,7 +181,7 @@ The registry grants no product presentation capabilities, regardless of legacy
 flag settings. The independent compatibility kit remains deprecated and retains
 its restrictive sandbox and protocol controls; [its guide](docs/ui-contract.md)
 describes that existing runtime. Versioned schema/runtime retirement and normal
-Platform adoption are tracked in [#390](https://github.com/devantler-tech/data-product-controller/issues/390).
+Platform adoption are tracked in [#390](https://github.com/devantler-tech/khoist/issues/390).
 
 The workspace offers System, Light and Dark appearance with an orange accent.
 An explicit choice stays in browser storage when available; denied storage does
@@ -254,9 +254,9 @@ when a product describes one logical dataset and every named output provides
 access to a representation of it. Enable the separate `dcatCatalog.enabled` chart
 flag and supply `dcatCatalog.id` to publish the catalog. Discovery grants no access
 to data and makes no availability claim. Production activation and flag retirement
-are tracked in [#123](https://github.com/devantler-tech/data-product-controller/issues/123).
+are tracked in [#123](https://github.com/devantler-tech/khoist/issues/123).
 
-Engine-specific provisioning, additional source adapters, schema-content compatibility, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/data-product-controller/issues/1).
+Engine-specific provisioning, additional source adapters, schema-content compatibility, and data-space exchange remain [roadmap work](https://github.com/devantler-tech/khoist/issues/1).
 
 ## Install on a cluster
 

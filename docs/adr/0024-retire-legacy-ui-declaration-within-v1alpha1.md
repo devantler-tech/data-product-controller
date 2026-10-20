@@ -28,7 +28,7 @@ stages. Each stage ships as a major release. No new API version and no conversio
 introduced, and `status.storedVersions` stays `[v1alpha1]`.
 
 **Stage 1 — stop new declarations**
-([#443](https://github.com/devantler-tech/data-product-controller/issues/443)). The delivered CRD
+([#443](https://github.com/devantler-tech/khoist/issues/443)). The delivered CRD
 gains the checkpoint's ratcheting rule and keeps the typed property. Creating a product with `spec.ui`, adding it or changing it is rejected
 with an actionable message. An unchanged legacy declaration remains valid and can be removed.
 There is no conversion in either direction: stored objects are untouched, and the rule only
@@ -57,7 +57,7 @@ formats are unchanged.
 
 ## Preconditions for removing the field
 
-Slice D ([#439](https://github.com/devantler-tech/data-product-controller/issues/439)) merges only
+Slice D ([#439](https://github.com/devantler-tech/khoist/issues/439)) merges only
 after each of these is verified and recorded on its issue:
 
 1. The Stage 1 release is installed in every consuming cluster, shown by reading the live CRD and
@@ -66,8 +66,8 @@ after each of these is verified and recorded on its issue:
     consuming cluster finds no object with `spec.ui`, and the deployed GitOps revision declares
     none. A failed, partial or filtered read is not a zero.
 3. The compatibility kit session runtime
-    ([#437](https://github.com/devantler-tech/data-product-controller/issues/437)) and the
-    registry UI surfaces ([#438](https://github.com/devantler-tech/data-product-controller/issues/438))
+    ([#437](https://github.com/devantler-tech/khoist/issues/437)) and the
+    registry UI surfaces ([#438](https://github.com/devantler-tech/khoist/issues/438))
     are removed in a release those clusters run, so nothing reads the field.
 4. Disposable acceptance installs the last signed Stage 1 release, upgrades to the candidate,
     performs a real Helm rollback and restores the candidate. Product UIDs, non-UI specifications,

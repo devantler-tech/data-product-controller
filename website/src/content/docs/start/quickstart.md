@@ -10,7 +10,7 @@ The example does not connect to a real harbour sensor.
 ## Before you start
 
 Install Git, curl and Go at the version declared in the
-[repository's go.mod](https://github.com/devantler-tech/data-product-controller/blob/main/go.mod)
+[repository's go.mod](https://github.com/devantler-tech/khoist/blob/main/go.mod)
 or newer. The first build downloads Go dependencies.
 
 ## Run the example API
@@ -18,8 +18,8 @@ or newer. The first build downloads Go dependencies.
 In a terminal:
 
 ```bash
-git clone https://github.com/devantler-tech/data-product-controller.git
-cd data-product-controller
+git clone https://github.com/devantler-tech/khoist.git
+cd khoist
 go run ./cmd/demo-product --listen-address 127.0.0.1:8080
 ```
 
