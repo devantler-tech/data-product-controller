@@ -12,8 +12,10 @@ The current chart requires Kubernetes **1.35 or newer**. Check the selected rele
 
 Choose a published version from
 [release tags](https://github.com/devantler-tech/khoist/tags).
-From v6.0.2 the chart and controller image are published under the `khoist` package name.
-Releases up to v6.0.1 keep the earlier `data-product-controller` name.
+From v6.0.2 the chart and controller image are published under the `khoist` package name,
+which the commands on this page use. Releases up to v6.0.1 keep the earlier
+`data-product-controller` name: for one of those, replace `charts/khoist` with
+`charts/data-product-controller` in each command.
 
 The commands below contain placeholders. Replace `<version>` with the chart version
 and `<verified-image-digest>` with the complete controller digest verified for that

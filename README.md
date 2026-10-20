@@ -278,12 +278,15 @@ helm show chart oci://ghcr.io/devantler-tech/charts/khoist --version '<version>'
 The command prints the chart's metadata when that version exists and fails when it does not.
 Platform deployments should pin the released chart and an immutable image digest.
 
-Releases up to v6.0.1 were published before the repository was renamed: their chart is
+The chart, image and signer names in this README's commands apply to v6.0.2 and later. Releases up
+to v6.0.1 were published before the repository was renamed: their chart is
 `oci://ghcr.io/devantler-tech/charts/data-product-controller`, their image is
 `ghcr.io/devantler-tech/data-product-controller`, and their signatures name the
-`devantler-tech/data-product-controller` workflows. Use those names to inspect or verify an older
-release. The [released artifact acceptance guide](docs/release-acceptance.md) explains how to select
-the matching profile.
+`devantler-tech/data-product-controller` workflows. For one of those releases, replace
+`charts/khoist` with `charts/data-product-controller` and `devantler-tech/khoist` with
+`devantler-tech/data-product-controller` in those commands. The
+[released artifact acceptance guide](docs/release-acceptance.md) explains how to select the matching
+profile.
 
 ### Verify a released chart
 
