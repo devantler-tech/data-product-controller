@@ -41,11 +41,13 @@ ui_free_rollback_lifecycle() {
 	for phase in baseline candidate rollback restored; do
 		if [[ $phase == baseline || $phase == rollback ]]; then
 			chart=$release_dir/release-chart.tgz
+			chart_name=data-product-controller
 			version=5.0.0
 			image=$(jq -er '.imageReference' "$release_dir/release.json")
 			runtime=$(jq -er '.runtimeDigest' "$release_dir/release.json")
 		else
 			chart=$candidate_chart
+			chart_name=${candidate_chart_name:?packaged candidate chart name required}
 			version=$candidate_version
 			image=$candidate_image
 			runtime=$product_digest
@@ -65,8 +67,8 @@ ui_free_rollback_lifecycle() {
 				--set-string image.digest="${image##*@}" --post-renderer "$repo_root/tests/source/publication-products.sh" \
 				--wait --timeout 180s >/dev/null
 		fi
-		workload_revision=$(helm_installed_revision dpc "$version" "$image")
-		publication_revision=$(helm_installed_revision dpc-publication "$version" "$image")
+		workload_revision=$(helm_installed_revision dpc "$version" "$image" "$chart_name")
+		publication_revision=$(helm_installed_revision dpc-publication "$version" "$image" "$chart_name")
 		((workload_revision > previous_workload && publication_revision > previous_publication))
 		controller_uid=$(publication_kube get deployment dpc -o json | jq -er '.metadata.uid | select(type == "string" and length > 0)')
 		publication_helm get manifest dpc --revision "$workload_revision" >"$test_dir/ui-free-$phase-workload.yaml"

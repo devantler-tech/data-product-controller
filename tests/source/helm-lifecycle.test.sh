@@ -33,15 +33,25 @@ source "$root/tests/source/helm-lifecycle.sh"
 digest=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 jq -n --arg digest "$digest" '{metadata:{status:"deployed",revision:7,chart:"data-product-controller",version:"1.2.3",appVersion:"1.2.3"},values:{image:{repository:"ghcr.io/devantler-tech/data-product-controller",digest:$digest}}}' >"$work/good.json"
 cp "$work/good.json" "$HELM_TEST_RELEASE"
-helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"
-[[ $(helm_installed_revision dpc-publication 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest") == 7 ]]
+helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" data-product-controller
+[[ $(helm_installed_revision dpc-publication 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" data-product-controller) == 7 ]]
+# The expected chart name is explicit: a release of the other chart name, or no name, is rejected.
+for chart in khoist ''; do
+	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" "$chart"; then
+		echo "installed release identity accepted chart name '$chart'" >&2
+		exit 1
+	fi
+done
+jq '.metadata.chart="khoist"' "$work/good.json" >"$HELM_TEST_RELEASE"
+helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" khoist
+cp "$work/good.json" "$HELM_TEST_RELEASE"
 for mutation in '.metadata.status="pending-upgrade"' '.metadata.version="1.2.4"' '.metadata.appVersion="1.2.4"' '.values.image.digest="latest"' '.values.image.repository="unapproved.example/controller"' '.metadata.chart="other"' '.metadata.revision=0'; do
 	jq "$mutation" "$work/good.json" >"$HELM_TEST_RELEASE"
-	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
+	if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" data-product-controller; then
 		echo 'installed release identity accepted drift' >&2
 		exit 1
 	fi
-	if helm_installed_revision dpc-publication 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" >"$work/rejected-revision"; then
+	if helm_installed_revision dpc-publication 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" data-product-controller >"$work/rejected-revision"; then
 		echo 'publication revision accepted drift' >&2
 		exit 1
 	fi
@@ -49,13 +59,13 @@ for mutation in '.metadata.status="pending-upgrade"' '.metadata.version="1.2.4"'
 done
 cp "$work/good.json" "$HELM_TEST_RELEASE"
 export CHANGE_REVISION=true
-if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
+if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" data-product-controller; then
 	echo 'installed identity accepted a release changed during readback' >&2
 	exit 1
 fi
 unset CHANGE_REVISION
 printf '{}\n' >"$HELM_TEST_RELEASE"
-if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest"; then
+if helm_installed_identity 1.2.3 "ghcr.io/devantler-tech/data-product-controller@$digest" data-product-controller; then
 	echo 'installed release identity accepted incomplete response' >&2
 	exit 1
 fi

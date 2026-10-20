@@ -28,7 +28,7 @@ jobs:
       contents: read # Build the tagged release source.
       packages: write # Publish only the independently versioned AGE image.
       id-token: write # Sign that artifact with the immutable publisher identity.
-    uses: devantler-tech/data-product-controller/.github/workflows/publish-age.yaml@86f0f95e5ac93ec914f5717f561af878b7d09bf1
+    uses: devantler-tech/khoist/.github/workflows/publish-age.yaml@58ed5155307e174ca6b10db652cf601f440dad65
 
   smoke:
     name: Verify published offline commands and portable UI host
@@ -58,15 +58,15 @@ jobs:
           EXPECTED_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          image="ghcr.io/devantler-tech/data-product-controller:${RELEASE_TAG#v}"
+          image="ghcr.io/devantler-tech/khoist:${RELEASE_TAG#v}"
           docker pull "$image"
           digest=$(docker image inspect "$image" --format '{{index .RepoDigests 0}}')
-          [[ "$digest" =~ ^ghcr.io/devantler-tech/data-product-controller@sha256:[a-f0-9]{64}$ ]]
+          [[ "$digest" =~ ^ghcr.io/devantler-tech/khoist@sha256:[a-f0-9]{64}$ ]]
           publisher_identity=$(go run ./scripts/publisher-identity)
           cosign verify \
             --certificate-identity "$publisher_identity" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-github-workflow-repository devantler-tech/data-product-controller \
+            --certificate-github-workflow-repository devantler-tech/khoist \
             --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
             --certificate-github-workflow-sha "$EXPECTED_SHA" \
             "$digest"

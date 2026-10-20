@@ -6,13 +6,15 @@ helm_scoped() {
 	publication_helm "$@"
 }
 
-# helm_installed_revision returns one stable deployed revision bound to the requested release, chart and image.
+# helm_installed_revision returns one stable deployed revision bound to the requested release, version, image and chart name.
+# Releases v6.0.1 and earlier carry the chart name data-product-controller; the current chart is named khoist.
 helm_installed_revision() {
-	local release=$1 version=$2 image=$3 metadata revision final
+	local release=$1 version=$2 image=$3 chart=$4 metadata revision final
+	[[ -n $chart ]] || return 1
 	metadata=$(helm_scoped get metadata "$release" --output json) || return 1
-	revision=$(jq -ser --arg version "$version" '
+	revision=$(jq -ser --arg version "$version" --arg chart "$chart" '
     if length == 1 then .[0] else error("ambiguous metadata") end |
-    select(.status == "deployed" and .chart == "data-product-controller" and
+    select(.status == "deployed" and .chart == $chart and
       .version == $version and .appVersion == $version and
       (.revision | type == "number" and . > 0 and . == floor)) | .revision' <<<"$metadata") || return 1
 	[[ $revision =~ ^[1-9][0-9]*$ ]] || return 1
@@ -25,7 +27,7 @@ helm_installed_revision() {
 
 # helm_installed_identity checks the main workload release without emitting a revision.
 helm_installed_identity() {
-	helm_installed_revision dpc "$1" "$2" >/dev/null
+	helm_installed_revision dpc "$1" "$2" "$3" >/dev/null
 }
 
 # install_chart installs the packaged candidate with the fixture's declared values and test CA.
@@ -87,7 +89,7 @@ helm_release_lifecycle() {
 	helm_scoped upgrade --install dpc "$baseline_dir/release-chart.tgz" --reset-values \
 		--values "$test_dir/baseline-values.yaml" --post-renderer "$repo_root/tests/source/trust-test-ca.sh" \
 		--wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image"
+	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
 	baseline_revision=$(helm_scoped history dpc --output json | jq -er '[.[] | select(.status == "deployed")] | if length == 1 then .[0].revision else error("ambiguous deployed revision") end')
 	[[ $baseline_revision =~ ^[1-9][0-9]*$ ]] || {
 		echo 'invalid installed baseline revision' >&2
@@ -115,17 +117,18 @@ helm_release_lifecycle() {
     (.schema.openAPIV3Schema.properties.spec.properties.source.properties.adapter.enum | index("percona-mongodb/v1") != null))' >/dev/null
 	candidate_version=$(helm show chart "$candidate_chart" | yq -r '.version')
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
-	helm_installed_identity "$candidate_version" "localhost:5055/data-product-controller@$product_digest"
+	helm_installed_identity "$candidate_version" "localhost:5055/data-product-controller@$product_digest" "${candidate_chart_name:?packaged candidate chart name required}"
 	wait_for 'installed candidate upgrade restores exact product readiness' 240 readiness True true
 	installed_observation candidate "localhost:5055/data-product-controller@$product_digest" "$product_digest" KHoist
 	installed_query_check
 	helm_scoped rollback dpc "$baseline_revision" --wait --timeout 240s >/dev/null
-	helm_installed_identity 1.12.0 "$baseline_image"
+	helm_installed_identity 1.12.0 "$baseline_image" data-product-controller
 	wait_for 'real Helm rollback restores the released baseline and query' 240 readiness True true
 	installed_observation rollback "$baseline_image" "$baseline_runtime" 'Data products'
 	installed_query_check
 	[[ $(kubectl --request-timeout=15s get crd/dataproducts.data.devantler.tech -o json | jq -er '.metadata.uid') == "$baseline_crd_uid" ]]
 	install_chart --set httpSource.enabled=true --set connectorReadiness.enabled=true
+	helm_installed_identity "$candidate_version" "localhost:5055/data-product-controller@$product_digest" "${candidate_chart_name:?packaged candidate chart name required}"
 	installed_observation restored-candidate "localhost:5055/data-product-controller@$product_digest" "$product_digest" KHoist
 	installed_query_check
 	chart_publication_lifecycle

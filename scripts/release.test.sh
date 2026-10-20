@@ -51,7 +51,7 @@ cmp "$generated_crd" "$chart_crd" || fail 'chart and generated CRDs differ'
 container_count=$(yq '[.spec.template.spec.containers[] | select(.name == "data-product-controller")] | length' "$deployment")
 [ "$container_count" = '1' ] ||
 	fail 'deployment must contain exactly one data-product-controller container'
-[ "$(yq '.spec.template.spec.containers[] | select(.name == "data-product-controller") | .image' "$deployment")" = 'ghcr.io/devantler-tech/data-product-controller:latest' ] ||
+[ "$(yq '.spec.template.spec.containers[] | select(.name == "data-product-controller") | .image' "$deployment")" = 'ghcr.io/devantler-tech/khoist:latest' ] ||
 	fail 'publish-app must receive the expected mutable image placeholder'
 
 sh "$repo_root/scripts/chart-image.test.sh"
