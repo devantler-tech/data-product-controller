@@ -4,7 +4,7 @@ description: Find the versioned Kubernetes contract and the fields a publisher n
 ---
 
 `apiVersion: data.devantler.tech/v1alpha1` and `kind: DataProduct` identify the resource.
-The [delivered CRD](https://github.com/devantler-tech/data-product-controller/blob/main/config/crd/bases/data.devantler.tech_dataproducts.yaml)
+The [delivered CRD](https://github.com/devantler-tech/khoist/blob/main/config/crd/bases/data.devantler.tech_dataproducts.yaml)
 is the field and admission reference. Kubernetes can show the installed version:
 
 ```bash

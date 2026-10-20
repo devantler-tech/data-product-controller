@@ -11,7 +11,7 @@ The current chart requires Kubernetes **1.35 or newer**. Check the selected rele
 ## Select and verify a release
 
 Choose a published version from
-[GitHub releases](https://github.com/devantler-tech/data-product-controller/releases).
+[GitHub releases](https://github.com/devantler-tech/khoist/releases).
 The chart and controller image use the `data-product-controller` package name.
 
 The commands below contain placeholders. Replace `<version>` with the chart version
@@ -23,7 +23,7 @@ helm show chart oci://ghcr.io/devantler-tech/charts/data-product-controller \
   --version '<version>'
 ```
 
-Use the [released artifact verification procedure](https://github.com/devantler-tech/data-product-controller/blob/main/docs/release-acceptance.md)
+Use the [released artifact verification procedure](https://github.com/devantler-tech/khoist/blob/main/docs/release-acceptance.md)
 before selecting an image digest. Controller images and charts have different signing
 identities; verifying one does not verify the other.
 

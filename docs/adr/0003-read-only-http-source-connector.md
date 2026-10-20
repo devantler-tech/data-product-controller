@@ -37,7 +37,7 @@ fixed operation and result labels, last observed readiness, and observation time
 connection details, credentials, and source response bodies.
 
 The OpenFeature `http-source` release flag defaults off. The optional chart workload explicitly
-enables it. Rollout and retirement are tracked in [#46](https://github.com/devantler-tech/data-product-controller/issues/46).
+enables it. Rollout and retirement are tracked in [#46](https://github.com/devantler-tech/khoist/issues/46).
 
 ## Consequences
 
@@ -50,7 +50,7 @@ enables it. Rollout and retirement are tracked in [#46](https://github.com/devan
 - Readiness adds one full export read per probe. The deployment must choose its probe period to fit
   the source's request budget. The chart uses a 30-second period and a seven-second timeout.
 - DataProduct health observation, public contract reachability, and registration remain separate
-  work under [#4](https://github.com/devantler-tech/data-product-controller/issues/4). A healthy local
+  work under [#4](https://github.com/devantler-tech/khoist/issues/4). A healthy local
   probe does not prove that an external consumer can reach a public contract.
 
 ## References
