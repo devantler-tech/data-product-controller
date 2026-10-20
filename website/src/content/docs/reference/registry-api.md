@@ -30,7 +30,7 @@ A disabled capability is not an empty successful catalogue. Invalid, oversized o
 unreadable metadata can be rejected or explicitly omitted from discovery.
 Do not treat an incomplete scan as proof that a product is absent.
 
-The [discovery reference](https://github.com/devantler-tech/data-product-controller/blob/main/docs/registry-discovery.md)
+The [discovery reference](https://github.com/devantler-tech/khoist/blob/main/docs/registry-discovery.md)
 defines query parameters, response shapes, limits and HTTP failures.
-The [dependency-trace reference](https://github.com/devantler-tech/data-product-controller/blob/main/docs/dependency-traces.md)
+The [dependency-trace reference](https://github.com/devantler-tech/khoist/blob/main/docs/dependency-traces.md)
 defines partial branches and lineage requirements.

@@ -36,7 +36,7 @@ PostgreSQL JSONB and Apache AGE.
 Real disposable acceptance covers these supported profiles. Production rollout,
 operational fit and release-gate retirement remain separate acceptance work.
 In particular, an ArangoDB edition marker does not establish a deployment entitlement.
-Read the [engine-provider contract](https://github.com/devantler-tech/data-product-controller/blob/main/docs/engine-providers.md)
+Read the [engine-provider contract](https://github.com/devantler-tech/khoist/blob/main/docs/engine-providers.md)
 before selecting a source, operator, publication or image.
 
 ## Interoperability limits
@@ -45,6 +45,6 @@ DCAT and DSP publication are bounded metadata profiles. The real Eclipse EDC imp
 checkpoint reports loss of typed distribution identities. It does not establish full
 provider interoperability, contract negotiation, authenticated transfer or usage control.
 
-The [roadmap](https://github.com/devantler-tech/data-product-controller/issues/1)
+The [roadmap](https://github.com/devantler-tech/khoist/issues/1)
 tracks adoption and the accepted API-only direction. Retained legacy UI metadata and
 runtime are deprecated compatibility; new integrations use named APIs.

@@ -190,12 +190,12 @@ controlled interoperability evidence, not production rollout evidence.
 
 Platform owns production activation, access policy and rollback. Disable
 `dcatCatalog.enabled` to restore 404 responses; published products and workloads
-remain intact. [Issue #123](https://github.com/devantler-tech/data-product-controller/issues/123)
+remain intact. [Issue #123](https://github.com/devantler-tech/khoist/issues/123)
 tracks activation and flag retirement, with an acceptance review on **2026-10-30**.
 That date does not automatically enable publication or remove the flag.
 
 Dataspace Protocol adapters, policy negotiation, transfers, federation and import
-remain in [roadmap #7](https://github.com/devantler-tech/data-product-controller/issues/7).
+remain in [roadmap #7](https://github.com/devantler-tech/khoist/issues/7).
 
 ## References
 

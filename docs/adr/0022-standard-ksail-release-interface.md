@@ -9,7 +9,7 @@ Accepted for the reference workload. Supersedes ADR 0021's temporary release-gat
 The first public source has completed normal Platform adoption with signed artifacts and real
 browser reads, local filters, explicit refresh, appearance changes and fresh history restoration.
 The failure and cancellation controls also passed against the deployed source revision.
-Acceptance evidence is recorded in [#373](https://github.com/devantler-tech/data-product-controller/issues/373).
+Acceptance evidence is recorded in [#373](https://github.com/devantler-tech/khoist/issues/373).
 Keeping a first-use switch adds configuration without an ongoing operational requirement.
 
 ## Decision
@@ -38,7 +38,7 @@ through normal GitOps; unlisting the optional product alone is insufficient.
 
 Platform's rollout verifier currently checks the legacy gate. It must gain a reviewed,
 artifact-bound retired-gate profile before adopting the new release. Source issue
-[#385](https://github.com/devantler-tech/data-product-controller/issues/385) covers this repository;
+[#385](https://github.com/devantler-tech/khoist/issues/385) covers this repository;
 parent #373 stays open until compatible Platform adoption and live readback complete.
 
 GitHub availability and anonymous allowance remain external. Public-source acceptance establishes

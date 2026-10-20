@@ -67,13 +67,13 @@ withdrawal, malformed declarations and duplicate-identity rejection.
 Discovery remains cluster-wide public metadata and grants no data access. Platform
 owns routing, access policy and production activation. The default-off gate and
 publisher annotation provide separate deployment and publication controls.
-[Issue #123](https://github.com/devantler-tech/data-product-controller/issues/123)
+[Issue #123](https://github.com/devantler-tech/khoist/issues/123)
 tracks rollout and flag retirement with a review on 2026-10-30. Release and test
 evidence alone do not activate production.
 
 The [catalog guide](../dcat-catalog.md) defines the mapping, limits, errors and
 examples. Dataspace Protocol adapters, policy negotiation, transfers, federation
-and import remain in [#7](https://github.com/devantler-tech/data-product-controller/issues/7).
+and import remain in [#7](https://github.com/devantler-tech/khoist/issues/7).
 
 ## References
 

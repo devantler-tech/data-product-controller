@@ -53,5 +53,5 @@ Verify any optional feature your deployment enables.
 For a failed workload upgrade, restore the recorded chart, digest and values through
 your platform's deployment workflow. Handle schema recovery separately after reviewing
 the old release's supported fields. The
-[installed lifecycle reference](https://github.com/devantler-tech/data-product-controller/blob/main/docs/installed-source-lifecycle.md)
+[installed lifecycle reference](https://github.com/devantler-tech/khoist/blob/main/docs/installed-source-lifecycle.md)
 explains the repository's controlled upgrade, rollback and retained-source evidence.

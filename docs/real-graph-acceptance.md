@@ -70,6 +70,6 @@ and Cosign. The local unit suite does not establish operator behavior. Current-h
 acceptance must pass before merge. Single mode has no high availability; Kind development
 evidence does not certify a production distribution, backup policy or Community license use.
 Production rollout remains tracked separately in
-[#128](https://github.com/devantler-tech/data-product-controller/issues/128).
+[#128](https://github.com/devantler-tech/khoist/issues/128).
 
 See [ADR 0015](adr/0015-real-graph-acceptance.md) for the contract and its limits.
