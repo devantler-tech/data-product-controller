@@ -43,11 +43,21 @@ if [[ ${#original[@]} == 0 ]]; then
 	exit 0
 fi
 
+# The copy keeps the pod's node, image and mounts, but carries no labels or owner, swaps every
+# claimed volume for an empty one so it never shares the live database files, and drops the
+# health checks so the kubelet does not restart the probe while it waits.
+jq --arg probe "$probe" --arg inner "$(<"$here/percona-entry-probe-inner.sh")" '
+  {apiVersion:"v1", kind:"Pod", metadata:{name:$probe},
+   spec:(.spec | del(.ephemeralContainers, .hostname, .subdomain) |
+     .volumes |= map(if has("persistentVolumeClaim") then {name, emptyDir:{}} else . end) |
+     .containers |= map(if .name == "mongod" then
+       del(.livenessProbe, .readinessProbe, .startupProbe) |
+       .command = (["bash", "-c", $inner, "khoist-probe"] + (.command // []) + (.args // [])) |
+       del(.args)
+     else . end))}' "$work/pod.json" >"$work/probe-pod.json"
 kube delete pod "$probe" --ignore-not-found --wait=true --timeout=30s >/dev/null 2>&1 || true
 probe_created=true
-if ! kube debug "$pod" --copy-to="$probe" --same-node --container=mongod \
-	-- bash -c "$(<"$here/percona-entry-probe-inner.sh")" khoist-probe "${original[@]}" \
-	>/dev/null 2>&1; then
+if ! kube create -f "$work/probe-pod.json" >/dev/null 2>&1; then
 	result ProbeNotCreated
 	exit 0
 fi
@@ -83,7 +93,7 @@ jq -Rnc --arg state "$state" --argjson available "$available" --argjson other "$
   ([$lines[] | select(startswith("khoist-probe exit ")) | capture("status=(?<s>[0-9]+)").s | tonumber] | last) as $entryExit |
   {probe:"entrypoint",
    outcome:(
-     if $state=="Running" then "StartedWithinDeadline"
+     if $state=="Running" then "StillRunningAtDeadline"
      elif $state!="Terminated" then "ProbeNotStarted"
      elif $available|not then "ProbeLogUnavailable"
      elif ($lines|length)==0 then "ProbeOutputMissing"

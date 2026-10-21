@@ -33,7 +33,7 @@ source "$repo_root/tests/provider/budget.sh"
 
 # Remove only this run's resources and report failure when cleanup is incomplete.
 cleanup() {
-	local result=$? node
+	local result=$? node probe_budget
 	trap - EXIT INT TERM
 	phase_deadline=$((SECONDS + 180))
 	if [[ -n ${registry_forward_pid:-} ]]; then
@@ -45,10 +45,6 @@ cleanup() {
 			# Keep diagnostic collection bounded and leave the original failure intact.
 			timeout --signal=TERM --kill-after=1s 15s bash \
 				"$repo_root/tests/provider/percona-diagnostics.sh" "$KUBECONFIG" || true
-			# A start that fails before the database logs anything leaves empty logs.
-			# Start it once more in a label-free copy to name the failing entrypoint line.
-			PERCONA_PROBE_ATTEMPTS=15 timeout --signal=TERM --kill-after=5s 75s bash \
-				"$repo_root/tests/provider/percona-entry-probe.sh" "$KUBECONFIG" || true
 			# Setup can fail before the product namespace or CRDs exist. Include
 			# network-plugin readiness so a cluster timeout has a concrete cause.
 			kubectl --request-timeout=10s -n kube-system get pods -o wide || true
@@ -62,6 +58,17 @@ cleanup() {
 			[[ ! -f "$test_dir/forward.log" ]] || cat "$test_dir/forward.log" >&2
 			kubectl --request-timeout=10s -n products get events --sort-by=.metadata.creationTimestamp || true
 			# Do not dump Secrets, database records or system-user logs.
+			# A start that fails before the database logs anything leaves empty logs.
+			# Start it once more in a label-free copy to name the failing entrypoint line,
+			# using only the reserve left after the 155s cluster deletion and node removal.
+			probe_budget=$((phase_deadline - SECONDS - 160))
+			((probe_budget <= 75)) || probe_budget=75
+			if ((probe_budget >= 20)); then
+				PERCONA_PROBE_ATTEMPTS=$(((probe_budget - 15) / 3)) timeout --signal=TERM --kill-after=2s \
+					"$((probe_budget - 2))s" bash "$repo_root/tests/provider/percona-entry-probe.sh" "$KUBECONFIG" || true
+			else
+				echo '{"probe":"entrypoint","outcome":"SkippedForCleanupReserve"}'
+			fi
 		fi
 		timeout --signal=TERM --kill-after=5s 150s ksail cluster delete --name "$cluster_name" --provider Docker \
 			--kubeconfig "$KUBECONFIG" --config "$cluster_config" --force --delete-storage || result=1

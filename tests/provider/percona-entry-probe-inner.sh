@@ -12,8 +12,11 @@ fi
 if command -v sha256sum >/dev/null 2>&1; then
 	digest=$(sha256sum "$entry" 2>/dev/null) && printf 'khoist-probe entry-sha256=%s\n' "${digest%% *}"
 fi
-trap 'printf "khoist-probe err status=%d line=%d\n" "$?" "$LINENO"' ERR
-trap 'printf "khoist-probe exit status=%d\n" "$?"' EXIT
+# Write probe lines to a saved copy of the container log. With errtrace the ERR trap also fires
+# inside command substitutions and pipelines, whose stdout is the entrypoint's own data.
+exec 47>&1
+trap 'printf "khoist-probe err status=%d line=%d\n" "$?" "$LINENO" >&47' ERR
+trap 'printf "khoist-probe exit status=%d\n" "$?" >&47' EXIT
 set -o errtrace
 # shellcheck source=/dev/null
 . "$entry" "$@"
