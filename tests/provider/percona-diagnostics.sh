@@ -50,7 +50,10 @@ read_log() {
       elif contains(": Permission denied") then "PermissionDenied"
       elif contains(": Read-only file system") then "ReadOnlyFilesystem"
       else null end;
-    [inputs | {document:(try fromjson catch null),reason:plaintext_reason,nonempty:(length>0)}] as $lines |
+    [inputs | (try fromjson catch null) as $document |
+      {document:$document,
+       reason:(if ($document|type)=="object" then null else plaintext_reason end),
+       nonempty:(length>0)}] as $lines |
     {pod:$pod,container:$container,stream:$stream,available:true,
      structuredLines:([$lines[] | select(.document|type=="object")]|length),
      unclassifiedLines:([$lines[] | select((.document|type)!="object" and .reason==null and .nonempty)]|length),
