@@ -12,7 +12,7 @@ import (
 )
 
 var publisherPattern = regexp.MustCompile(
-	`^devantler-tech/actions/\.github/workflows/publish-app\.yaml@[a-f0-9]{40}$`,
+	`^devantler-tech/[.]github/[.]github/workflows/publish-app[.]yaml@[a-f0-9]{40}$`,
 )
 
 func publisherIdentity(input io.Reader) (string, error) {

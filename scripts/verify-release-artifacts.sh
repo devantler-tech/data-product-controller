@@ -13,6 +13,7 @@ fail() {
 tag='' source_sha='' image_digest='' chart_digest='' publisher_sha='' platform='' output_dir=''
 budget=180
 profile=data-product-controller profile_selected=false
+publisher_repository=devantler-tech/actions publisher_repository_selected=false
 while [[ $# -gt 0 ]]; do
 	[[ $# -ge 2 ]] || fail configuration
 	case "$1" in
@@ -21,6 +22,10 @@ while [[ $# -gt 0 ]]; do
 		profile=$2 profile_selected=true
 		;;
 	--tag) tag=$2 ;;
+	--publisher-repository)
+		[[ $publisher_repository_selected == false && -n $2 ]] || fail configuration
+		publisher_repository=$2 publisher_repository_selected=true
+		;;
 	--source-sha) source_sha=$2 ;;
 	--image-digest) image_digest=$2 ;;
 	--chart-digest) chart_digest=$2 ;;
@@ -34,6 +39,10 @@ while [[ $# -gt 0 ]]; do
 done
 case "$profile" in
 data-product-controller | khoist) ;;
+*) fail configuration ;;
+esac
+case "$publisher_repository" in
+devantler-tech/actions | devantler-tech/.github) ;;
 *) fail configuration ;;
 esac
 [[ $tag =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ && $source_sha =~ ^[a-f0-9]{40}$ &&
@@ -73,7 +82,7 @@ signature_bound() {
 		-f "$script_dir/verify-release-artifacts.jq" "$1" >/dev/null 2>&1
 }
 bounded cosign verify --certificate-identity \
-	"https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@$publisher_sha" \
+	"https://github.com/$publisher_repository/.github/workflows/publish-app.yaml@$publisher_sha" \
 	"${caller[@]}" "$image" >"$output_dir/image-signature.json" 2>"$output_dir/image-verification.log" || fail image-unverified
 signature_bound "$output_dir/image-signature.json" "$image_digest" || fail image-signature-incomplete
 bounded cosign verify --certificate-identity \
@@ -101,6 +110,7 @@ bounded yq -e '.name == strenv(RELEASE_EXPECTED_CHART) and .version == strenv(RE
 ((SECONDS < deadline)) || fail deadline
 bounded cp "${archives[0]}" "$output_dir/release-chart.tgz" || fail finalization
 bounded jq -n --arg mode receipt --arg tag "$tag" --arg sha "$source_sha" --arg publisher "$publisher_sha" \
+	--arg publisherRepository "$publisher_repository" \
 	--arg image "$image_digest" --arg chart "$chart_digest" --arg platform "$platform" --arg runtime "$runtime_digest" \
 	--arg profile "$profile" --arg imageReference "$image" --arg chartReference "$chart" \
 	-f "$script_dir/verify-release-artifacts.jq" \
