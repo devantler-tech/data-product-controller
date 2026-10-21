@@ -28,7 +28,7 @@ jobs:
       contents: read # Build the tagged release source.
       packages: write # Publish only the independently versioned AGE image.
       id-token: write # Sign that artifact with the immutable publisher identity.
-    uses: devantler-tech/khoist/.github/workflows/publish-age.yaml@58ed5155307e174ca6b10db652cf601f440dad65
+    uses: devantler-tech/khoist/.github/workflows/publish-age.yaml@d6cd61d542cd4de6b8756cf18c9c91231a5f3ff0
 
   smoke:
     name: Verify published offline commands and portable UI host
