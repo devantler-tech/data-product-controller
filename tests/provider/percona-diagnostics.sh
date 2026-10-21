@@ -24,7 +24,9 @@ jq -c '
    current:($s.state.terminated|terminated),previous:($s.lastState.terminated|terminated)}
 ' "$work/pods.json" >"$work/status.jsonl"
 
-# read_log emits only structured startup identifiers and error codes, never log prose.
+# read_log emits only identifiers, counts and fixed error classes, never log prose.
+# The operator entrypoint can exit before mongod starts emitting JSON. Classify
+# those plaintext errors without publishing their arguments, paths or values.
 read_log() {
 	local pod=$1 container=$2 stream=$3
 	local -a args=(logs "$pod" -c "$container")
@@ -37,12 +39,27 @@ read_log() {
 	jq -Rnc --arg pod "$pod" --arg container "$container" --arg stream "$stream" '
     def token: if type=="string" and test("^[A-Za-z0-9_-]{1,80}$") then . else null end;
     def number: if type=="number" then . else null end;
-    {pod:$pod,container:$container,stream:$stream,available:true,records:[
-      inputs |
-      if .=="Fatal glibc error: CPU does not support x86-64-v3" then
-        {severity:"F",component:"RUNTIME",reason:"UnsupportedCPU"}
+    def plaintext_reason:
+      if .=="Fatal glibc error: CPU does not support x86-64-v3" then "UnsupportedCPU"
+      elif startswith("Error parsing command line:") then "CommandLineRejected"
+      elif startswith("BadValue:") then "InvalidStartupOption"
+      elif startswith("Unrecognized option:") then "UnknownStartupOption"
+      elif test("\\.sh: line [0-9]+: [A-Za-z_][A-Za-z0-9_]*: unbound variable$") then "EntrypointUnboundVariable"
+      elif .=="error: mongod does not appear to have stayed running -- perhaps it had an error?" then "BootstrapProcessExited"
+      elif .=="error: mongod does not appear to have accepted connections quickly enough -- perhaps it had an error?" then "BootstrapConnectionTimeout"
+      elif contains(": Permission denied") then "PermissionDenied"
+      elif contains(": Read-only file system") then "ReadOnlyFilesystem"
+      else null end;
+    [inputs | {document:(try fromjson catch null),reason:plaintext_reason,nonempty:(length>0)}] as $lines |
+    {pod:$pod,container:$container,stream:$stream,available:true,
+     structuredLines:([$lines[] | select(.document|type=="object")]|length),
+     unclassifiedLines:([$lines[] | select((.document|type)!="object" and .reason==null and .nonempty)]|length),
+     records:[
+      $lines[] |
+      if .reason!=null then
+        {severity:"E",component:"STARTUP",reason:.reason}
       else
-        (try fromjson catch null) |
+        .document |
         select(type=="object" and (.s=="E" or .s=="F")) |
         (.attr|if type=="object" then . else {} end) as $attr |
         ($attr.error|if type=="object" then . else {} end) as $error |

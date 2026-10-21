@@ -22,6 +22,13 @@ case "$*" in
 	printf '%s\n' '{"s":"E","c":"STORAGE","id":20575,"msg":"synthetic-private-detail","attr":{"error":"synthetic-private-detail"}}'
 	printf '%s\n' '{"s":"E","c":{"private":"synthetic-private-detail"},"id":"synthetic-private-detail","attr":["synthetic-private-detail"]}'
   printf '%s\n' 'synthetic-private-detail' 'Fatal glibc error: CPU does not support x86-64-v3'
+  printf '%s\n' 'Error parsing command line: synthetic-private-detail' \
+    'BadValue: synthetic-password' 'Unrecognized option: synthetic-record' \
+    '/data/db/ps-entry.sh: line 401: SYNTHETIC_SECRET: unbound variable' \
+    'error: mongod does not appear to have stayed running -- perhaps it had an error?' \
+    'error: mongod does not appear to have accepted connections quickly enough -- perhaps it had an error?' \
+    'synthetic-private-detail: Permission denied' \
+    'synthetic-password: Read-only file system'
   ;;
 *' logs documents-rs0-0 -c mongod --tail=40'|*' logs documents-rs0-0 -c mongo-init --tail=40')
   printf '%s\n' '{"s":"I","c":"COMMAND","msg":"synthetic-private-detail","attr":{"document":"synthetic-record"}}'
@@ -36,9 +43,14 @@ bash "$root/tests/provider/percona-diagnostics.sh" "$work/kubeconfig" >"$work/ou
 grep -F '"exitCode":14' "$work/output" >/dev/null
 grep -F '"errorName":"InvalidPath"' "$work/output" >/dev/null
 grep -F '"reason":"UnsupportedCPU"' "$work/output" >/dev/null
+for reason in CommandLineRejected InvalidStartupOption UnknownStartupOption EntrypointUnboundVariable BootstrapProcessExited BootstrapConnectionTimeout PermissionDenied ReadOnlyFilesystem; do
+	grep -F "\"reason\":\"$reason\"" "$work/output" >/dev/null
+done
+grep -F '"structuredLines":3' "$work/output" >/dev/null
+grep -F '"unclassifiedLines":1' "$work/output" >/dev/null
 grep -F 'mongo-init' "$TEST_DIAGNOSTICS_CALLS" >/dev/null
 grep -F -- '--previous --tail=80' "$TEST_DIAGNOSTICS_CALLS" >/dev/null
-if grep -E 'synthetic-(private|password|record)' "$work/output"; then
+if grep -E 'synthetic-(private|password|record)|SYNTHETIC_SECRET|ps-entry.sh' "$work/output"; then
 	echo 'FAIL: diagnostics leaked raw messages, credentials or records' >&2
 	exit 1
 fi
