@@ -1,6 +1,6 @@
 module github.com/devantler-tech/data-product-controller
 
-go 1.26.9
+go 1.26.10
 
 require (
 	github.com/arangodb/kube-arangodb v0.0.0-20260902085934-c8ddcb3ff018
