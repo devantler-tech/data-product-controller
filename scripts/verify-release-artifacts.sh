@@ -14,6 +14,7 @@ tag='' source_sha='' image_digest='' chart_digest='' publisher_sha='' platform='
 budget=180
 profile=data-product-controller profile_selected=false
 publisher_repository=devantler-tech/actions publisher_repository_selected=false
+publisher_sha_selected=false
 while [[ $# -gt 0 ]]; do
 	[[ $# -ge 2 ]] || fail configuration
 	case "$1" in
@@ -29,7 +30,10 @@ while [[ $# -gt 0 ]]; do
 	--source-sha) source_sha=$2 ;;
 	--image-digest) image_digest=$2 ;;
 	--chart-digest) chart_digest=$2 ;;
-	--publisher-sha) publisher_sha=$2 ;;
+	--publisher-sha)
+		[[ $publisher_sha_selected == false && -n $2 ]] || fail configuration
+		publisher_sha=$2 publisher_sha_selected=true
+		;;
 	--platform) platform=$2 ;;
 	--output-dir) output_dir=$2 ;;
 	--timeout) budget=$2 ;;

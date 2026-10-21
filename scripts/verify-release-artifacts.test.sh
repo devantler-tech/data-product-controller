@@ -179,6 +179,11 @@ done
 reject --publisher-repository devantler-tech/.github --publisher-repository devantler-tech/actions
 [[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] ||
 	fail 'ambiguous publisher repository reached an external operation'
+for publisher_sha in bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; do
+	reject --publisher-sha "$publisher_sha"
+	[[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] ||
+		fail 'repeated publisher SHA reached an external operation'
+done
 # A supported manifest must reach the runtime platform check after its exact pull.
 reject_platform() {
 	local requested=${1:-linux/amd64}
