@@ -42,6 +42,9 @@ cleanup() {
 	fi
 	if [[ $cluster_started == true ]]; then
 		if [[ $result != 0 ]]; then
+			# Keep diagnostic collection bounded and leave the original failure intact.
+			timeout --signal=TERM --kill-after=1s 15s bash \
+				"$repo_root/tests/provider/percona-diagnostics.sh" "$KUBECONFIG" || true
 			# Setup can fail before the product namespace or CRDs exist. Include
 			# network-plugin readiness so a cluster timeout has a concrete cause.
 			kubectl --request-timeout=10s -n kube-system get pods -o wide || true
