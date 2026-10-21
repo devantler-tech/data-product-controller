@@ -63,6 +63,7 @@ case "$*" in
   printf '%s\n' '{"status":{"containerStatuses":[{"name":"mongod","restartCount":1,"state":{"waiting":{}},"lastState":{"terminated":{"exitCode":1}}}]}}'
   ;;
 *' logs documents-entry-probe -c mongod --tail=200 --previous')
+  [[ ${TEST_EMPTY_LOG:-false} != true ]] || exit 0
   printf '%s\n' 'khoist-probe entry-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
     'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic' \
     'khoist-probe exit status=1'
@@ -82,4 +83,9 @@ grep -q ' delete pod documents-entry-probe ' "$TEST_PROBE_CALLS" || fail 'probe 
 
 TEST_NOT_FAILED=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/skipped"
 jq -e '.outcome=="NoFailedStart"' "$work/skipped" >/dev/null || fail "probed a container that never failed"
-printf 'PASS: startup probe line/status evidence, process replacement, skip and privacy controls\n'
+
+# 5. An empty log proves nothing about the entrypoint: the probe's own first line never ran.
+TEST_EMPTY_LOG=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/empty"
+jq -e '.outcome=="ProbeOutputMissing" and .entrySha256==null and .otherLines==0' "$work/empty" >/dev/null ||
+	fail "empty probe log was classified as $(cat "$work/empty")"
+printf 'PASS: startup probe line/status evidence, process replacement, empty log, skip and privacy controls\n'

@@ -86,6 +86,7 @@ jq -Rnc --arg state "$state" --argjson available "$available" --argjson other "$
      if $state=="Running" then "StartedWithinDeadline"
      elif $state!="Terminated" then "ProbeNotStarted"
      elif $available|not then "ProbeLogUnavailable"
+     elif ($lines|length)==0 then "ProbeOutputMissing"
      elif any($lines[]; .=="khoist-probe entry=unreadable") then "EntrypointUnreadable"
      elif $entryExit!=null then "EntrypointExited"
      else "EntrypointReplaced" end),
