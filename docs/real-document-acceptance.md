@@ -47,7 +47,7 @@ running at its deadline, or a start that leaves no exit marker, is reported as i
 evidence beside the container's own termination reason, never as a started or replaced database.
 
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
-with individual setup, startup, publication, pause, recovery and gate budgets, plus a three-minute
+with individual setup, startup, publication, pause, recovery and gate budgets, plus a four-minute
 cleanup reserve. Every phase uses the smaller remaining deadline; partial output from a failed
 observation is a failure. Cleanup deletes only the generated test cluster and its storage.
 

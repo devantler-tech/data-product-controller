@@ -26,7 +26,7 @@ export KUBECONFIG="$test_dir/kubeconfig"
 cluster_config="$test_dir/cluster/ksail.yaml"
 cluster_started=false
 started_at=$SECONDS
-# 33 minutes of assertions plus 3 minutes reserved for cleanup, under the 40-minute job.
+# 33 minutes of assertions plus 4 minutes reserved for cleanup, under the 40-minute job.
 work_deadline=$((started_at + 1980))
 phase_deadline=$work_deadline
 source "$repo_root/tests/provider/budget.sh"
@@ -35,7 +35,7 @@ source "$repo_root/tests/provider/budget.sh"
 cleanup() {
 	local result=$? node probe_budget
 	trap - EXIT INT TERM
-	phase_deadline=$((SECONDS + 180))
+	phase_deadline=$((SECONDS + 240))
 	if [[ -n ${registry_forward_pid:-} ]]; then
 		kill "$registry_forward_pid" 2>/dev/null || true
 		wait "$registry_forward_pid" 2>/dev/null || true
