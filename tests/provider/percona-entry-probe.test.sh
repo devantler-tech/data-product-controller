@@ -66,14 +66,14 @@ case "$*" in
 *' create -f '*) cp "${@: -1}" "$TEST_PROBE_POD" ;;
 *' get pod documents-entry-probe -o json')
   [[ ${TEST_STILL_RUNNING:-false} != true ]] || { printf '%s\n' '{"status":{"containerStatuses":[{"name":"mongod","restartCount":0,"state":{"running":{}}}]}}'; exit 0; }
-  printf '%s\n' '{"status":{"containerStatuses":[{"name":"mongod","restartCount":1,"state":{"waiting":{}},"lastState":{"terminated":{"exitCode":1}}}]}}'
+  [[ ${TEST_NO_EXIT:-false} != true ]] || { printf '%s\n' '{"status":{"containerStatuses":[{"name":"mongod","restartCount":0,"state":{"terminated":{"exitCode":137,"reason":"OOMKilled","message":"synthetic-private-detail"}}}]}}'; exit 0; }
+  printf '%s\n' '{"status":{"containerStatuses":[{"name":"mongod","restartCount":0,"state":{"terminated":{"exitCode":1,"reason":"Error"}}}]}}'
   ;;
-*' logs documents-entry-probe -c mongod --tail=200') ;;
-*' logs documents-entry-probe -c mongod --tail=200 --previous')
+*' logs documents-entry-probe -c mongod --tail=200')
   [[ ${TEST_EMPTY_LOG:-false} != true ]] || exit 0
   printf '%s\n' 'khoist-probe entry-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
-    'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic' \
-    'khoist-probe exit status=1'
+    'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic'
+  [[ ${TEST_NO_EXIT:-false} == true ]] || printf '%s\n' 'khoist-probe exit status=1'
   ;;
 *) exit 91 ;;
 esac
@@ -90,7 +90,7 @@ grep -q ' delete pod documents-entry-probe ' "$TEST_PROBE_CALLS" || fail 'probe 
 # The copy is label- and owner-free on the same node, shares no claimed volume, and runs the
 # original command and arguments as separate words after the probe name.
 jq -e --arg inner "$(<"$inner")" '.metadata == {name:"documents-entry-probe"} and
-  .spec.nodeName == "node-a" and .spec.hostname == null and
+  .spec.nodeName == "node-a" and .spec.hostname == null and .spec.restartPolicy == "Never" and
   ([.spec.volumes[] | select(has("persistentVolumeClaim"))] | length) == 0 and
   (.spec.volumes | map(.name) | sort) == ["bin", "mongod-data"] and
   (.spec.containers[0] | .livenessProbe == null and .readinessProbe == null and .args == null and
@@ -112,4 +112,11 @@ TEST_STILL_RUNNING=true PERCONA_PROBE_ATTEMPTS=2 bash "$root/tests/provider/perc
 	"$work/kubeconfig" >"$work/running"
 jq -e '.outcome=="StillRunningAtDeadline"' "$work/running" >/dev/null ||
 	fail "running copy was classified as $(cat "$work/running")"
-printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated copy, empty log, running deadline, skip and privacy controls\n'
+
+# 7. No EXIT marker is not proof of replacement: a killed shell leaves the same log.
+TEST_NO_EXIT=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/no-exit"
+jq -e '.outcome=="Indeterminate" and .entrypointExit==null and .containerExit==137 and
+  .containerReason=="OOMKilled" and .errors==[{status:1,line:42}]' "$work/no-exit" >/dev/null ||
+	fail "missing exit marker was classified as $(cat "$work/no-exit")"
+! grep -q synthetic "$work/no-exit" || fail "probe result leaked the termination message"
+printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'

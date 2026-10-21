@@ -45,10 +45,10 @@ fi
 
 # The copy keeps the pod's node, image and mounts, but carries no labels or owner, swaps every
 # claimed volume for an empty one so it never shares the live database files, and drops the
-# health checks so the kubelet does not restart the probe while it waits.
+# health checks and restarts so the copy starts the database container exactly once.
 jq --arg probe "$probe" --arg inner "$(<"$here/percona-entry-probe-inner.sh")" '
   {apiVersion:"v1", kind:"Pod", metadata:{name:$probe},
-   spec:(.spec | del(.ephemeralContainers, .hostname, .subdomain) |
+   spec:(.spec | del(.ephemeralContainers, .hostname, .subdomain) | .restartPolicy = "Never" |
      .volumes |= map(if has("persistentVolumeClaim") then {name, emptyDir:{}} else . end) |
      .containers |= map(if .name == "mongod" then
        del(.livenessProbe, .readinessProbe, .startupProbe) |
@@ -67,29 +67,27 @@ for ((attempt = 0; attempt < attempts; attempt++)); do
 	sleep "$interval"
 	kube get pod "$probe" -o json >"$work/probe.json" 2>/dev/null || continue
 	state=$(jq -r '[.status.containerStatuses[]? | select(.name=="mongod")] | first // {} |
-      if (.restartCount // 0) > 0 or .state.terminated != null then "Terminated"
+      if .state.terminated != null then "Terminated"
       elif .state.running != null then "Running"
       else "Pending" end' "$work/probe.json")
 	[[ $state != Terminated ]] || break
 done
 
-# Read the first completed start; the copy restarts it after it exits.
-logs=(logs "$probe" -c mongod --tail=200)
-if jq -e '[.status.containerStatuses[]? | select(.name=="mongod")] | (first.restartCount // 0) > 0' \
-	"$work/probe.json" >/dev/null 2>&1; then
-	logs+=(--previous)
-fi
+# The copy never restarts, so its log is exactly the one diagnostic start.
 available=true
-kube "${logs[@]}" >"$work/log" 2>/dev/null || available=false
+kube logs "$probe" -c mongod --tail=200 >"$work/log" 2>/dev/null || available=false
 grep -E '^khoist-probe (entry-sha256=[0-9a-f]{64}|entry=unreadable|err status=[0-9]{1,3} line=[0-9]{1,6}|exit status=[0-9]{1,3})$' \
 	"$work/log" >"$work/probe-lines" || true
 other=$(($(wc -l <"$work/log") - $(wc -l <"$work/probe-lines")))
 
+# Each named outcome needs positive evidence. Anything else, including a shell killed before its
+# EXIT trap or an entrypoint that replaced the shell, is Indeterminate with the container's own
+# termination reason and exit code beside it.
 jq -Rnc --arg state "$state" --argjson available "$available" --argjson other "${other:-0}" \
 	--slurpfile pod <(jq -c '[.status.containerStatuses[]? | select(.name=="mongod")] | first // {}' \
 		"$work/probe.json" 2>/dev/null || printf '{}') '
   [inputs] as $lines |
-  ($pod[0] | (.lastState.terminated // .state.terminated // {}).exitCode) as $containerExit |
+  ($pod[0] | .state.terminated // {}) as $terminated |
   ([$lines[] | select(startswith("khoist-probe exit ")) | capture("status=(?<s>[0-9]+)").s | tonumber] | last) as $entryExit |
   {probe:"entrypoint",
    outcome:(
@@ -99,10 +97,12 @@ jq -Rnc --arg state "$state" --argjson available "$available" --argjson other "$
      elif ($lines|length)==0 then "ProbeOutputMissing"
      elif any($lines[]; .=="khoist-probe entry=unreadable") then "EntrypointUnreadable"
      elif $entryExit!=null then "EntrypointExited"
-     else "EntrypointReplaced" end),
+     else "Indeterminate" end),
    entrySha256:([$lines[] | select(startswith("khoist-probe entry-sha256=")) | .[26:]] | first),
    errors:([$lines[] | select(startswith("khoist-probe err ")) |
      capture("status=(?<status>[0-9]+) line=(?<line>[0-9]+)") | map_values(tonumber)] | .[-8:]),
    entrypointExit:$entryExit,
-   containerExit:(if ($containerExit|type)=="number" then $containerExit else null end),
+   containerExit:(if ($terminated.exitCode|type)=="number" then $terminated.exitCode else null end),
+   containerReason:(if ($terminated.reason|type)=="string" and ($terminated.reason|test("^[A-Za-z]{1,32}$"))
+     then $terminated.reason else null end),
    otherLines:$other}' <"$work/probe-lines"

@@ -42,7 +42,9 @@ label-free copy of its pod whose entrypoint runs under numeric exit traps. The c
 claimed volume with an empty one, so it never shares the live database files, and it uses only the
 cleanup reserve left after cluster deletion. That probe reports only the entrypoint digest, failing
 line numbers and exit statuses, so a start that fails before the database writes any log still names
-where it stopped. A copy still running at its deadline is reported as such, not as a started database.
+where it stopped. The copy never restarts. Only positive probe evidence names an outcome: a copy still
+running at its deadline, or a start that leaves no exit marker, is reported as indeterminate
+evidence beside the container's own termination reason, never as a started or replaced database.
 
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
 with individual setup, startup, publication, pause, recovery and gate budgets, plus a three-minute
