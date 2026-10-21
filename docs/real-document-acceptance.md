@@ -37,6 +37,10 @@ metadata from the controller's source and Secret reads. Enabled observation must
 events; after each disabled rollout, there must be zero such reads across a full polling interval.
 Fixed synthetic passwords and the document payload must be absent from controller logs, product
 status and the registry response. Neither the audit log nor diagnostics dump Secret values.
+When the database container has already exited non-zero, failure cleanup also starts it once in a
+label-free copy of its pod whose entrypoint runs under numeric exit traps. That probe reports only the
+entrypoint digest, failing line numbers and exit statuses, so a start that fails before the database
+writes any log still names where it stopped.
 
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
 with individual setup, startup, publication, pause, recovery and gate budgets, plus a three-minute
