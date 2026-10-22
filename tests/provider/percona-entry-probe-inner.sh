@@ -30,18 +30,25 @@ if command -v mongod >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 &&
 			probe_output=$(mktemp) || probe_output=''
 		fi
 		if [[ -n $probe_output ]]; then
-			(
-				ulimit -f 64
-				exec timeout --signal=TERM --kill-after=1s 5s mongod --version
-			) >"$probe_output" 2>&1
+			# Read one overflow witness beyond the accepted 64 KiB. A file-size
+			# limit alone cannot distinguish a complete boundary-size stream from
+			# a parseable truncated prefix. The file can never exceed 65537 bytes.
+			timeout --signal=TERM --kill-after=1s 5s mongod --version 2>&1 |
+				head -c 65537 >"$probe_output"
+			probe_capture_stages=("${PIPESTATUS[@]}")
+			probe_version_status=${probe_capture_stages[0]}
+			probe_capture_status=${probe_capture_stages[1]}
 		else
 			timeout --signal=TERM --kill-after=1s 5s mongod --version >/dev/null 2>&1
+			probe_version_status=$?
 		fi
-		probe_version_status=$?
 		printf 'khoist-probe version mode=direct statuses=%d\n' "$probe_version_status"
 		if [[ -n $probe_output ]]; then
-			# shellcheck disable=SC2016 # jq variables are not shell interpolation.
-			probe_summary=$(timeout --signal=TERM --kill-after=1s 5s jq -Rnc '
+			probe_output_bytes=$(wc -c <"$probe_output" 2>/dev/null) || probe_output_bytes=''
+			probe_output_bytes=${probe_output_bytes//[[:space:]]/}
+			if [[ $probe_capture_status == 0 && $probe_output_bytes =~ ^[0-9]+$ ]] && ((probe_output_bytes <= 65536)); then
+				# shellcheck disable=SC2016 # jq variables are not shell interpolation.
+				probe_summary=$(timeout --signal=TERM --kill-after=1s 5s jq -Rnc '
         def number: if type=="number" and .>=0 and .<=2147483647 and floor==. then . else null end;
         def reason:
           if .=="Fatal glibc error: CPU does not support x86-64-v3" then "UnsupportedCPU"
@@ -61,7 +68,10 @@ if command -v mongod >/dev/null 2>&1 && command -v timeout >/dev/null 2>&1 &&
          errors:([$lines[].document|select(type=="object" and (.s=="E" or .s=="F"))|
            {severity:.s,id:(.id|number),code:((try (.attr.error.code // .attr.code) catch null)|number)}]|.[0:8])}
       ' <"$probe_output" 2>/dev/null) && printf 'khoist-probe version-output %s\n' "$probe_summary" ||
+					printf 'khoist-probe version-output=unavailable\n'
+			else
 				printf 'khoist-probe version-output=unavailable\n'
+			fi
 			rm -f "$probe_output"
 		else
 			printf 'khoist-probe version-output=unavailable\n'

@@ -61,6 +61,10 @@ mkdir "$work/version-bin"
 cat >"$work/version-bin/mongod" <<'MONGOD'
 #!/usr/bin/env bash
 [[ "$*" == --version ]] || exit 89
+if [[ -n ${TEST_OUTPUT_BYTES:-} ]]; then
+  printf '%*s' "$TEST_OUTPUT_BYTES" ''
+  exit 29
+fi
 if [[ ${TEST_PLAINTEXT:-false} == true ]]; then
   printf '%s\n' 'Error parsing command line: synthetic-private-detail' \
     'synthetic-private-detail: Permission denied' 'unclassified synthetic-private-detail' >&2
@@ -89,6 +93,31 @@ for producer_status in 0 29; do
     .errors==[{severity:"F",id:20574,code:38}]' <<<"$summary" >/dev/null || fail 'missing sanitized binary failure evidence'
 	! grep -q synthetic <<<"$out" || fail 'version comparison exposed binary output'
 done
+# A complete nonzero stream at the byte limit is still observable. One byte
+# beyond it must be explicitly unavailable, never a parseable partial summary.
+for bytes in 65535 65536 65537 70000; do
+	out=$(PATH="$work/version-bin:$PATH" TEST_OUTPUT_BYTES=$bytes \
+		bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" 2>&1) && status=0 || status=$?
+	[[ $status == 1 ]] || fail 'bounded version stream changed original entrypoint failure'
+	if ((bytes <= 65536)); then
+		grep -q '^khoist-probe version-output {' <<<"$out" || fail 'complete stream at the byte limit was lost'
+		grep -Fxq 'khoist-probe version mode=direct statuses=29' <<<"$out" || fail 'nonzero complete producer status was changed'
+	else
+		grep -Fxq 'khoist-probe version-output=unavailable' <<<"$out" || fail 'truncated stream was reported as a complete observation'
+		! grep -q '^khoist-probe version-output {' <<<"$out" || fail 'truncated stream retained a summary'
+	fi
+done
+mkdir "$work/broken-reader"
+cat >"$work/broken-reader/head" <<'HEAD'
+#!/usr/bin/env bash
+[[ $1 != -c ]] || exit 17
+exec /usr/bin/head "$@"
+HEAD
+chmod +x "$work/broken-reader/head"
+out=$(PATH="$work/broken-reader:$work/version-bin:$PATH" \
+	bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" 2>&1) && status=0 || status=$?
+[[ $status == 1 ]] || fail 'failed capture reader changed original entrypoint failure'
+grep -Fxq 'khoist-probe version-output=unavailable' <<<"$out" || fail 'failed capture reader reported complete output'
 out=$(PATH="$work/version-bin:$PATH" TEST_PLAINTEXT=true \
 	bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" 2>&1) && status=0 || status=$?
 [[ $status == 1 ]] || fail 'plaintext classification changed original failure'

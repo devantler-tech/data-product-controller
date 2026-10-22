@@ -48,7 +48,10 @@ evidence beside the container's own termination reason, never as a started or re
 Before sourcing the entrypoint, the copy compares direct `mongod --version`, its original
 early-closing reader and a fully draining reader. Each producer has a five-second timeout and
 one-second kill reserve, inside the existing copy deadline. The direct comparison privately
-captures at most 64 KiB of combined output. A bounded JSON parser reduces it to line counts,
+accepts at most 64 KiB of combined output, with one extra private byte as an overflow witness.
+An over-limit stream or failed capture reader is unavailable, even if its prefix parses;
+a complete stream remains observable when its producer exits nonzero.
+A bounded JSON parser reduces accepted output to line counts,
 fixed startup-error classes and numeric MongoDB error identifiers/codes, then deletes it.
 Messages, attributes, arguments and environment values are never published. The outer collector
 admits only one closed summary with approved fields, types and classes; missing, malformed,
