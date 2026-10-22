@@ -12,9 +12,10 @@ import (
 )
 
 var publisherPattern = regexp.MustCompile(
-	`^devantler-tech/actions/\.github/workflows/publish-app\.yaml@[a-f0-9]{40}$`,
+	`^devantler-tech/[.]github/[.]github/workflows/publish-app[.]yaml@[a-f0-9]{40}$`,
 )
 
+// publisherIdentity accepts one immutable maintained-catalogue signer declaration.
 func publisherIdentity(input io.Reader) (string, error) {
 	var workflow struct {
 		Jobs map[string]struct {
@@ -36,10 +37,12 @@ func publisherIdentity(input io.Reader) (string, error) {
 	return "https://github.com/" + publisher, nil
 }
 
+// main returns the verifier identity command's explicit process status.
 func main() {
 	os.Exit(run())
 }
 
+// run resolves the checked-in release caller without accepting an environment override.
 func run() int {
 	file, err := os.Open(".github/workflows/cd.yaml")
 	if err != nil {

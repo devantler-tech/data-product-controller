@@ -28,7 +28,7 @@ yq -e '.jobs.release.permissions | (((.issues // "none") == "none") and ((."pull
 yq -e '.jobs.release.permissions | ((.contents == "write") and (."id-token" == "write"))' "$release_workflow" >/dev/null ||
 	fail 'release must retain contents and identity permissions for publication'
 
-grep -Eq 'uses: devantler-tech/actions/\.github/workflows/publish-app\.yaml@[0-9a-f]{40}' "$workflow" ||
+yq -e '.jobs.publish.uses | test("^devantler-tech/[.]github/[.]github/workflows/publish-app[.]yaml@[0-9a-f]{40}$")' "$workflow" >/dev/null ||
 	fail 'CD must call the immutable shared publish-app workflow'
 grep -F 'app-name: data-product-controller' "$workflow" >/dev/null ||
 	fail 'CD must identify the controller container for digest pinning'

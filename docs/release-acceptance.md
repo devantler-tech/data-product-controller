@@ -16,6 +16,15 @@ Tags up to v6.0.1 were published with the `data-product-controller` profile; v6.
 release after the rename, and later tags use `khoist`.
 The shared image publisher commit remains independently supplied.
 
+The publisher catalogue is independent of that artifact profile. Omit
+`--publisher-repository` (or select `devantler-tech/actions`) for historical
+publications. For a tag signed by the maintained catalogue, explicitly supply
+`--publisher-repository devantler-tech/.github` and its reviewed full
+`--publisher-sha`. Unknown, empty or repeated repository selections fail before
+external access, and verification never falls back to the other signer. Maintained
+receipts also record `publisherRepository`; the default historical receipt shape
+is unchanged. Never infer the publisher from the current repository name.
+
 ```bash
 bash scripts/verify-release-artifacts.sh \
   --profile data-product-controller \

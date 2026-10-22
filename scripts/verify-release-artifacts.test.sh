@@ -21,6 +21,7 @@ export TEST_CALLER_REPOSITORY=devantler-tech/data-product-controller
 export TEST_IMAGE_REPOSITORY=ghcr.io/devantler-tech/data-product-controller
 export TEST_CHART_REPOSITORY=ghcr.io/devantler-tech/charts/data-product-controller
 export TEST_CHART_SIGNER=https://github.com/devantler-tech/data-product-controller/.github/workflows/publish-chart.yaml@refs/tags/v1.2.3
+export TEST_IMAGE_SIGNER=https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 export TEST_OPERATION_LOG="$work/operations"
 export TEST_SHA=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 export TEST_IMAGE_DIGEST=sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
@@ -42,7 +43,7 @@ if [[ ${MULTI_SIGNATURE:-false} == true ]]; then printf '[{"critical":{"image":{
 last=${!#}
 case "$last" in
 "$TEST_IMAGE_REPOSITORY@$TEST_IMAGE_DIGEST")
- [[ $args == *' --certificate-identity https://github.com/devantler-tech/actions/.github/workflows/publish-app.yaml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb '* ]] || exit 92
+ [[ $args == *" --certificate-identity $TEST_IMAGE_SIGNER "* ]] || exit 92
  [[ ${IMAGE_VERIFY_EXIT:-0} == 0 ]] || exit "$IMAGE_VERIFY_EXIT"
  printf '[{"critical":{"image":{"docker-manifest-digest":"%s"}}}]\n' "$TEST_IMAGE_DIGEST" ;;
 "$TEST_CHART_REPOSITORY@$TEST_CHART_DIGEST")
@@ -149,6 +150,40 @@ reject() {
 	if run_verify "$@"; then fail 'unverified or mismatched identity produced success'; fi
 	[[ ! -f "$work/result/release.json" ]] || fail 'failed verification left a completeness record'
 }
+# The publisher catalogue is independent from the consumer artifact profile.
+# An omitted selector must preserve historical receipt shape and signer identity.
+jq -e 'has("publisherRepository") | not' "$work/result/release.json" >/dev/null ||
+	fail 'default historical receipt shape changed'
+legacy_image_signer=$TEST_IMAGE_SIGNER
+export TEST_IMAGE_SIGNER=https://github.com/devantler-tech/.github/.github/workflows/publish-app.yaml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+run_verify --publisher-repository devantler-tech/.github ||
+	fail 'explicit maintained publisher was rejected'
+jq -e '.publisherRepository == "devantler-tech/.github" and .publisherSHA == "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"' "$work/result/release.json" >/dev/null ||
+	fail 'maintained publisher provenance was not recorded'
+reject
+jq -e '.reason == "image-unverified"' "$work/output" >/dev/null ||
+	fail 'default selection inferred a maintained publisher'
+# A maintained request must not fall back to a legacy signer, and the default
+# must not infer the maintained repository from an unrelated current checkout.
+export TEST_IMAGE_SIGNER=$legacy_image_signer
+reject --publisher-repository devantler-tech/.github
+jq -e '.reason == "image-unverified"' "$work/output" >/dev/null ||
+	fail 'maintained selection did not enforce its exact signer'
+run_verify --publisher-repository devantler-tech/actions ||
+	fail 'explicit historical publisher was rejected'
+for publisher_repository in foreign '' 'devantler-tech/.github/../actions'; do
+	reject --publisher-repository "$publisher_repository"
+	[[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] ||
+		fail 'unknown publisher repository reached an external operation'
+done
+reject --publisher-repository devantler-tech/.github --publisher-repository devantler-tech/actions
+[[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] ||
+	fail 'ambiguous publisher repository reached an external operation'
+for publisher_sha in bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; do
+	reject --publisher-sha "$publisher_sha"
+	[[ ! -s $TEST_OPERATION_LOG && ! -e $work/result ]] ||
+		fail 'repeated publisher SHA reached an external operation'
+done
 # A supported manifest must reach the runtime platform check after its exact pull.
 reject_platform() {
 	local requested=${1:-linux/amd64}
@@ -239,6 +274,12 @@ for profile in data-product-controller khoist; do
 		--arg chart "$TEST_CHART_REPOSITORY@$TEST_CHART_DIGEST" \
 		'.complete == true and .releaseProfile == $profile and .imageReference == $image and .chartReference == $chart' \
 		"$work/result/release.json" >/dev/null || fail 'receipt omitted the selected artifact profile'
+	export TEST_IMAGE_SIGNER=https://github.com/devantler-tech/.github/.github/workflows/publish-app.yaml@bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+	run_verify --profile "$profile" --publisher-repository devantler-tech/.github ||
+		fail "maintained publisher rejected with $profile profile"
+	jq -e --arg profile "$profile" '.releaseProfile == $profile and .publisherRepository == "devantler-tech/.github"' \
+		"$work/result/release.json" >/dev/null || fail 'publisher selection lost the artifact profile'
+	export TEST_IMAGE_SIGNER=$legacy_image_signer
 	for boundary in TEST_CALLER_REPOSITORY TEST_IMAGE_REPOSITORY TEST_CHART_REPOSITORY TEST_CHART_SIGNER; do
 		saved=${!boundary}
 		case "$boundary" in

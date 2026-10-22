@@ -45,6 +45,46 @@ line numbers and exit statuses, so a start that fails before the database writes
 where it stopped. The copy never restarts. Only positive probe evidence names an outcome: a copy still
 running at its deadline, or a start that leaves no exit marker, is reported as indeterminate
 evidence beside the container's own termination reason, never as a started or replaced database.
+Before sourcing the entrypoint, the copy compares direct `mongod --version`, its original
+early-closing reader and a fully draining reader. Each producer has a five-second timeout and
+one-second kill reserve, inside the existing copy deadline. The direct comparison privately
+accepts at most 64 KiB of combined output, with one extra private byte as an overflow witness.
+An over-limit stream or failed capture reader is unavailable, even if its prefix parses;
+a complete stream remains observable when its producer exits nonzero.
+A bounded JSON parser reduces accepted output to line counts,
+fixed startup-error classes and numeric MongoDB error identifiers/codes, then deletes it.
+Messages, attributes, arguments and environment values are never published. The outer collector
+admits only one closed summary with approved fields, types and classes; missing, malformed,
+conflicting or failed collection is explicitly unavailable or incomplete.
+Only fixed mode names and numeric stage statuses are retained for the other comparisons.
+`versionOutput.outcome: Observed` means a complete sanitized stream observation, not that its
+error cause is known; an empty or unclassified stream is not a clean-start verdict. File-size
+and parser limits apply only to this diagnostic comparison, never the original entrypoint.
+`versionOutcome: Observed` means all three comparisons were collected, not that they passed or
+that MongoDB is ready. Missing prerequisites, failed or partial log reads and conflicting markers
+remain explicitly unavailable or incomplete. These pre-entry comparisons may warm the copy;
+they do not by themselves establish why the original start failed or prove a reliability repair.
+
+## Hosted kernel compatibility
+
+The immutable Percona 8.0.26-11 reference includes MongoDB's kernel/rseq startup
+guard. A complete diagnostic stream carrying fatal identifier `12257600`
+identifies that guard, not an early-reader pipeline failure. The upstream
+[compatibility advisory](https://jira.mongodb.org/browse/SERVER-125742)
+describes the affected server/kernel combinations; do not disable the guard or
+change allocator settings to manufacture an acceptance pass.
+
+The native Document job temporarily selects `ubuntu-22.04`, whose documented
+hosted image uses the compatible 6.8 kernel line. All other jobs, image digests,
+operator versions, deadlines, authorization denials, recovery checks and cleanup
+remain unchanged. The workflow contract test requires both this explicit host
+and the actual native acceptance command.
+
+This is a bounded CI compatibility constraint, not a production deployment
+change or proof of twenty reliable runs. Track that acceptance in #464. Upgrade
+the immutable reference to an appropriate fixed Percona release, re-prove it on
+the newer hosted environment, and remove this constraint before the selected
+hosted label is retired.
 
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
 with individual setup, startup, publication, pause, recovery and gate budgets, plus a four-minute

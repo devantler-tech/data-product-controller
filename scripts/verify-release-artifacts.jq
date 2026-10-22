@@ -16,4 +16,7 @@ elif $ARGS.named.mode == "receipt" then
   {complete:true,tag:$ARGS.named.tag,sourceSHA:$ARGS.named.sha,publisherSHA:$ARGS.named.publisher,
     releaseProfile:$ARGS.named.profile,imageReference:$ARGS.named.imageReference,chartReference:$ARGS.named.chartReference,
     imageDigest:$ARGS.named.image,chartDigest:$ARGS.named.chart,platform:$ARGS.named.platform,runtimeDigest:$ARGS.named.runtime}
+  | if $ARGS.named.publisherRepository == "devantler-tech/.github" then
+      . + {publisherRepository:$ARGS.named.publisherRepository}
+    else . end
 else error("unsupported verification mode") end

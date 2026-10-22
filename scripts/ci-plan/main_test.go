@@ -223,6 +223,39 @@ func TestWorkflowPreservesPlanAndEverySelectedResult(t *testing.T) {
 	}
 }
 
+// TestNativeDocumentPinsItsCompatibilityHost preserves real acceptance on its compatible host.
+func TestNativeDocumentPinsItsCompatibilityHost(t *testing.T) {
+	data, err := os.ReadFile("../../.github/workflows/ci.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow struct {
+		Jobs map[string]struct {
+			Runner string `yaml:"runs-on"`
+			Steps  []struct{ Run string }
+		}
+	}
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	job, ok := workflow.Jobs["percona-acceptance"]
+	if !ok || job.Runner != "ubuntu-22.04" {
+		t.Fatalf(
+			"native reference image needs its compatible hosted environment, got %q",
+			job.Runner,
+		)
+	}
+	found := false
+	for _, step := range job.Steps {
+		if step.Run == "bash tests/provider/percona.sh" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("compatible runner selection replaced real native acceptance")
+	}
+}
+
 func validateWorkflow(data []byte) error {
 	var w struct {
 		Jobs map[string]struct {
