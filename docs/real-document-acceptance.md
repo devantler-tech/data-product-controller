@@ -65,6 +65,27 @@ that MongoDB is ready. Missing prerequisites, failed or partial log reads and co
 remain explicitly unavailable or incomplete. These pre-entry comparisons may warm the copy;
 they do not by themselves establish why the original start failed or prove a reliability repair.
 
+## Hosted kernel compatibility
+
+The immutable Percona 8.0.26-11 reference includes MongoDB's kernel/rseq startup
+guard. A complete diagnostic stream carrying fatal identifier `12257600`
+identifies that guard, not an early-reader pipeline failure. The upstream
+[compatibility advisory](https://jira.mongodb.org/browse/SERVER-125742)
+describes the affected server/kernel combinations; do not disable the guard or
+change allocator settings to manufacture an acceptance pass.
+
+The native Document job temporarily selects `ubuntu-22.04`, whose documented
+hosted image uses the compatible 6.8 kernel line. All other jobs, image digests,
+operator versions, deadlines, authorization denials, recovery checks and cleanup
+remain unchanged. The workflow contract test requires both this explicit host
+and the actual native acceptance command.
+
+This is a bounded CI compatibility constraint, not a production deployment
+change or proof of twenty reliable runs. Track that acceptance in #464. Upgrade
+the immutable reference to an appropriate fixed Percona release, re-prove it on
+the newer hosted environment, and remove this constraint before the selected
+hosted label is retired.
+
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
 with individual setup, startup, publication, pause, recovery and gate budgets, plus a four-minute
 cleanup reserve. Every phase uses the smaller remaining deadline; partial output from a failed
