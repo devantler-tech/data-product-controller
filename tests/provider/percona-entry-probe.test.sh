@@ -20,10 +20,78 @@ exec "$@"
 ENTRY
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" --synthetic-argument 2>&1) && status=0 || status=$?
 [[ $status == 1 ]] || fail "failing entrypoint status was $status, want 1"
-grep -qx 'khoist-probe err status=1 line=4' <<<"$out" || fail "missing failing line: $out"
+grep -qx 'khoist-probe err status=1 line=4 stages=1 pipeline=1' <<<"$out" || fail "missing failing line: $out"
 grep -qx 'khoist-probe exit status=1' <<<"$out" || fail "missing exit line: $out"
 grep -qE '^khoist-probe entry-sha256=[0-9a-f]{64}$' <<<"$out" || fail "missing entrypoint digest: $out"
 ! grep -qE 'synthetic|grep' <<<"$out" || fail "probe echoed entrypoint values or arguments: $out"
+
+# A pipeline failure must name each stage before the trap itself overwrites PIPESTATUS.
+# Losing that vector makes a producer failure indistinguishable from a downstream one.
+cat >"$work/entry-pipeline.sh" <<'ENTRY'
+set -Eeuo pipefail
+bash -c 'exit 29' | cat
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
+[[ $status == 29 ]] || fail "producer failure status changed: $status"
+grep -qx 'khoist-probe err status=29 line=2 stages=2 pipeline=29,0' <<<"$out" ||
+	fail 'producer pipeline statuses were lost'
+
+cat >"$work/entry-pipeline.sh" <<'ENTRY'
+set -Eeuo pipefail
+true | bash -c 'exit 23' | cat
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
+[[ $status == 23 ]] || fail "middle-stage failure status changed: $status"
+grep -qx 'khoist-probe err status=23 line=2 stages=3 pipeline=0,23,0' <<<"$out" ||
+	fail 'middle pipeline status was lost'
+
+cat >"$work/entry-pipeline.sh" <<'ENTRY'
+set -Eeuo pipefail
+true | true | bash -c 'exit 17'
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
+[[ $status == 17 ]] || fail "consumer failure status changed: $status"
+grep -qx 'khoist-probe err status=17 line=2 stages=3 pipeline=0,0,17' <<<"$out" ||
+	fail 'consumer pipeline status was lost'
+
+# An early-closing reader inherits the caller's SIGPIPE disposition. Compare the probe
+# with the real uninstrumented pipeline: ignored SIGPIPE yields EPIPE rather than 141.
+# CI runs both dispositions and supplies their exact expected status as a positive control.
+baseline=$(bash -c '
+set -o pipefail
+yes synthetic-private-detail | head -n 1 >/dev/null
+result=("$?" "${PIPESTATUS[@]}")
+printf "%s %s %s\n" "${result[@]}"
+exit "${result[0]}"
+' 2>/dev/null) && baseline_status=0 || baseline_status=$?
+case "$baseline" in
+'141 141 0' | '1 1 0') ;;
+*) fail "unexpected uninstrumented closed-reader result: $baseline_status $baseline" ;;
+esac
+[[ $baseline == "$baseline_status $baseline_status 0" ]] || fail 'baseline status and stages disagree'
+if [[ $# -gt 0 ]]; then
+	[[ $# == 1 && ($1 == 141 || $1 == 1) && $baseline_status == "$1" ]] ||
+		fail "signal disposition did not produce expected status: $baseline_status"
+fi
+cat >"$work/entry-pipeline.sh" <<'ENTRY'
+set -Eeuo pipefail
+yes synthetic-private-detail | head -n 1 >/dev/null
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
+[[ $status == "$baseline_status" ]] || fail "closed-reader status changed: $status, want $baseline_status"
+grep -qx "khoist-probe err status=$baseline_status line=2 stages=2 pipeline=$baseline_status,0" <<<"$out" ||
+	fail 'closed-reader pipeline status was lost'
+! grep -q synthetic <<<"$out" || fail 'pipeline probe echoed producer output'
+
+# The stage count remains explicit when the retained vector reaches its bound.
+cat >"$work/entry-pipeline.sh" <<'ENTRY'
+set -Eeuo pipefail
+true | true | true | true | true | true | true | true | true | true | true | true | true | true | true | true | false
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
+[[ $status == 1 ]] || fail "bounded pipeline status changed: $status"
+grep -qx 'khoist-probe err status=1 line=2 stages=17 pipeline=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0' <<<"$out" ||
+	fail 'pipeline vector was unbounded or lost its full count'
 
 # 2. A handled failure is not reported, and process replacement leaves no exit line.
 cat >"$work/entry-execs.sh" <<'ENTRY'
@@ -43,7 +111,16 @@ value=$(false; printf kept)
 ENTRY
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-substitutes.sh" 2>&1) && status=0 || status=$?
 [[ $status == 0 ]] || fail "probe output changed a substituted value (status $status): $out"
-grep -qx 'khoist-probe err status=1 line=1' <<<"$out" || fail "missing substitution failure line: $out"
+grep -qx 'khoist-probe err status=1 line=1 stages=1 pipeline=1' <<<"$out" || fail "missing substitution failure line: $out"
+
+cat >"$work/entry-substitutes.sh" <<'ENTRY'
+set -Eeuo pipefail
+value=$(bash -c 'exit 29' | cat)
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-substitutes.sh" 2>&1) && status=0 || status=$?
+[[ $status == 29 ]] || fail "substituted pipeline failure changed status: $status"
+grep -qx 'khoist-probe err status=29 line=2 stages=2 pipeline=29,0' <<<"$out" ||
+	fail 'substituted pipeline statuses were lost'
 
 # 3. An unreadable entrypoint is distinguished from a clean start.
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/missing.sh" 2>&1) && status=0 || status=$?
@@ -72,7 +149,11 @@ case "$*" in
 *' logs documents-entry-probe -c mongod --tail=200')
   [[ ${TEST_EMPTY_LOG:-false} != true ]] || exit 0
   printf '%s\n' 'khoist-probe entry-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
-    'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic'
+    'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic' \
+    'khoist-probe err status=29 line=34 stages=4 pipeline=29,0,0,0' \
+    'khoist-probe err status=1 line=35 stages=17 pipeline=0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0' \
+    'khoist-probe err status=1 line=36 stages=2 pipeline=synthetic-private-detail' \
+    'khoist-probe err status=1 line=37 stages=2 pipeline=999,0'
   [[ ${TEST_NO_EXIT:-false} == true ]] || printf '%s\n' 'khoist-probe exit status=1'
   ;;
 *) exit 91 ;;
@@ -83,7 +164,10 @@ export PATH="$work/bin:$PATH" PERCONA_PROBE_INTERVAL=0
 printf 'disposable fixture\n' >"$work/kubeconfig"
 bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/output"
 jq -e '.outcome=="EntrypointExited" and .entrypointExit==1 and .containerExit==1 and
-  .errors==[{status:1,line:42}] and .otherLines==2 and (.entrySha256|length)==64' "$work/output" >/dev/null ||
+  .errors==[{status:1,line:42},
+    {status:29,line:34,pipelineStages:4,pipelineStatuses:[29,0,0,0],pipelineComplete:true},
+    {status:1,line:35,pipelineStages:17,pipelineStatuses:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],pipelineComplete:false}] and
+  .otherLines==4 and (.entrySha256|length)==64' "$work/output" >/dev/null ||
 	fail "unexpected probe result: $(cat "$work/output")"
 ! grep -qE 'synthetic|ps-entry|bind_ip' "$work/output" || fail "probe result leaked arguments or log prose"
 grep -q ' delete pod documents-entry-probe ' "$TEST_PROBE_CALLS" || fail 'probe copy was not removed'
@@ -116,7 +200,7 @@ jq -e '.outcome=="StillRunningAtDeadline"' "$work/running" >/dev/null ||
 # 7. No EXIT marker is not proof of replacement: a killed shell leaves the same log.
 TEST_NO_EXIT=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/no-exit"
 jq -e '.outcome=="Indeterminate" and .entrypointExit==null and .containerExit==137 and
-  .containerReason=="OOMKilled" and .errors==[{status:1,line:42}]' "$work/no-exit" >/dev/null ||
+  .containerReason=="OOMKilled" and (.errors|length)==3 and .errors[1].pipelineStatuses==[29,0,0,0]' "$work/no-exit" >/dev/null ||
 	fail "missing exit marker was classified as $(cat "$work/no-exit")"
 ! grep -q synthetic "$work/no-exit" || fail "probe result leaked the termination message"
-printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'
+printf 'PASS: bounded pipeline/status evidence, SIGPIPE, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'
