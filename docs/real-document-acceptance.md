@@ -47,8 +47,16 @@ running at its deadline, or a start that leaves no exit marker, is reported as i
 evidence beside the container's own termination reason, never as a started or replaced database.
 Before sourcing the entrypoint, the copy compares direct `mongod --version`, its original
 early-closing reader and a fully draining reader. Each producer has a five-second timeout and
-one-second kill reserve, inside the existing copy deadline. Only fixed mode names and numeric
-stage statuses are retained; binary output, arguments and environment values are discarded.
+one-second kill reserve, inside the existing copy deadline. The direct comparison privately
+captures at most 64 KiB of combined output. A bounded JSON parser reduces it to line counts,
+fixed startup-error classes and numeric MongoDB error identifiers/codes, then deletes it.
+Messages, attributes, arguments and environment values are never published. The outer collector
+admits only one closed summary with approved fields, types and classes; missing, malformed,
+conflicting or failed collection is explicitly unavailable or incomplete.
+Only fixed mode names and numeric stage statuses are retained for the other comparisons.
+`versionOutput.outcome: Observed` means a complete sanitized stream observation, not that its
+error cause is known; an empty or unclassified stream is not a clean-start verdict. File-size
+and parser limits apply only to this diagnostic comparison, never the original entrypoint.
 `versionOutcome: Observed` means all three comparisons were collected, not that they passed or
 that MongoDB is ready. Missing prerequisites, failed or partial log reads and conflicting markers
 remain explicitly unavailable or incomplete. These pre-entry comparisons may warm the copy;

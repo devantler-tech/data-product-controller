@@ -61,8 +61,13 @@ mkdir "$work/version-bin"
 cat >"$work/version-bin/mongod" <<'MONGOD'
 #!/usr/bin/env bash
 [[ "$*" == --version ]] || exit 89
+if [[ ${TEST_PLAINTEXT:-false} == true ]]; then
+  printf '%s\n' 'Error parsing command line: synthetic-private-detail' \
+    'synthetic-private-detail: Permission denied' 'unclassified synthetic-private-detail' >&2
+  exit 29
+fi
 printf 'synthetic-private-detail v8.0.26\n'
-printf 'synthetic-private-detail\n' >&2
+printf '{"s":"F","c":"CONTROL","id":20574,"msg":"synthetic-private-detail","attr":{"error":{"code":38,"errmsg":"synthetic-private-detail"}}}\n' >&2
 exit "${TEST_VERSION_STATUS:-0}"
 MONGOD
 cat >"$work/version-bin/timeout" <<'TIMEOUT'
@@ -79,8 +84,25 @@ for producer_status in 0 29; do
 	grep -qx "khoist-probe version mode=direct statuses=$producer_status" <<<"$out" || fail 'missing direct version observation'
 	grep -qx "khoist-probe version mode=early statuses=$producer_status,0,0,0" <<<"$out" || fail 'missing original reader observation'
 	grep -qx "khoist-probe version mode=drain statuses=$producer_status,0" <<<"$out" || fail 'missing draining reader observation'
+	summary=$(sed -n 's/^khoist-probe version-output //p' <<<"$out")
+	jq -e '.lines==2 and .structured==1 and .unclassified==1 and .classes==[] and
+    .errors==[{severity:"F",id:20574,code:38}]' <<<"$summary" >/dev/null || fail 'missing sanitized binary failure evidence'
 	! grep -q synthetic <<<"$out" || fail 'version comparison exposed binary output'
 done
+out=$(PATH="$work/version-bin:$PATH" TEST_PLAINTEXT=true \
+	bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" 2>&1) && status=0 || status=$?
+[[ $status == 1 ]] || fail 'plaintext classification changed original failure'
+summary=$(sed -n 's/^khoist-probe version-output //p' <<<"$out")
+jq -e '.lines==3 and .structured==0 and .unclassified==1 and
+  .classes==["CommandLineRejected","PermissionDenied"] and .errors==[]' <<<"$summary" >/dev/null || fail 'fixed plaintext classes missing'
+! grep -q synthetic <<<"$out" || fail 'plaintext classifier leaked message values'
+mkdir "$work/broken-parser"
+printf '#!/usr/bin/env bash\nexit 42\n' >"$work/broken-parser/jq"
+chmod +x "$work/broken-parser/jq"
+out=$(PATH="$work/broken-parser:$work/version-bin:$PATH" \
+	bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" 2>&1) && status=0 || status=$?
+[[ $status == 1 ]] || fail 'parser failure changed original entrypoint failure'
+grep -Fxq 'khoist-probe version-output=unavailable' <<<"$out" || fail 'parser failure looked like a complete observation'
 
 # 3. An unreadable entrypoint is distinguished from a clean start.
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/missing.sh" 2>&1) && status=0 || status=$?
@@ -127,6 +149,15 @@ case "$*" in
       'khoist-probe version mode=direct statuses=synthetic-private-detail' \
       'khoist-probe version mode=early statuses=0' \
       'khoist-probe version mode=drain statuses=0,0,0'
+  fi
+  if [[ ${TEST_VERSION_DETAILS:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe version-output {"lines":2,"structured":1,"unclassified":1,"classes":[],"errors":[{"severity":"F","id":20574,"code":38}]}'
+  fi
+  if [[ ${TEST_UNSAFE_DETAILS:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe version-output {"lines":2,"structured":1,"unclassified":1,"classes":["synthetic-private-detail"],"errors":[],"message":"synthetic-private-detail"}'
+  fi
+  if [[ ${TEST_MALFORMED_DETAILS:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe version-output {"lines":2,"structured":1,"unclassified":1,"classes":null,"errors":[]}'
   fi
   if [[ ${TEST_VERSION_UNAVAILABLE:-false} == true ]]; then
     printf '%s\n' 'khoist-probe version=unavailable'
@@ -193,4 +224,12 @@ TEST_PARTIAL_VERSION_LOG=true bash "$root/tests/provider/percona-entry-probe.sh"
 jq -e '.outcome=="ProbeLogUnavailable" and .versionOutcome=="Incomplete"' "$work/version-partial" >/dev/null || fail 'partial failed log read was accepted'
 TEST_VERSION_OUTPUT=true TEST_VERSION_UNAVAILABLE=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/version-conflict"
 jq -e '.versionOutcome=="Incomplete"' "$work/version-conflict" >/dev/null || fail 'conflicting availability markers were accepted'
+TEST_VERSION_DETAILS=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/details"
+jq -e '.versionOutput.outcome=="Observed" and .versionOutput.summary.errors==[{severity:"F",id:20574,code:38}]' \
+	"$work/details" >/dev/null || fail 'sanitized version details were discarded'
+TEST_VERSION_DETAILS=true TEST_UNSAFE_DETAILS=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/unsafe-details"
+jq -e '.versionOutput=={outcome:"Incomplete"}' "$work/unsafe-details" >/dev/null || fail 'conflicting or unsafe summary was accepted'
+! grep -q synthetic "$work/unsafe-details" || fail 'producer summary exposed unapproved fields'
+TEST_MALFORMED_DETAILS=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/malformed-details"
+jq -e '.versionOutput=={outcome:"Incomplete"}' "$work/malformed-details" >/dev/null || fail 'malformed summary escaped closed schema'
 printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'
