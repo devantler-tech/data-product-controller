@@ -289,7 +289,8 @@ jobs:
       - name: Validate bounded startup diagnostics without a cluster
         run: |
           bash tests/provider/percona-diagnostics.test.sh
-          bash tests/provider/percona-entry-probe.test.sh
+          env --default-signal=PIPE bash tests/provider/percona-entry-probe.test.sh 141
+          env --ignore-signal=PIPE bash tests/provider/percona-entry-probe.test.sh 1
 
       - name: Exercise real queries, privileges and lifecycle
         # Verify the signed released baseline before comparing the current PR build.

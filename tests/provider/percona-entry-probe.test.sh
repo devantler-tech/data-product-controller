@@ -54,16 +54,33 @@ out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && sta
 grep -qx 'khoist-probe err status=17 line=2 stages=3 pipeline=0,0,17' <<<"$out" ||
 	fail 'consumer pipeline status was lost'
 
-# An actual early-closing reader must retain SIGPIPE separately from a failed binary.
-# This exercises the signal class without asserting it caused the native incident.
+# An early-closing reader inherits the caller's SIGPIPE disposition. Compare the probe
+# with the real uninstrumented pipeline: ignored SIGPIPE yields EPIPE rather than 141.
+# CI runs both dispositions and supplies their exact expected status as a positive control.
+baseline=$(bash -c '
+set -o pipefail
+yes synthetic-private-detail | head -n 1 >/dev/null
+result=("$?" "${PIPESTATUS[@]}")
+printf "%s %s %s\n" "${result[@]}"
+exit "${result[0]}"
+' 2>/dev/null) && baseline_status=0 || baseline_status=$?
+case "$baseline" in
+'141 141 0' | '1 1 0') ;;
+*) fail "unexpected uninstrumented closed-reader result: $baseline_status $baseline" ;;
+esac
+[[ $baseline == "$baseline_status $baseline_status 0" ]] || fail 'baseline status and stages disagree'
+if [[ $# -gt 0 ]]; then
+	[[ $# == 1 && ($1 == 141 || $1 == 1) && $baseline_status == "$1" ]] ||
+		fail "signal disposition did not produce expected status: $baseline_status"
+fi
 cat >"$work/entry-pipeline.sh" <<'ENTRY'
 set -Eeuo pipefail
 yes synthetic-private-detail | head -n 1 >/dev/null
 ENTRY
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
-[[ $status == 141 ]] || fail "SIGPIPE status changed: $status"
-grep -qx 'khoist-probe err status=141 line=2 stages=2 pipeline=141,0' <<<"$out" ||
-	fail 'SIGPIPE pipeline status was lost'
+[[ $status == "$baseline_status" ]] || fail "closed-reader status changed: $status, want $baseline_status"
+grep -qx "khoist-probe err status=$baseline_status line=2 stages=2 pipeline=$baseline_status,0" <<<"$out" ||
+	fail 'closed-reader pipeline status was lost'
 ! grep -q synthetic <<<"$out" || fail 'pipeline probe echoed producer output'
 
 # The stage count remains explicit when the retained vector reaches its bound.
