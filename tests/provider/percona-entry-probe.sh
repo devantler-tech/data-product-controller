@@ -76,7 +76,8 @@ done
 # The copy never restarts, so its log is exactly the one diagnostic start.
 available=true
 kube logs "$probe" -c mongod --tail=200 >"$work/log" 2>/dev/null || available=false
-grep -E '^khoist-probe (entry-sha256=[0-9a-f]{64}|entry=unreadable|err status=[0-9]{1,3} line=[0-9]{1,6}|exit status=[0-9]{1,3})$' \
+status_pattern='([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])'
+grep -E "^khoist-probe (entry-sha256=[0-9a-f]{64}|entry=unreadable|err status=$status_pattern line=[0-9]{1,6}( stages=[0-9]{1,3} pipeline=$status_pattern(,$status_pattern){0,15})?|exit status=$status_pattern)$" \
 	"$work/log" >"$work/probe-lines" || true
 other=$(($(wc -l <"$work/log") - $(wc -l <"$work/probe-lines")))
 
@@ -100,7 +101,12 @@ jq -Rnc --arg state "$state" --argjson available "$available" --argjson other "$
      else "Indeterminate" end),
    entrySha256:([$lines[] | select(startswith("khoist-probe entry-sha256=")) | .[26:]] | first),
    errors:([$lines[] | select(startswith("khoist-probe err ")) |
-     capture("status=(?<status>[0-9]+) line=(?<line>[0-9]+)") | map_values(tonumber)] | .[-8:]),
+     capture("status=(?<status>[0-9]+) line=(?<line>[0-9]+)(?: stages=(?<stages>[0-9]+) pipeline=(?<pipeline>[0-9,]+))?") |
+     (.pipeline // "" | split(",") | map(tonumber)) as $pipeline |
+     {status:(.status|tonumber),line:(.line|tonumber)} +
+       (if .stages==null then {} else
+         {pipelineStages:(.stages|tonumber),pipelineStatuses:$pipeline,
+          pipelineComplete:((.stages|tonumber)==($pipeline|length))} end)] | .[-8:]),
    entrypointExit:$entryExit,
    containerExit:(if ($terminated.exitCode|type)=="number" then $terminated.exitCode else null end),
    containerReason:(if ($terminated.reason|type)=="string" and ($terminated.reason|test("^[A-Za-z]{1,32}$"))

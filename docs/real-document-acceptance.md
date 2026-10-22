@@ -42,7 +42,10 @@ label-free copy of its pod whose entrypoint runs under numeric exit traps. The c
 claimed volume with an empty one, so it never shares the live database files, and it uses only the
 cleanup reserve left after cluster deletion. That probe reports only the entrypoint digest, failing
 line numbers and exit statuses, so a start that fails before the database writes any log still names
-where it stopped. The copy never restarts. Only positive probe evidence names an outcome: a copy still
+where it stopped. Each trapped failure also captures its pipeline stage statuses before another
+command can overwrite them. The report retains at most 16 statuses per error, includes the full
+stage count, and marks a truncated vector incomplete; legacy records without a vector make no
+claim about individual stages. The copy never restarts. Only positive probe evidence names an outcome: a copy still
 running at its deadline, or a start that leaves no exit marker, is reported as indeterminate
 evidence beside the container's own termination reason, never as a started or replaced database.
 
