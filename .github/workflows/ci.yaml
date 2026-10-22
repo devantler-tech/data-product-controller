@@ -13,6 +13,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  version-pipeline-control:
+    # Disposable investigation for #464; never merge this experiment.
+    name: Diagnose pinned Document version pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions: {}
+    steps:
+      - name: Compare the real binary with early-close and draining readers
+        env:
+          IMAGE: percona/percona-server-mongodb:8.0.26-11@sha256:53f89c001997627554e6afc0feb5906209ba109f4f98c62f2ca8456c214af60c
+        run: |
+          set -euo pipefail
+          [[ $(uname -m) == x86_64 ]]
+          timeout 180 docker pull --platform linux/amd64 "$IMAGE"
+          timeout 120 docker run --rm -i --platform linux/amd64 \
+            --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 64 \
+            --memory 1g --cpus 1 --user 1001:1001 \
+            --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            --entrypoint /bin/bash "$IMAGE" -s <<'CONTROL'
+          set -uo pipefail
+          direct_fail=0 early_fail=0 drained_fail=0 malformed=0
+          for ((sample=0; sample<100; sample++)); do
+            mongod --version >/dev/null 2>/dev/null
+            direct_status=$?
+            ((direct_status == 0)) || ((direct_fail+=1))
+            mongod --version 2>/dev/null | head -1 | awk '{print $3}' | awk -F'.' '{print $1"."$2}' > /tmp/early
+            early_status=("${PIPESTATUS[@]}")
+            early_bad=0
+            for status in "${early_status[@]}"; do
+              ((status == 0)) || early_bad=1
+            done
+            ((early_bad == 0)) || ((early_fail+=1))
+            mongod --version 2>/dev/null | awk 'NR==1 {split($3,v,"."); print v[1]"."v[2]}' > /tmp/drained
+            drained_status=("${PIPESTATUS[@]}")
+            for status in "${drained_status[@]}"; do
+              ((status == 0)) || ((drained_fail+=1))
+            done
+            [[ $(</tmp/drained) == 8.0 ]] || ((malformed+=1))
+            if ((sample < 3)); then
+              printf '{"sample":%d,"direct":%d,"early":[%d,%d,%d,%d],"drained":[%d,%d]}\n' \
+                "$sample" "$direct_status" "${early_status[@]}" "${drained_status[@]}"
+            fi
+          done
+          (printf 'db version v8.0.26\n'; exit 29) | awk 'NR==1 {split($3,v,"."); print v[1]"."v[2]}' >/dev/null
+          forced_status=$?
+          printf '{"samples":100,"directFailures":%d,"earlyCloseFailures":%d,"drainingFailures":%d,"malformed":%d,"forcedProducerFailure":%d}\n' \
+            "$direct_fail" "$early_fail" "$drained_fail" "$malformed" "$forced_status"
+          [[ $direct_fail == 0 && $early_fail -gt 0 && $drained_fail == 0 && $malformed == 0 && $forced_status == 29 ]]
+          CONTROL
+
   plan:
     name: Select exact CI coverage
     timeout-minutes: 5
