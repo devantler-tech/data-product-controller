@@ -15,7 +15,16 @@ fi
 # Write probe lines to a saved copy of the container log. With errtrace the ERR trap also fires
 # inside command substitutions and pipelines, whose stdout is the entrypoint's own data.
 exec 47>&1
-trap 'printf "khoist-probe err status=%d line=%d\n" "$?" "$LINENO" >&47' ERR
+# The trap passes all values as arguments before any handler command overwrites PIPESTATUS.
+# Keep the original error marker and emit only numeric stages for multi-command pipelines.
+_khoist_probe_error() {
+	printf 'khoist-probe err status=%d line=%d\n' "$1" "$2" >&47
+	if (($# > 3)); then
+		local IFS=,
+		printf 'khoist-probe pipeline line=%d statuses=%s\n' "$2" "${*:3}" >&47
+	fi
+}
+trap '_khoist_probe_error "$?" "$LINENO" "${PIPESTATUS[@]}"' ERR
 trap 'printf "khoist-probe exit status=%d\n" "$?" >&47' EXIT
 set -o errtrace
 # shellcheck source=/dev/null

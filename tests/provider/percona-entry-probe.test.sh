@@ -45,6 +45,16 @@ out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-substitutes.sh" 2>&1) && 
 [[ $status == 0 ]] || fail "probe output changed a substituted value (status $status): $out"
 grep -qx 'khoist-probe err status=1 line=1' <<<"$out" || fail "missing substitution failure line: $out"
 
+# 2c. Capture the real failing pipeline stages before the ERR handler changes PIPESTATUS.
+cat >"$work/entry-pipeline.sh" <<'ENTRY'
+set -Eeuo pipefail
+value=$((printf 'synthetic-private-detail\n'; exit 29) | cat)
+ENTRY
+out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && status=0 || status=$?
+[[ $status == 29 ]] || fail "pipeline failure status changed: $status"
+grep -qx 'khoist-probe pipeline line=2 statuses=29,0' <<<"$out" || fail 'missing original pipeline segment statuses'
+! grep -q synthetic <<<"$out" || fail 'pipeline diagnostic leaked command output'
+
 # 3. An unreadable entrypoint is distinguished from a clean start.
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/missing.sh" 2>&1) && status=0 || status=$?
 [[ $status == 97 && $out == 'khoist-probe entry=unreadable' ]] || fail "unreadable entrypoint: $status $out"
@@ -74,6 +84,10 @@ case "$*" in
   printf '%s\n' 'khoist-probe entry-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
     'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic'
   [[ ${TEST_NO_EXIT:-false} == true ]] || printf '%s\n' 'khoist-probe exit status=1'
+  if [[ ${TEST_PIPELINE:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe pipeline line=34 statuses=29,0,0,0' \
+      'khoist-probe pipeline line=34 statuses=synthetic-private-detail'
+  fi
   ;;
 *) exit 91 ;;
 esac
@@ -119,4 +133,9 @@ jq -e '.outcome=="Indeterminate" and .entrypointExit==null and .containerExit==1
   .containerReason=="OOMKilled" and .errors==[{status:1,line:42}]' "$work/no-exit" >/dev/null ||
 	fail "missing exit marker was classified as $(cat "$work/no-exit")"
 ! grep -q synthetic "$work/no-exit" || fail "probe result leaked the termination message"
+
+TEST_PIPELINE=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/pipeline"
+jq -e '.pipelines==[{line:34,statuses:[29,0,0,0]}] and .otherLines==3' "$work/pipeline" >/dev/null ||
+  fail 'pipeline segment evidence was lost or malformed log data was accepted'
+! grep -q synthetic "$work/pipeline" || fail 'pipeline result leaked unclassified output'
 printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'
