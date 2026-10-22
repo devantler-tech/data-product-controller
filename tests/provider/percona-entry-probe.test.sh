@@ -55,6 +55,33 @@ out=$(bash -c "$(<"$inner")" khoist-probe "$work/entry-pipeline.sh" 2>&1) && sta
 grep -qx 'khoist-probe pipeline line=2 statuses=29,0' <<<"$out" || fail 'missing original pipeline segment statuses'
 ! grep -q synthetic <<<"$out" || fail 'pipeline diagnostic leaked command output'
 
+# 2d. Compare the real version command and both readers without exposing output
+# or replacing the entrypoint's original failure. Each producer has a fixed bound.
+mkdir "$work/version-bin"
+cat >"$work/version-bin/mongod" <<'MONGOD'
+#!/usr/bin/env bash
+[[ "$*" == --version ]] || exit 89
+printf 'synthetic-private-detail v8.0.26\n'
+printf 'synthetic-private-detail\n' >&2
+exit "${TEST_VERSION_STATUS:-0}"
+MONGOD
+cat >"$work/version-bin/timeout" <<'TIMEOUT'
+#!/usr/bin/env bash
+[[ "$1 $2 $3" == '--signal=TERM --kill-after=1s 5s' ]] || exit 89
+shift 3
+exec "$@"
+TIMEOUT
+chmod +x "$work/version-bin/mongod" "$work/version-bin/timeout"
+for producer_status in 0 29; do
+	out=$(PATH="$work/version-bin:$PATH" TEST_VERSION_STATUS=$producer_status \
+		bash -c "$(<"$inner")" khoist-probe "$work/entry-fails.sh" 2>&1) && status=0 || status=$?
+	[[ $status == 1 ]] || fail 'version comparison replaced the original entrypoint failure'
+	grep -qx "khoist-probe version mode=direct statuses=$producer_status" <<<"$out" || fail 'missing direct version observation'
+	grep -qx "khoist-probe version mode=early statuses=$producer_status,0,0,0" <<<"$out" || fail 'missing original reader observation'
+	grep -qx "khoist-probe version mode=drain statuses=$producer_status,0" <<<"$out" || fail 'missing draining reader observation'
+	! grep -q synthetic <<<"$out" || fail 'version comparison exposed binary output'
+done
+
 # 3. An unreadable entrypoint is distinguished from a clean start.
 out=$(bash -c "$(<"$inner")" khoist-probe "$work/missing.sh" 2>&1) && status=0 || status=$?
 [[ $status == 97 && $out == 'khoist-probe entry=unreadable' ]] || fail "unreadable entrypoint: $status $out"
@@ -81,12 +108,28 @@ case "$*" in
   ;;
 *' logs documents-entry-probe -c mongod --tail=200')
   [[ ${TEST_EMPTY_LOG:-false} != true ]] || exit 0
+  if [[ ${TEST_PARTIAL_VERSION_LOG:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe version mode=direct statuses=0'
+    exit 1
+  fi
   printf '%s\n' 'khoist-probe entry-sha256=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef' \
     'synthetic-private-detail' 'khoist-probe err status=1 line=42' 'khoist-probe err status=1 line=synthetic'
   [[ ${TEST_NO_EXIT:-false} == true ]] || printf '%s\n' 'khoist-probe exit status=1'
   if [[ ${TEST_PIPELINE:-false} == true ]]; then
     printf '%s\n' 'khoist-probe pipeline line=34 statuses=29,0,0,0' \
       'khoist-probe pipeline line=34 statuses=synthetic-private-detail'
+  fi
+  if [[ ${TEST_VERSION_OUTPUT:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe version mode=direct statuses=29' \
+      'khoist-probe version mode=early statuses=29,0,0,0' \
+      'khoist-probe version mode=drain statuses=29,0' \
+      'khoist-probe version mode=private statuses=0' \
+      'khoist-probe version mode=direct statuses=synthetic-private-detail' \
+      'khoist-probe version mode=early statuses=0' \
+      'khoist-probe version mode=drain statuses=0,0,0'
+  fi
+  if [[ ${TEST_VERSION_UNAVAILABLE:-false} == true ]]; then
+    printf '%s\n' 'khoist-probe version=unavailable'
   fi
   ;;
 *) exit 91 ;;
@@ -138,4 +181,16 @@ TEST_PIPELINE=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kub
 jq -e '.pipelines==[{line:34,statuses:[29,0,0,0]}] and .otherLines==3' "$work/pipeline" >/dev/null ||
 	fail 'pipeline segment evidence was lost or malformed log data was accepted'
 ! grep -q synthetic "$work/pipeline" || fail 'pipeline result leaked unclassified output'
+TEST_VERSION_OUTPUT=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/versions"
+jq -e '.versionOutcome=="Observed" and .versions==[
+  {mode:"direct",statuses:[29]}, {mode:"early",statuses:[29,0,0,0]}, {mode:"drain",statuses:[29,0]}
+] and .otherLines==6' "$work/versions" >/dev/null || fail 'version evidence was lost or malformed output was accepted'
+! grep -q synthetic "$work/versions" || fail 'version evidence leaked unclassified output'
+TEST_VERSION_UNAVAILABLE=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/version-unavailable"
+jq -e '.versionOutcome=="Unavailable" and .versions==[]' "$work/version-unavailable" >/dev/null || fail 'missing prerequisites were read as a version observation'
+jq -e '.versionOutcome=="Incomplete" and .versions==[]' "$work/output" >/dev/null || fail 'absent evidence was read as success'
+TEST_PARTIAL_VERSION_LOG=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/version-partial"
+jq -e '.outcome=="ProbeLogUnavailable" and .versionOutcome=="Incomplete"' "$work/version-partial" >/dev/null || fail 'partial failed log read was accepted'
+TEST_VERSION_OUTPUT=true TEST_VERSION_UNAVAILABLE=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/version-conflict"
+jq -e '.versionOutcome=="Incomplete"' "$work/version-conflict" >/dev/null || fail 'conflicting availability markers were accepted'
 printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'

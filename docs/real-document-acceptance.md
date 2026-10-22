@@ -45,6 +45,14 @@ line numbers and exit statuses, so a start that fails before the database writes
 where it stopped. The copy never restarts. Only positive probe evidence names an outcome: a copy still
 running at its deadline, or a start that leaves no exit marker, is reported as indeterminate
 evidence beside the container's own termination reason, never as a started or replaced database.
+Before sourcing the entrypoint, the copy compares direct `mongod --version`, its original
+early-closing reader and a fully draining reader. Each producer has a five-second timeout and
+one-second kill reserve, inside the existing copy deadline. Only fixed mode names and numeric
+stage statuses are retained; binary output, arguments and environment values are discarded.
+`versionOutcome: Observed` means all three comparisons were collected, not that they passed or
+that MongoDB is ready. Missing prerequisites, failed or partial log reads and conflicting markers
+remain explicitly unavailable or incomplete. These pre-entry comparisons may warm the copy;
+they do not by themselves establish why the original start failed or prove a reliability repair.
 
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
 with individual setup, startup, publication, pause, recovery and gate budgets, plus a four-minute
