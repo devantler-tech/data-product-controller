@@ -37,9 +37,17 @@ metadata from the controller's source and Secret reads. Enabled observation must
 events; after each disabled rollout, there must be zero such reads across a full polling interval.
 Fixed synthetic passwords and the document payload must be absent from controller logs, product
 status and the registry response. Neither the audit log nor diagnostics dump Secret values.
+When the database container has already exited non-zero, failure cleanup also starts it once in a
+label-free copy of its pod whose entrypoint runs under numeric exit traps. The copy replaces every
+claimed volume with an empty one, so it never shares the live database files, and it uses only the
+cleanup reserve left after cluster deletion. That probe reports only the entrypoint digest, failing
+line numbers and exit statuses, so a start that fails before the database writes any log still names
+where it stopped. The copy never restarts. Only positive probe evidence names an outcome: a copy still
+running at its deadline, or a start that leaves no exit marker, is reported as indeterminate
+evidence beside the container's own termination reason, never as a started or replaced database.
 
 The job has a 40-minute outer limit. The harness has a shared 33-minute assertion deadline,
-with individual setup, startup, publication, pause, recovery and gate budgets, plus a three-minute
+with individual setup, startup, publication, pause, recovery and gate budgets, plus a four-minute
 cleanup reserve. Every phase uses the smaller remaining deadline; partial output from a failed
 observation is a failure. Cleanup deletes only the generated test cluster and its storage.
 

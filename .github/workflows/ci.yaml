@@ -286,6 +286,11 @@ jobs:
           tar -xzf "$RUNNER_TEMP/ksail.tar.gz" -C "$RUNNER_TEMP/ksail-bin" ksail
           echo "$RUNNER_TEMP/ksail-bin" >> "$GITHUB_PATH"
 
+      - name: Validate bounded startup diagnostics without a cluster
+        run: |
+          bash tests/provider/percona-diagnostics.test.sh
+          bash tests/provider/percona-entry-probe.test.sh
+
       - name: Exercise real queries, privileges and lifecycle
         # Verify the signed released baseline before comparing the current PR build.
         run: bash tests/provider/percona.sh

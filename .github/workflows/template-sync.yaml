@@ -29,7 +29,7 @@ jobs:
     permissions:
       contents: write # Push the template synchronization branch.
       pull-requests: write # Open or update the synchronization pull request.
-    uses: devantler-tech/.github/.github/workflows/template-sync.yaml@3f78fb69353cadf5cadb970b96d1d6b2aa0fdacb # v7.20.3
+    uses: devantler-tech/.github/.github/workflows/template-sync.yaml@d633b9a4e3122beda4eed42053dcfb30af59b652 # v7.23.1
     with:
       source-repo-path: devantler-tech/go-template
     secrets:
