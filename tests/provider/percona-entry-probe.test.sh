@@ -5,6 +5,7 @@ root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 inner="$root/tests/provider/percona-entry-probe-inner.sh"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+# Stop a hermetic control at its first violated diagnostic or privacy invariant.
 fail() {
 	echo "FAIL: $*" >&2
 	exit 1

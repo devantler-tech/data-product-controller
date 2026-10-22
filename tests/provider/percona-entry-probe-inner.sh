@@ -99,6 +99,7 @@ fi
 exec 47>&1
 # The trap passes all values as arguments before any handler command overwrites PIPESTATUS.
 # Keep the original error marker and emit only numeric stages for multi-command pipelines.
+# Report original numeric pipeline statuses without echoing commands or private values.
 _khoist_probe_error() {
 	printf 'khoist-probe err status=%d line=%d\n' "$1" "$2" >&47
 	if (($# > 3)); then

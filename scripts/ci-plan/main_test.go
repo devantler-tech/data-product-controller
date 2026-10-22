@@ -223,6 +223,7 @@ func TestWorkflowPreservesPlanAndEverySelectedResult(t *testing.T) {
 	}
 }
 
+// TestNativeDocumentPinsItsCompatibilityHost preserves real acceptance on its compatible host.
 func TestNativeDocumentPinsItsCompatibilityHost(t *testing.T) {
 	data, err := os.ReadFile("../../.github/workflows/ci.yaml")
 	if err != nil {

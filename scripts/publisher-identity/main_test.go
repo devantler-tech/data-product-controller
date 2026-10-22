@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestPublisherIdentityFollowsImmutableDeclaration binds the signer to the caller's full SHA.
 func TestPublisherIdentityFollowsImmutableDeclaration(t *testing.T) {
 	for _, sha := range []string{strings.Repeat("a", 40), strings.Repeat("b", 40)} {
 		publisher := "devantler-tech/.github/.github/workflows/publish-app.yaml@" + sha
@@ -19,6 +20,7 @@ func TestPublisherIdentityFollowsImmutableDeclaration(t *testing.T) {
 	}
 }
 
+// TestPublisherIdentityRejectsAmbiguousOrMutableDeclarations fails closed on signer ambiguity.
 func TestPublisherIdentityRejectsAmbiguousOrMutableDeclarations(t *testing.T) {
 	valid := "devantler-tech/.github/.github/workflows/publish-app.yaml@" + strings.Repeat("a", 40)
 	for name, source := range map[string]string{
