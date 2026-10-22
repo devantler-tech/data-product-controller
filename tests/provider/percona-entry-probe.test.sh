@@ -136,6 +136,6 @@ jq -e '.outcome=="Indeterminate" and .entrypointExit==null and .containerExit==1
 
 TEST_PIPELINE=true bash "$root/tests/provider/percona-entry-probe.sh" "$work/kubeconfig" >"$work/pipeline"
 jq -e '.pipelines==[{line:34,statuses:[29,0,0,0]}] and .otherLines==3' "$work/pipeline" >/dev/null ||
-  fail 'pipeline segment evidence was lost or malformed log data was accepted'
+	fail 'pipeline segment evidence was lost or malformed log data was accepted'
 ! grep -q synthetic "$work/pipeline" || fail 'pipeline result leaked unclassified output'
 printf 'PASS: startup probe line/status evidence, substitution safety, process replacement, isolated one-shot copy, empty log, running deadline, missing exit marker, skip and privacy controls\n'
