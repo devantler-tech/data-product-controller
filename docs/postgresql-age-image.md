@@ -8,20 +8,27 @@ it does not enable the controller's default-off hybrid provider.
 
 Tagged repository releases publish
 `ghcr.io/devantler-tech/data-product-controller-postgresql-age:17.11-age1.7.0-dpc<VERSION>`.
-Use the immutable digest from the successful **Publish PostgreSQL with Apache AGE** job summary.
-The reusable publisher verifies its own immutable workflow identity, signs that digest, checks
+Use the immutable digest from the successful **Build, exercise, sign and verify AGE image** job
+summary in **Publish application**. This ordinary CD job verifies its exact tagged workflow
+identity and source commit, signs that digest, checks
 the release source revision and repeats the authenticated graph query after pulling the artifact.
 Readback first removes the job's registry login, requiring anonymous artifact and signature access.
 Both its initial build and release readback must pass before the artifact is considered delivered.
 
 The checked-in publisher definition requires repository ID `1350892700` and an
 explicit original or KHoist repository name. Issuer-provided caller claims must
-match the trusted GitHub context, and the called workflow must belong to that
-same repository at an immutable commit. The extracted-step acceptance uses
+match the trusted GitHub context: `workflow_ref` names that repository's
+`.github/workflows/cd.yaml` at the exact release tag, while `workflow_sha` and
+`sha` must equal the tagged source commit. Optional job-workflow metadata must
+either be entirely absent or match that exact same CD workflow and source commit;
+partial, foreign and reusable-callee identities are refused. A real ordinary-CD
+proof reported both matching job-workflow fields, so absence alone cannot identify
+an ordinary job.
+The extracted-step acceptance uses
 synthetic issuer responses; it does not verify real token signatures or artifact
-certificates. Release execution uses the immutable callee selected in
-`.github/workflows/cd.yaml`; controls in another source revision are not evidence
-that the selected callee enforces them.
+certificates. Release execution uses the CD definition in that tagged source;
+controls in another revision are not evidence that the selected source enforces them.
+An identity refusal reports fixed Boolean comparisons only, never the issuer token or claim values.
 
 For the first publication, set this image's package visibility to **Public** in its GitHub
 package settings. Container packages have their own visibility; a public source repository
@@ -35,14 +42,28 @@ artifact; controller, manifest and chart publication is skipped. The proof must 
 digest, tagged source and immutable publisher identity before promotion. Normal version tags
 continue to publish the complete release.
 
-For independent verification, obtain the caller repository name, release tag, source commit and
-publisher commit from the tagged repository source. Choose the repository name used at that
-release; do not substitute its current name for a historical certificate. The publisher commit
-is the full SHA after `@` in `.github/workflows/cd.yaml`'s `publish-age` job. Require all four
-expected values; accepting any signer or any repository release is insufficient. The AGE image
-family remains unchanged for both allowed caller names.
+For independent verification, obtain the repository name, release tag and full source commit
+from the tagged repository source. Inspect its CD `publish-age` job: a `uses` call selects the
+historical reusable publisher below; an ordinary `steps` job selects the current CD publisher.
+Do not guess from the current default branch or broaden the accepted identity to cover both.
+Choose the repository name used at that release, not its current name. The AGE image family
+remains unchanged for both allowed names.
+
+Each example uses a disposable, empty registry configuration to require anonymous access without
+changing your saved registry logins. Run the complete subshell; it removes that temporary
+configuration on success or failure and leaves your existing configuration intact.
+Docker must be reachable through `DOCKER_HOST` or its default socket, without loading a saved
+named context. The explicit credential-free GHCR entry prevents automatic credential-helper
+discovery; inherited authentication and signature-repository overrides are not used.
+
+### Historical reusable publisher
+
+Existing immutable images keep their original certificate identity. For a tagged CD job using
+the reusable publisher, also obtain the full publisher SHA after `@` in that job's `uses` value.
+The provider acceptance fixture deliberately retains this historical verifier for its pinned image.
 
 ```bash
+(
 set -euo pipefail
 : "${RELEASE_REPOSITORY:?Set the exact caller repository at the tagged release}"
 : "${AGE_IMAGE:?Set the published repository@sha256 digest}"
@@ -56,6 +77,11 @@ esac
 [[ "$AGE_IMAGE" =~ ^ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:[a-f0-9]{64}$ ]] || exit 1
 [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$PUBLISHER_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
 [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || exit 1
+verification_config=$(mktemp -d)
+trap 'rm -rf "$verification_config"' EXIT
+printf '%s\n' '{"auths":{"ghcr.io":{}}}' >"$verification_config/config.json"
+unset DOCKER_AUTH_CONFIG COSIGN_REPOSITORY DOCKER_CONTEXT
+export DOCKER_CONFIG="$verification_config"
 cosign verify \
   --certificate-identity "https://github.com/$RELEASE_REPOSITORY/.github/workflows/publish-age.yaml@$PUBLISHER_SHA" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
@@ -64,6 +90,42 @@ cosign verify \
   --certificate-github-workflow-sha "$SOURCE_SHA" "$AGE_IMAGE"
 docker pull "$AGE_IMAGE"
 [[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]] || exit 1
+)
+```
+
+### Current CD publisher
+
+For an ordinary AGE job in the tagged CD workflow, use the exact tag in its certificate identity
+and require the source SHA separately. The source check is mandatory even though the tag is named.
+
+```bash
+(
+set -euo pipefail
+: "${RELEASE_REPOSITORY:?Set the exact repository at the tagged release}"
+: "${AGE_IMAGE:?Set the published repository@sha256 digest}"
+: "${RELEASE_TAG:?Set the exact v-prefixed release tag}"
+: "${SOURCE_SHA:?Set its full source commit}"
+case "$RELEASE_REPOSITORY" in
+  devantler-tech/data-product-controller|devantler-tech/khoist) ;;
+  *) exit 1 ;;
+esac
+[[ "$AGE_IMAGE" =~ ^ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:[a-f0-9]{64}$ ]] || exit 1
+[[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+[[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || exit 1
+verification_config=$(mktemp -d)
+trap 'rm -rf "$verification_config"' EXIT
+printf '%s\n' '{"auths":{"ghcr.io":{}}}' >"$verification_config/config.json"
+unset DOCKER_AUTH_CONFIG COSIGN_REPOSITORY DOCKER_CONTEXT
+export DOCKER_CONFIG="$verification_config"
+cosign verify \
+  --certificate-identity "https://github.com/$RELEASE_REPOSITORY/.github/workflows/cd.yaml@refs/tags/$RELEASE_TAG" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  --certificate-github-workflow-repository "$RELEASE_REPOSITORY" \
+  --certificate-github-workflow-ref "refs/tags/$RELEASE_TAG" \
+  --certificate-github-workflow-sha "$SOURCE_SHA" "$AGE_IMAGE"
+docker pull "$AGE_IMAGE"
+[[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]] || exit 1
+)
 ```
 
 ## CloudNativePG configuration

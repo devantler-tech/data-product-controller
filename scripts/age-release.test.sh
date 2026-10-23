@@ -16,9 +16,13 @@ fail() {
 # require a PostgreSQL process, real Cypher reads and SQL authorization denials.
 yq -e '.jobs."age-image".permissions.contents == "read" and .jobs."age-image"."timeout-minutes" <= 15' "$ci" >/dev/null || fail 'bounded read-only image acceptance is required'
 AGE_RELEASE_NEEDS_JSON="\${{ toJSON(needs) }}" yq -e '(.jobs."required-checks".needs | contains(["age-image"])) and ([.jobs."required-checks".steps[] | select(.env.NEEDS_JSON == strenv(AGE_RELEASE_NEEDS_JSON)) | .run | contains("ci-trusted/scripts/ci-plan/main.go check")] | any)' "$ci" >/dev/null || fail 'image acceptance must feed the trusted required result checker'
-[ -f "$publisher" ] || fail 'owned image publisher is required'
-yq -e '(.on | has("workflow_call")) and (.on | keys | length == 1)' "$publisher" >/dev/null || fail 'publisher must only be callable as a reusable workflow'
-yq -e '(.permissions | length == 0) and .jobs.publish.permissions.contents == "read" and .jobs.publish.permissions.packages == "write" and .jobs.publish.permissions."id-token" == "write"' "$publisher" >/dev/null || fail 'publisher must use scoped identity and package permissions'
+[ ! -e "$publisher" ] || fail 'single-use AGE publisher must not remain a reusable export'
+workflow_json=$(yq -o=json '.' "$cd") || fail 'CD workflow must parse completely'
+printf '%s\n' "$workflow_json" | jq -se 'length == 1 and (.[0] | type == "object" and
+  (.permissions | length == 0) and (.on | keys == ["push"]) and .on.push.tags == ["v*"] and
+  .jobs."publish-age"."runs-on" == "ubuntu-latest" and .jobs."publish-age"."timeout-minutes" == 15 and
+  (.jobs."publish-age" | has("uses") | not) and
+  (.jobs."publish-age".steps | length == 7))' >/dev/null || fail 'AGE publication must be an ordinary bounded CD job'
 # A proof tag must publish only the independently versioned AGE image. Publishing
 # a chart would point at a controller image intentionally absent from that tag.
 for workflow in "$cd" "$chart_publisher"; do
@@ -26,8 +30,6 @@ for workflow in "$cd" "$chart_publisher"; do
 	[ "$condition" = "\${{ !startsWith(github.ref_name, 'v0.0.0-age-proof.') }}" ] || fail 'proof tags must exclude controller and chart publication'
 done
 yq -e '.jobs.smoke.needs == "publish" and (.jobs.smoke | has("if") | not) and (.jobs."publish-age" | has("needs") | not) and (.jobs."publish-age" | has("if") | not)' "$cd" >/dev/null || fail 'proof tags must run AGE publication and skip dependent controller smoke'
-callee=$(yq '.jobs."publish-age".uses' "$cd")
-printf '%s\n' "$callee" | grep -Eq '^devantler-tech/khoist/\.github/workflows/publish-age\.yaml@[a-f0-9]{40}$' || fail 'release must use the immutable owned publisher'
 yq -e '.jobs."publish-age".permissions.contents == "read" and .jobs."publish-age".permissions.packages == "write" and .jobs."publish-age".permissions."id-token" == "write"' "$cd" >/dev/null || fail 'release must grant only the required publisher permissions'
 bash "$repo_root/scripts/age-publisher-identity.test.sh"
 printf '%s\n' 'AGE release contract tests passed'
