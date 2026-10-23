@@ -148,6 +148,10 @@ awk '/^```bash$/{block++; copy=(block==2); next} copy && /^```$/{exit} copy{prin
 cat >"$scratch/bin/cosign" <<'VERIFIER'
 #!/usr/bin/env bash
 set -euo pipefail
+[[ -n ${DOCKER_CONFIG:-} && -d $DOCKER_CONFIG && $DOCKER_CONFIG != "$FIXTURE_AUTH_CONFIG" ]]
+jq -e '. == {auths:{"ghcr.io":{}}}' "$DOCKER_CONFIG/config.json" >/dev/null
+[[ -z ${DOCKER_AUTH_CONFIG+x} && -z ${COSIGN_REPOSITORY+x} && -z ${DOCKER_CONTEXT+x} ]]
+printf '%s\n' "$DOCKER_CONFIG" >"$FIXTURE_ISOLATED_CONFIG"
 touch "$FIXTURE_SIGNER"
 printf '%s\n' "$@" | cmp - "$FIXTURE_EXPECTED"
 touch "$FIXTURE_VERIFIED"
@@ -155,6 +159,10 @@ VERIFIER
 cat >"$scratch/bin/docker" <<'REGISTRY'
 #!/usr/bin/env bash
 set -euo pipefail
+[[ -n ${DOCKER_CONFIG:-} && -d $DOCKER_CONFIG && $DOCKER_CONFIG != "$FIXTURE_AUTH_CONFIG" ]]
+jq -e '. == {auths:{"ghcr.io":{}}}' "$DOCKER_CONFIG/config.json" >/dev/null
+[[ -z ${DOCKER_AUTH_CONFIG+x} && -z ${COSIGN_REPOSITORY+x} && -z ${DOCKER_CONTEXT+x} ]]
+[[ $(cat "$FIXTURE_ISOLATED_CONFIG") == "$DOCKER_CONFIG" ]]
 touch "$FIXTURE_REGISTRY"
 if [[ $1 == pull && $2 == "$AGE_IMAGE" && $# == 2 ]]; then exit 0; fi
 if [[ $1 == image && $2 == inspect && $3 == "$AGE_IMAGE" && $# == 5 ]]; then
@@ -164,6 +172,9 @@ fi
 exit 1
 REGISTRY
 chmod +x "$scratch/bin/cosign" "$scratch/bin/docker"
+mkdir "$scratch/authenticated"
+printf '%s\n' '{"auths":{"ghcr.io":{"auth":"synthetic-saved-login"}}}' >"$scratch/authenticated/config.json"
+cp "$scratch/authenticated/config.json" "$scratch/original-auth.json"
 
 # verify_example binds the exact documented filters; mixed identities must stop before a pull.
 verify_example() {
@@ -182,13 +193,27 @@ verify_example() {
 		--certificate-github-workflow-repository "$expected_repository" \
 		--certificate-github-workflow-ref refs/tags/v5.0.0 \
 		--certificate-github-workflow-sha "$pin" "$image" >"$scratch/expected"
-	rm -f "$scratch/signer" "$scratch/registry" "$scratch/verified"
+	rm -f "$scratch/signer" "$scratch/registry" "$scratch/verified" "$scratch/isolated-config"
 	env -i PATH="$scratch/bin:$PATH" RELEASE_REPOSITORY="$repository" AGE_IMAGE="$image" \
 		RELEASE_TAG=v5.0.0 SOURCE_SHA="$pin" PUBLISHER_SHA="$pin" \
+		DOCKER_CONFIG="$scratch/authenticated" FIXTURE_AUTH_CONFIG="$scratch/authenticated" \
+		DOCKER_AUTH_CONFIG='{"auths":{"ghcr.io":{"auth":"synthetic-env-login"}}}' \
+		COSIGN_REPOSITORY=ghcr.io/example/signature-override \
+		DOCKER_CONTEXT=synthetic-saved-context \
+		FIXTURE_ISOLATED_CONFIG="$scratch/isolated-config" \
 		FIXTURE_SIGNER="$scratch/signer" FIXTURE_REGISTRY="$scratch/registry" \
 		FIXTURE_VERIFIED="$scratch/verified" \
 		FIXTURE_EXPECTED="$scratch/expected" /bin/bash "$script" \
 		>"$scratch/stdout" 2>"$scratch/stderr" || result=$?
+	cmp "$scratch/original-auth.json" "$scratch/authenticated/config.json"
+	if [[ -f $scratch/isolated-config ]]; then
+		local isolated_config
+		IFS= read -r isolated_config <"$scratch/isolated-config"
+		[[ -n $isolated_config && ! -e $isolated_config ]] || {
+			echo 'AGE documented verification leaked its disposable registry configuration' >&2
+			exit 1
+		}
+	fi
 	if [[ $wanted == accept ]]; then
 		[[ $result == 0 && -f $scratch/verified && -f $scratch/registry ]] || {
 			echo "AGE documented verification rejected permitted repository: $repository" >&2

@@ -44,6 +44,13 @@ Do not guess from the current default branch or broaden the accepted identity to
 Choose the repository name used at that release, not its current name. The AGE image family
 remains unchanged for both allowed names.
 
+Each example uses a disposable, empty registry configuration to require anonymous access without
+changing your saved registry logins. Run the complete subshell; it removes that temporary
+configuration on success or failure and leaves your existing configuration intact.
+Docker must be reachable through `DOCKER_HOST` or its default socket, without loading a saved
+named context. The explicit credential-free GHCR entry prevents automatic credential-helper
+discovery; inherited authentication and signature-repository overrides are not used.
+
 ### Historical reusable publisher
 
 Existing immutable images keep their original certificate identity. For a tagged CD job using
@@ -51,6 +58,7 @@ the reusable publisher, also obtain the full publisher SHA after `@` in that job
 The provider acceptance fixture deliberately retains this historical verifier for its pinned image.
 
 ```bash
+(
 set -euo pipefail
 : "${RELEASE_REPOSITORY:?Set the exact caller repository at the tagged release}"
 : "${AGE_IMAGE:?Set the published repository@sha256 digest}"
@@ -64,6 +72,11 @@ esac
 [[ "$AGE_IMAGE" =~ ^ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:[a-f0-9]{64}$ ]] || exit 1
 [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$PUBLISHER_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
 [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || exit 1
+verification_config=$(mktemp -d)
+trap 'rm -rf "$verification_config"' EXIT
+printf '%s\n' '{"auths":{"ghcr.io":{}}}' >"$verification_config/config.json"
+unset DOCKER_AUTH_CONFIG COSIGN_REPOSITORY DOCKER_CONTEXT
+export DOCKER_CONFIG="$verification_config"
 cosign verify \
   --certificate-identity "https://github.com/$RELEASE_REPOSITORY/.github/workflows/publish-age.yaml@$PUBLISHER_SHA" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
@@ -72,6 +85,7 @@ cosign verify \
   --certificate-github-workflow-sha "$SOURCE_SHA" "$AGE_IMAGE"
 docker pull "$AGE_IMAGE"
 [[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]] || exit 1
+)
 ```
 
 ### Current CD publisher
@@ -80,6 +94,7 @@ For an ordinary AGE job in the tagged CD workflow, use the exact tag in its cert
 and require the source SHA separately. The source check is mandatory even though the tag is named.
 
 ```bash
+(
 set -euo pipefail
 : "${RELEASE_REPOSITORY:?Set the exact repository at the tagged release}"
 : "${AGE_IMAGE:?Set the published repository@sha256 digest}"
@@ -92,6 +107,11 @@ esac
 [[ "$AGE_IMAGE" =~ ^ghcr.io/devantler-tech/data-product-controller-postgresql-age@sha256:[a-f0-9]{64}$ ]] || exit 1
 [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
 [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]] || exit 1
+verification_config=$(mktemp -d)
+trap 'rm -rf "$verification_config"' EXIT
+printf '%s\n' '{"auths":{"ghcr.io":{}}}' >"$verification_config/config.json"
+unset DOCKER_AUTH_CONFIG COSIGN_REPOSITORY DOCKER_CONTEXT
+export DOCKER_CONFIG="$verification_config"
 cosign verify \
   --certificate-identity "https://github.com/$RELEASE_REPOSITORY/.github/workflows/cd.yaml@refs/tags/$RELEASE_TAG" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
@@ -100,6 +120,7 @@ cosign verify \
   --certificate-github-workflow-sha "$SOURCE_SHA" "$AGE_IMAGE"
 docker pull "$AGE_IMAGE"
 [[ $(docker image inspect "$AGE_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}') == "$SOURCE_SHA" ]] || exit 1
+)
 ```
 
 ## CloudNativePG configuration
