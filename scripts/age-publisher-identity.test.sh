@@ -84,6 +84,17 @@ run_case source invalid-tag "$original" 1350892700 "$original_claims" success pu
 for repository in "$original" "$canonical"; do
 	valid=$(claims "$repository")
 	run_case accept "$repository" "$repository" 1350892700 "$valid"
+	changed=$(printf '%s' "$valid" | jq -c '.aud="sensitive-claim-value-must-not-appear"')
+	run_case closed sanitized-diagnostics "$repository" 1350892700 "$changed"
+	grep -Fq '"audience":false' "$scratch/stderr" || {
+		echo 'AGE identity refusal must report a fixed Boolean binding verdict' >&2
+		exit 1
+	}
+	if grep -Fq 'sensitive-claim-value-must-not-appear' "$scratch/stderr" ||
+		grep -Fq "$(jq -r .value "$scratch/response")" "$scratch/stderr"; then
+		echo 'AGE identity diagnostic exposed a claim value or issuer token' >&2
+		exit 1
+	fi
 	run_case accept proof-tag "$repository" 1350892700 "$(claims "$repository" v0.0.0-age-proof.fixture)" success push tag v0.0.0-age-proof.fixture
 	run_case source reused-name "$repository" 1 "$valid"
 	run_case source foreign-context-workflow "$repository" 1350892700 "$valid" success push tag v5.0.0 'example/fork/.github/workflows/cd.yaml@refs/tags/v5.0.0'
@@ -119,6 +130,10 @@ for repository in "$original" "$canonical"; do
 		run_case closed "$mode-issuer-response" "$repository" 1350892700 "$valid" "$mode"
 	done
 	run_case closed malformed-claims "$repository" 1350892700 '{'
+	[[ $(cat "$scratch/stderr") == '{"claims_object":false}' ]] || {
+		echo 'Malformed claims must produce only a fixed refusal diagnostic' >&2
+		exit 1
+	}
 	run_case closed non-object-claims "$repository" 1350892700 '[]'
 done
 

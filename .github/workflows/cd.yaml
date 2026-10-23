@@ -77,7 +77,7 @@ jobs:
             3) payload="${payload}=" ;;
           esac
           claims=$(printf '%s' "$payload" | tr '_-' '/+' | base64 -d)
-          printf '%s' "$claims" | jq -se --arg repository "$REPOSITORY" --arg id "$REPOSITORY_ID" \
+          if ! printf '%s' "$claims" | jq -se --arg repository "$REPOSITORY" --arg id "$REPOSITORY_ID" \
             --arg event "$EVENT" --arg ref_type "$REF_TYPE" --arg ref "refs/tags/$RELEASE_TAG" \
             --arg workflow "$WORKFLOW_REF" --arg workflow_sha "$WORKFLOW_SHA" --arg sha "$SOURCE_SHA" '
             length == 1 and (.[0] | type == "object" and
@@ -85,7 +85,29 @@ jobs:
               .repository == $repository and .repository_id == $id and
               .event_name == $event and .ref_type == $ref_type and .ref == $ref and
               .workflow_ref == $workflow and .workflow_sha == $workflow_sha and .sha == $sha and
-              (has("job_workflow_ref") | not) and (has("job_workflow_sha") | not))' >/dev/null
+              (has("job_workflow_ref") | not) and (has("job_workflow_sha") | not))' >/dev/null 2>&1; then
+            # Fixed Boolean comparisons only: never log the token or claim values.
+            if verdict=$(printf '%s' "$claims" | jq -sc --arg repository "$REPOSITORY" --arg id "$REPOSITORY_ID" \
+              --arg event "$EVENT" --arg ref_type "$REF_TYPE" --arg ref "refs/tags/$RELEASE_TAG" \
+              --arg workflow "$WORKFLOW_REF" --arg workflow_sha "$WORKFLOW_SHA" --arg sha "$SOURCE_SHA" '
+              if length == 1 and (.[0] | type == "object") then .[0] | {
+                issuer:(.iss == "https://token.actions.githubusercontent.com"),
+                audience:(.aud == "sigstore"),
+                repository:(.repository == $repository), repository_id:(.repository_id == $id),
+                event:(.event_name == $event), ref_type:(.ref_type == $ref_type), ref:(.ref == $ref),
+                workflow_ref:(.workflow_ref == $workflow), workflow_sha:(.workflow_sha == $workflow_sha),
+                source_sha:(.sha == $sha),
+                job_workflow_ref_absent:(has("job_workflow_ref") | not),
+                job_workflow_sha_absent:(has("job_workflow_sha") | not),
+                job_workflow_ref_matches:(.job_workflow_ref == $workflow),
+                job_workflow_sha_matches:(.job_workflow_sha == $workflow_sha)
+              } else {claims_object:false} end' 2>/dev/null); then
+              printf '%s\n' "$verdict" >&2
+            else
+              printf '{"claims_object":false}\n' >&2
+            fi
+            exit 1
+          fi
           printf 'workflow=%s\n' "$WORKFLOW_REF" >> "$GITHUB_OUTPUT"
 
       - name: Checkout released source

@@ -24,6 +24,7 @@ The extracted-step acceptance uses
 synthetic issuer responses; it does not verify real token signatures or artifact
 certificates. Release execution uses the CD definition in that tagged source;
 controls in another revision are not evidence that the selected source enforces them.
+An identity refusal reports fixed Boolean comparisons only, never the issuer token or claim values.
 
 For the first publication, set this image's package visibility to **Public** in its GitHub
 package settings. Container packages have their own visibility; a public source repository
