@@ -85,7 +85,8 @@ jobs:
               .repository == $repository and .repository_id == $id and
               .event_name == $event and .ref_type == $ref_type and .ref == $ref and
               .workflow_ref == $workflow and .workflow_sha == $workflow_sha and .sha == $sha and
-              (has("job_workflow_ref") | not) and (has("job_workflow_sha") | not))' >/dev/null 2>&1; then
+              (((has("job_workflow_ref") | not) and (has("job_workflow_sha") | not)) or
+                (.job_workflow_ref == $workflow and .job_workflow_sha == $workflow_sha)))' >/dev/null 2>&1; then
             # Fixed Boolean comparisons only: never log the token or claim values.
             if verdict=$(printf '%s' "$claims" | jq -sc --arg repository "$REPOSITORY" --arg id "$REPOSITORY_ID" \
               --arg event "$EVENT" --arg ref_type "$REF_TYPE" --arg ref "refs/tags/$RELEASE_TAG" \

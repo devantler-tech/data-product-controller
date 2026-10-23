@@ -19,7 +19,11 @@ The checked-in publisher definition requires repository ID `1350892700` and an
 explicit original or KHoist repository name. Issuer-provided caller claims must
 match the trusted GitHub context: `workflow_ref` names that repository's
 `.github/workflows/cd.yaml` at the exact release tag, while `workflow_sha` and
-`sha` must equal the tagged source commit. Reusable-workflow claims are refused.
+`sha` must equal the tagged source commit. Optional job-workflow metadata must
+either be entirely absent or match that exact same CD workflow and source commit;
+partial, foreign and reusable-callee identities are refused. A real ordinary-CD
+proof reported both matching job-workflow fields, so absence alone cannot identify
+an ordinary job.
 The extracted-step acceptance uses
 synthetic issuer responses; it does not verify real token signatures or artifact
 certificates. Release execution uses the CD definition in that tagged source;

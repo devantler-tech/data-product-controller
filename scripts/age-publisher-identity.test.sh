@@ -84,6 +84,21 @@ run_case source invalid-tag "$original" 1350892700 "$original_claims" success pu
 for repository in "$original" "$canonical"; do
 	valid=$(claims "$repository")
 	run_case accept "$repository" "$repository" 1350892700 "$valid"
+	# The real ordinary-CD issuer supplies matching job metadata as well.
+	matching=$(printf '%s' "$valid" | jq -c '.job_workflow_ref=.workflow_ref | .job_workflow_sha=.workflow_sha')
+	run_case accept matching-job-metadata "$repository" 1350892700 "$matching"
+	for change in \
+		'del(.job_workflow_ref)' 'del(.job_workflow_sha)' \
+		'.job_workflow_ref=null' '.job_workflow_sha=null' \
+		'.job_workflow_ref=[]' '.job_workflow_sha=123' \
+		'.job_workflow_ref |= sub("cd.yaml"; "publish-age.yaml")' \
+		'.job_workflow_ref |= sub("@.*$"; "@refs/heads/main")' \
+		'.job_workflow_sha="ffffffffffffffffffffffffffffffffffffffff"' \
+		'.repository_id="1"' '.sha="ffffffffffffffffffffffffffffffffffffffff"' \
+		'.event_name="workflow_dispatch"'; do
+		changed=$(printf '%s' "$matching" | jq -c "$change")
+		run_case closed "matching metadata: $change" "$repository" 1350892700 "$changed"
+	done
 	changed=$(printf '%s' "$valid" | jq -c '.aud="sensitive-claim-value-must-not-appear"')
 	run_case closed sanitized-diagnostics "$repository" 1350892700 "$changed"
 	grep -Fq '"audience":false' "$scratch/stderr" || {
