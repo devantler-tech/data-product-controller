@@ -141,7 +141,10 @@ awk '/^```bash$/{copy=1; next} copy && /^```$/{exit} copy{print}' \
 	"$repo_root/docs/postgresql-age-image.md" >"$scratch/verify.sh"
 awk '/^```bash$/{block++; copy=(block==2); next} copy && /^```$/{exit} copy{print}' \
 	"$repo_root/docs/postgresql-age-image.md" >"$scratch/verify-current.sh"
-[[ -s $scratch/verify-current.sh ]] || { echo 'Current CD verification example is missing' >&2; exit 1; }
+[[ -s $scratch/verify-current.sh ]] || {
+	echo 'Current CD verification example is missing' >&2
+	exit 1
+}
 cat >"$scratch/bin/cosign" <<'VERIFIER'
 #!/usr/bin/env bash
 set -euo pipefail
