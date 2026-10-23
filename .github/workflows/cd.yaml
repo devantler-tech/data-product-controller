@@ -17,7 +17,7 @@ jobs:
       contents: read # Checkout the tagged source.
       packages: write # Publish the image and manifest artifact to GHCR.
       id-token: write # Mint the keyless Sigstore signing identity.
-    uses: devantler-tech/.github/.github/workflows/publish-app.yaml@0c7b6c3509b73adbc7537e030935bb01987e625b # v7.23.0
+    uses: devantler-tech/.github/.github/workflows/publish-app.yaml@6f1dee9557a939cc24ca2c562ea775d05e01564d # v12.0.1
     with:
       app-name: data-product-controller
       enable-caller-pin: true
